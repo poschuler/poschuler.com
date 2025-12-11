@@ -1,0 +1,4 @@
+SESSION_THEME_SECRET=
+DB_DEBUG_FLAG=0
+PUBLIC_HOST="https://poschuler.com"
+DEPLOYMENT_ENV="development"
