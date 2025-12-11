@@ -1,0 +1,332 @@
+{
+  "basics": {
+    "name": "Paul Osorio Schuler",
+    "label": "Software Architect · iSAQB® Certified · Software Engineer",
+    "image": "https://avatars.githubusercontent.com/u/1238212?v=4",
+    "email": "poschuler@gmail.com",
+    "url": "https://poschuler.com",
+    "summary": "iSAQB® Certified Software Architect and Software Engineer with an MBA, I bring over 12 years of experience in designing, developing, and implementing secure, robust, and scalable software solutions. My approach merges hands-on development expertise (including .NET, JavaScript/TypeScript, and SQL/NoSQL databases) with a strategic vision to define architectures, operational models, and technological roadmaps that drive efficiency and innovation. I actively collaborate and partner with business leaders and technical teams to ensure the effective application and optimal use of automation technologies and tools, ensuring that solutions meet functional and non-functional requirements and are consistently aligned with business strategy (defined by OKRs and KPIs)",
+    "location": {
+      "address": "Chosica",
+      "postalCode": "15472",
+      "city": "Lima",
+      "countryCode": "PE",
+      "region": "Peru",
+      "url": "https://maps.app.goo.gl/rDwEKUjsx1XpjiGo7"
+    },
+    "profiles": [
+      {
+        "row": 1,
+        "network": "GitHub",
+        "username": "poschuler",
+        "url": "https://github.com/poschuler",
+        "key": "g"
+      },
+      {
+        "row": 2,
+        "network": "LinkedIn",
+        "username": "poschuler",
+        "url": "https://www.linkedin.com/in/poschuler/",
+        "key": "l"
+      },
+      {
+        "row": 3,
+        "network": "X",
+        "username": "poschuler",
+        "url": "https://twitter.com/poschuler",
+        "key": "x"
+      }
+    ]
+  },
+  "work": [
+    {
+      "row": 8,
+      "name": "Scotiabank Perú",
+      "position": "Automation Solution Architect",
+      "location": "Remote",
+      "startDate": "08/2021",
+      "endDate": "present",
+      "summary": "Automation Solution Architect experienced in leading process automation initiatives from design to deployment using PEGA, UiPath, and Power Platform. Proven ability to deliver P&L impact (CAD 2M+ annually), ensure architectural compliance, and provide technical mentorship. Current focus includes evaluating Camunda/Kafka for event-driven orchestration and developing AI Builder PoCs for claims analysis and text extraction."
+    },
+    {
+      "row": 9,
+      "name": "Chekalo.pe",
+      "position": "Software Architect",
+      "location": "Remote",
+      "startDate": "01/2023",
+      "endDate": "present",
+      "summary": "Spearheaded the Chekalo.pe platform from concept to deployment. As Software Architect, I designed its architecture, selected technologies (React, .NET, Python, GCP), and developed full-stack components. A key innovation was integrating Gemini AI (Embeddings & Flash 2.0) into the ETL process for enhanced product verification, alongside implementing CI/CD on Google Cloud."
+    },
+    {
+      "row": 7,
+      "name": "Banco de Crédito BCP",
+      "position": "Smart Automation Tech Leader → Tribe Technical Leader",
+      "location": "Remote",
+      "startDate": "08/2019",
+      "endDate": "07/2021",
+      "summary": "Technological leader of the Automation Center of Excellence (CoE), driving ~USD 8M in business value via automation. Responsibilities included designing solutions (Low-Code, BPMS, Microservices), managing a ~USD 2M tech budget, defining the technology roadmap, ensuring standards compliance, leading PoCs for new tech, and establishing the CoE's governance model."
+    },
+    {
+      "row": 6,
+      "name": "Scotiabank Perú",
+      "position": "RPA Tech Leader",
+      "location": "",
+      "startDate": "10/2016",
+      "endDate": "07/2019",
+      "summary": "As RPA Tech Leader, I spearheaded Scotiabank's bank-wide RPA implementation, deploying its first LATAM-level bot which generated a USD 500k impact. Key responsibilities included establishing the RPA Governance model, managing a PEN 2.5MM project budget, and leading a 9-person development team (Pega Robotics, .NET)."
+    },
+    {
+      "row": 5,
+      "name": "Scotiabank Perú",
+      "position": "IT Analyst Jr. → Tech Leader",
+      "location": "",
+      "startDate": "08/2014",
+      "endDate": "09/2016",
+      "summary": "Developed, implemented, and deployed requirements for the system supporting the credit line approval and renewal workflow for the bank's Wholesale clients. Responsibilities included implementing new functionalities, as well as system maintenance and incident management."
+    },
+    {
+      "row": 4,
+      "name": "Software Enterprise Services",
+      "position": "Software Developer",
+      "location": "",
+      "startDate": "04/2014",
+      "endDate": "06/2014",
+      "summary": "Provided maintenance for the bank's web application supporting the loan processing system."
+    },
+    {
+      "row": 3,
+      "name": "MINEDU Peru",
+      "position": "Software Developer",
+      "location": "",
+      "startDate": "08/2013",
+      "endDate": "02/2014",
+      "summary": "Designed, developed, and implemented the nationwide student admission system for pedagogical institutes supported by MINEDU."
+    },
+    {
+      "row": 2,
+      "name": "Software Enterprise Services",
+      "position": "Software Developer",
+      "location": "",
+      "startDate": "05/2012",
+      "endDate": "07/2013",
+      "summary": "Developed new functionalities for the bank's system supporting mortgage loans."
+    },
+    {
+      "row": 1,
+      "name": "SISPRO S.A.C.",
+      "position": "Software Developer",
+      "location": "",
+      "startDate": "05/2011",
+      "endDate": "05/2012",
+      "summary": "Performed analysis, maintenance, and development of applications for BANBIF, including the integration of RENIEC's (National Registry of Identification and Civil Status) queuing system into an application for customer identification."
+    }
+  ],
+  "education": [
+    {
+      "row": 2,
+      "institution": "UTP - Escuela de Postgrado",
+      "url": "https://www.postgradoutp.edu.pe/",
+      "area": "MBA",
+      "summary": "",
+      "startDate": "2017",
+      "endDate": "2019"
+    },
+    {
+      "row": 5,
+      "institution": "UTP - Universidad Tecnológica del Perú",
+      "url": "https://www.utp.edu.pe/",
+      "area": "B.S inSoftware Engineer",
+      "summary": "",
+      "startDate": "2008",
+      "endDate": "2013"
+    }
+  ],
+  "certificates": [
+    {
+      "row": 1,
+      "name": "iSAQB® Certified Professional for Software Architecture – Foundation Level",
+      "date": "2025",
+      "issuer": "iSAQB®",
+      "url": "https://drive.google.com/file/d/1uH_beSQe2LV6gVy8_TmhqZ012SsjkpY-/view?usp=drive_link",
+      "keywords": ["Software Architecture"]
+    },
+    {
+      "row": 2,
+      "name": "Microsoft Certified: Azure Developer Associate",
+      "date": "2024",
+      "issuer": "Microsoft",
+      "url": "https://learn.microsoft.com/api/credentials/share/es-es/poschuler/F578FDEA6F723D10?sharingId",
+      "keywords": ["Cloud", "Azure"]
+    },
+    {
+      "row": 3,
+      "name": "Microsoft Certified: Azure Fundamentals",
+      "date": "2024",
+      "issuer": "Microsoft",
+      "url": "https://learn.microsoft.com/api/credentials/share/es-mx/poschuler/4D01352F022D0273?sharingId",
+      "keywords": ["Cloud", "Azure"]
+    },
+    {
+      "row": 4,
+      "name": "Remix bootcamp",
+      "date": "2024",
+      "issuer": "Zero to Mastery Academy",
+      "url": "https://drive.google.com/file/d/1msCT8eoHHfvsONPou7aK97VGZYv4J-wg/view?usp=drive_link",
+      "keywords": ["Full Stack Development", "Web Development"]
+    },
+    {
+      "row": 5,
+      "name": "Web Developer",
+      "date": "2023",
+      "issuer": "Zero to Mastery Academy",
+      "url": "https://drive.google.com/file/d/14LxGXtcCxT6OIbAWBJJ-qfrq3h0dd2Bw/view?usp=drive_link",
+      "keywords": ["Web Development"]
+    },
+    {
+      "row": 6,
+      "name": "React Developer",
+      "date": "2023",
+      "issuer": "Zero to Mastery Academy",
+      "url": "https://drive.google.com/file/d/1NZ4voFTDgS49KxcX82Z3-QE4Vg2Y9-Wy/view?usp=drive_link",
+      "keywords": ["Front End Development", "Web Development"]
+    },
+    {
+      "row": 7,
+      "name": "Typescript: The Complete Developer's Guide",
+      "date": "2023",
+      "issuer": "Zero to Mastery Academy",
+      "url": "https://drive.google.com/file/d/1bxNAL1bln5TW6MzJJlMS_mWbZqHD7yEw/view?usp=drive_link",
+      "keywords": ["Typescript", "Web Development"]
+    },
+    {
+      "row": 8,
+      "name": "Node.js Developer",
+      "date": "2023",
+      "issuer": "Zero to Mastery Academy",
+      "url": "https://drive.google.com/file/d/1dk3KVVY2Rz6i6qMkzMPCnMivkjBYqWTU/view?usp=drive_link",
+      "keywords": ["Back End Development", "Web Development"]
+    },
+    {
+      "row": 9,
+      "name": "Junior to Senior Web Developer Roadmap",
+      "date": "2023",
+      "issuer": "Zero to Mastery Academy",
+      "url": "https://drive.google.com/file/d/1LgRUa8awN2WENfOnoEdSoS3UY8wwxJC7/view?usp=drive_link",
+      "keywords": ["Web Development"]
+    },
+    {
+      "row": 10,
+      "name": "M320: MongoDB Data Modeling",
+      "date": "2021",
+      "issuer": "MongoDB University",
+      "url": "https://ti-user-certificates.s3.amazonaws.com/ae62dcd7-abdc-4e90-a570-83eccba49043/d00f0c92-18db-555f-b268-82225a69ba4c-paul-osorio-schuler-6e6ce82f-4ccc-5122-97ac-6ccfe5137c17-certificate.pdf",
+      "keywords": ["Database", "NOSQL"]
+    },
+    {
+      "row": 11,
+      "name": "M220JS: MongoDB for JavaScript Developers",
+      "date": "2021",
+      "issuer": "MongoDB University",
+      "url": "https://ti-user-certificates.s3.amazonaws.com/ae62dcd7-abdc-4e90-a570-83eccba49043/d00f0c92-18db-555f-b268-82225a69ba4c-paul-osorio-schuler-c17e1f29-f2f6-554a-aa9c-552d6c2d1ada-certificate.pdf",
+      "keywords": ["Database", "NOSQL"]
+    },
+    {
+      "row": 12,
+      "name": "M001: MongoDB Basics",
+      "date": "2021",
+      "issuer": "MongoDB University",
+      "url": "https://ti-user-certificates.s3.amazonaws.com/ae62dcd7-abdc-4e90-a570-83eccba49043/d00f0c92-18db-555f-b268-82225a69ba4c-paul-osorio-schuler-6b9b4864-5b28-5fad-81d3-bc0f449c8a1c-certificate.pdf",
+      "keywords": ["Database", "NOSQL"]
+    },
+    {
+      "row": 13,
+      "name": "Introduction to RPA Express",
+      "date": "2018",
+      "issuer": "Automation Academy by WorkFusion",
+      "url": "https://www.credential.net/gn4wyjuk",
+      "keywords": ["RPA"]
+    },
+    {
+      "row": 14,
+      "name": "Automation Essentials",
+      "date": "2018",
+      "issuer": "Automation Academy by WorkFusion",
+      "url": "https://www.credential.net/buh0benk",
+      "keywords": ["RPA"]
+    }
+  ],
+  "skills": [
+    {
+      "row": 1,
+      "name": "Software Architecture"
+    },
+    {
+      "row": 2,
+      "name": "Project Management"
+    },
+    {
+      "row": 3,
+      "name": "Leadership"
+    },
+    {
+      "row": 4,
+      "name": "JavaScript"
+    },
+    {
+      "row": 5,
+      "name": "JavaScript"
+    },
+    {
+      "row": 6,
+      "name": "JavaScript"
+    },
+    {
+      "row": 7,
+      "name": "TypeScript"
+    },
+    {
+      "row": 8,
+      "name": "React/Remix"
+    },
+    {
+      "row": 9,
+      "name": "Tailwind CSS"
+    },
+    {
+      "row": 10,
+      "name": "Node.js/NestJS"
+    },
+    {
+      "row": 11,
+      "name": "PostgreSQL"
+    },
+    {
+      "row": 12,
+      "name": "MongoDB"
+    },
+    {
+      "row": 13,
+      "name": "MS SQL Server"
+    },
+    {
+      "row": 14,
+      "name": ".NET"
+    },
+    {
+      "row": 15,
+      "name": "C#"
+    }
+  ],
+  "languages": [
+    {
+      "row": 1,
+      "language": "English",
+      "fluency": "B2"
+    },
+    {
+      "row": 2,
+      "language": "Spanish",
+      "fluency": "Native"
+    }
+  ]
+}

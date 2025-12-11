@@ -1,0 +1,457 @@
+@import "tailwindcss" source(".");
+
+@import "@radix-ui/colors/gray";
+@import "@radix-ui/colors/gray-dark";
+@import "@radix-ui/colors/mauve";
+@import "@radix-ui/colors/mauve-dark";
+@import "@radix-ui/colors/indigo";
+@import "@radix-ui/colors/indigo-dark";
+@import "@radix-ui/colors/tomato";
+@import "@radix-ui/colors/tomato-dark";
+@import "@radix-ui/colors/amber";
+@import "@radix-ui/colors/amber-dark";
+@import "@radix-ui/colors/grass";
+@import "@radix-ui/colors/grass-dark";
+@import "@radix-ui/colors/violet";
+@import "@radix-ui/colors/violet-dark";
+@import "@radix-ui/colors/plum";
+@import "@radix-ui/colors/plum-dark";
+@import "@radix-ui/colors/blue";
+@import "@radix-ui/colors/blue-dark";
+@import "@radix-ui/colors/crimson";
+@import "@radix-ui/colors/crimson-dark";
+@import "@radix-ui/colors/jade";
+@import "@radix-ui/colors/jade-dark";
+@import "@radix-ui/colors/gold";
+@import "@radix-ui/colors/gold-dark";
+@import "@radix-ui/colors/amber";
+@import "@radix-ui/colors/amber-dark";
+@import "@radix-ui/colors/slate";
+@import "@radix-ui/colors/slate-dark";
+@import "@radix-ui/colors/sage";
+@import "@radix-ui/colors/sage-dark";
+@import "@radix-ui/colors/olive";
+@import "@radix-ui/colors/olive-dark";
+@import "@radix-ui/colors/sand";
+@import "@radix-ui/colors/sand-dark";
+@import "@radix-ui/colors/sky";
+@import "@radix-ui/colors/sky-dark";
+
+@plugin "tailwindcss-animate";
+@plugin "tailwindcss-react-aria-components" {
+  prefix: rac;
+}
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+  --background-color-app: var(--mauve-1);
+  --background-color-subtle: var(--mauve-2);
+  --background-color-ui: var(--mauve-3);
+  --background-color-hover: var(--mauve-4);
+  --background-color-active: var(--mauve-5);
+  --background-color-border: var(--mauve-6);
+  --background-color-solid: var(--mauve-9);
+  --background-color-solid-hover: var(--mauve-10);
+  --background-color-solid-active: var(--mauve-11);
+
+  --background-color-github: rgb(36 41 46);
+  --background-color-github-hover: rgb(85 85 85);
+  --background-color-github-active: rgb(85 85 85);
+
+  --background-color-gitlab: rgb(226 67 41);
+  --background-color-gitlab-hover: rgb(252 109 38);
+  --background-color-gitlab-active: rgb(252 109 38);
+
+  --background-color-google: var(--gray-1);
+  --background-color-google-hover: var(--gray-2);
+  --background-color-google-active: var(--gray-3);
+
+  --background-color-primary-app: var(--indigo-1);
+  --background-color-primary-subtle: var(--indigo-2);
+  --background-color-primary-ui: var(--indigo-3);
+  --background-color-primary-hover: var(--indigo-4);
+  --background-color-primary-active: var(--indigo-5);
+  --background-color-primary-solid: var(--indigo-9);
+  --background-color-primary-solid-hover: var(--indigo-10);
+  --background-color-primary-solid-active: var(--indigo-11);
+
+  --background-color-danger-app: var(--tomato-1);
+  --background-color-danger-subtle: var(--tomato-2);
+  --background-color-danger-ui: var(--tomato-3);
+  --background-color-danger-hover: var(--tomato-4);
+  --background-color-danger-active: var(--tomato-5);
+  --background-color-danger-solid: var(--tomato-9);
+  --background-color-danger-solid-hover: var(--tomato-10);
+  --background-color-danger-solid-active: var(--tomato-11);
+
+  --background-color-warning-app: var(--amber-1);
+  --background-color-warning-subtle: var(--amber-2);
+  --background-color-warning-ui: var(--amber-3);
+  --background-color-warning-hover: var(--amber-4);
+  --background-color-warning-active: var(--amber-5);
+  --background-color-warning-solid: var(--amber-9);
+  --background-color-warning-solid-hover: var(--amber-10);
+  --background-color-warning-solid-active: var(--amber-11);
+
+  --background-color-success-app: var(--grass-1);
+  --background-color-success-subtle: var(--grass-2);
+  --background-color-success-ui: var(--grass-3);
+  --background-color-success-hover: var(--grass-4);
+  --background-color-success-active: var(--grass-5);
+  --background-color-success-solid: var(--grass-9);
+  --background-color-success-solid-hover: var(--grass-10);
+  --background-color-success-solid-active: var(--grass-11);
+
+  --background-color-info-app: var(--violet-1);
+
+  --background-color-pending-app: var(--amber-1);
+
+  --background-image-hero-text-gradient: linear-gradient(
+    180deg,
+    var(--mauve-12) 0%,
+    var(--blue-11) 100%
+  );
+  --background-image-hero-text-gradient-lg: linear-gradient(
+    96deg,
+    var(--mauve-12) 50%,
+    var(--blue-10) 105%
+  );
+  --background-image-hero-playwright-text-gradient: linear-gradient(
+    120deg,
+    var(--mauve-12) 0%,
+    var(--indigo-11) 70%,
+    var(--blue-10) 80%
+  );
+  --background-image-hero-playwright-text-gradient-dark: linear-gradient(
+    120deg,
+    white 0%,
+    var(--indigo-11) 70%,
+    var(--blue-10) 80%
+  );
+
+  --text-color-default: var(--mauve-12);
+  --text-color-low: var(--mauve-11);
+
+  --text-color-primary-default: var(--indigo-12);
+  --text-color-primary-low: var(--indigo-11);
+
+  --text-color-danger-default: var(--tomato-12);
+  --text-color-danger-low: var(--tomato-11);
+
+  --text-color-warning-default: var(--amber-12);
+  --text-color-warning-low: var(--amber-11);
+
+  --text-color-info-default: var(--violet-12);
+  --text-color-info-low: var(--violet-11);
+
+  --text-color-pending-default: var(--amber-12);
+  --text-color-pending-low: var(--amber-11);
+
+  --text-color-success-default: var(--grass-12);
+  --text-color-success-low: var(--grass-11);
+
+  --ring-color-default: var(--mauve-6);
+  --ring-color-hover: var(--mauve-8);
+  --ring-color-active: var(--mauve-9);
+  --ring-color-primary-default: var(--indigo-6);
+  --ring-color-primary-ui: var(--indigo-7);
+  --ring-color-primary-hover: var(--indigo-8);
+  --ring-color-primary-active: var(--indigo-9);
+  --ring-color-primary-highlight: var(--indigo-12);
+
+  --ring-color-danger-default: var(--tomato-6);
+  --ring-color-danger-ui: var(--tomato-7);
+  --ring-color-danger-hover: var(--tomato-8);
+  --ring-color-danger-active: var(--tomato-9);
+  --ring-color-danger-highlight: var(--tomato-12);
+
+  --ring-color-success-default: var(--grass-6);
+  --ring-color-success-ui: var(--grass-7);
+  --ring-color-success-hover: var(--grass-8);
+  --ring-color-success-active: var(--grass-9);
+  --ring-color-success-highlight: var(--grass-12);
+
+  --ring-color-google-default: var(--gray-6);
+
+  --border-color-default: var(--mauve-6);
+  --border-color-hover: var(--mauve-8);
+  --border-color-active: var(--mauve-9);
+
+  --border-color-primary-default: var(--indigo-6);
+  --border-color-primary-ui: var(--indigo-7);
+  --border-color-primary-hover: var(--indigo-8);
+  --border-color-primary-active: var(--indigo-9);
+
+  --border-color-danger-default: var(--tomato-6);
+  --border-color-danger-ui: var(--tomato-7);
+  --border-color-danger-hover: var(--tomato-8);
+  --border-color-danger-active: var(--tomato-9);
+
+  --border-color-warning-default: var(--amber-6);
+  --border-color-warning-ui: var(--amber-7);
+  --border-color-warning-hover: var(--amber-8);
+  --border-color-warning-active: var(--amber-9);
+
+  --border-color-info-default: var(--violet-6);
+  --border-color-info-ui: var(--violet-7);
+  --border-color-info-hover: var(--violet-8);
+  --border-color-info-active: var(--violet-9);
+
+  --border-color-pending-default: var(--amber-6);
+  --border-color-pending-ui: var(--amber-7);
+  --border-color-pending-hover: var(--amber-8);
+  --border-color-pending-active: var(--amber-9);
+
+  --border-color-success-default: var(--grass-6);
+  --border-color-success-ui: var(--grass-7);
+  --border-color-success-hover: var(--grass-8);
+  --border-color-success-active: var(--grass-9);
+  --radius-chip: 20px;
+
+  --background-color-subtle-modal-overlay: var(--mauve-2) / 70%;
+  --animate-modal-overlay-blur: modal-overlay-blur 300ms;
+  --animate-modal-overlay-reverse: modal-overlay-blur 300ms reverse ease-in;
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes modal-overlay-blur {
+    from {
+      background: var(--mauve-2) / 0%;
+      backdrop-filter: blur(0);
+    }
+
+    to {
+      background: var(--mauve-2) / 70%;
+      backdrop-filter: blur(4px);
+    }
+  }
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+}
+
+@layer base {
+  html,
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--background-color-app);
+    color: var(--text-color-default);
+    height: 100%;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #root {
+    height: 100%;
+  }
+
+  [data-backdrop]::after {
+    @apply absolute inset-0 bg-app opacity-60 backdrop-blur-sm;
+    content: "";
+  }
+
+  button,
+  [role="button"] {
+    cursor: default;
+  }
+
+  strong {
+    @apply font-semibold;
+  }
+}
+
+#nprogress .bar {
+  background: #2563eb !important;
+  height: 3px !important;
+}
+
+.nav-btn {
+  display: none;
+  position: absolute;
+  z-index: 20;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+}
+
+.nav-btn:hover {
+  background-color: rgb(255, 165, 0);
+}
+
+.nav-btn.custom-prev-button {
+  top: 50%;
+  left: -40px;
+}
+
+.nav-btn.custom-next-button {
+  right: -40px;
+  top: 50%;
+}
+
+@media (min-width: 768px) {
+  .nav-btn {
+    display: block;
+  }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #888888;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #666666;
+}
+
+.border-gradient {
+  position: relative;
+}
+
+.border-gradient::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 0.1px;
+  background: linear-gradient(to bottom, var(--indigo-8), var(--mauve-2));
+}
+
+/* Define the container */
+.custom-container {
+  container-type: inline-size;
+}
+
+/* Define masonry layout based on container size */
+/* @container (min-width: 650px) {
+  .masonry {
+    @apply columns-2 !block;
+  }
+}
+
+@container (min-width: 970px) {
+  .masonry {
+    @apply columns-3 !block;
+  }
+}
+
+@container (min-width: 1300px) {
+  .masonry {
+    @apply columns-4 !block;
+  }
+}
+
+@container (min-width: 1650px) {
+  .masonry {
+    @apply columns-5 !block;
+  }
+}
+
+.masonry {
+  @apply grid justify-center;
+} */
+
+/* Define horizontal masonry layout using CSS Grid */
+/* Define horizontal grid layout with wrapping */
+
+@container (min-width: 0) {
+  .horizontal-product-list {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-auto-rows: auto;
+    justify-items: center;
+  }
+}
+
+@container (min-width: 650px) {
+  .horizontal-product-list {
+    @apply grid gap-4;
+    grid-template-columns: repeat(
+      auto-fill,
+      minmax(320px, 1fr)
+    ); /* Dynamic columns */
+    grid-auto-rows: auto;
+    justify-items: auto;
+  }
+}
+
+@container (min-width: 970px) {
+  .horizontal-product-list {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-auto-rows: auto;
+    justify-items: auto;
+  }
+}
+
+@container (min-width: 1300px) {
+  .horizontal-product-list {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-auto-rows: auto;
+    justify-items: auto;
+  }
+}
+
+@container (min-width: 1650px) {
+  .horizontal-product-list {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-auto-rows: auto;
+    justify-items: auto;
+  }
+}
+
+.horizontal-product-list > * {
+  @apply break-inside-avoid;
+}
+
+
+@utility prose {
+  --tw-prose-body: var(--mauve-11);
+  --tw-prose-headings: var(--mauve-12);
+  --tw-prose-lead: var(--mauve-10);
+  --tw-prose-links: var(--mauve-12);
+  --tw-prose-bold: var(--mauve-12);
+  --tw-prose-counters: var(--mauve-9);
+  --tw-prose-bullets: var(--mauve-7);
+  --tw-prose-hr: var(--mauve-6);
+  --tw-prose-quotes: var(--mauve-12);
+  --tw-prose-quote-borders: var(--mauve-6);
+  --tw-prose-captions: var(--mauve-10);
+  --tw-prose-code: var(--mauve-12);
+  --tw-prose-pre-code: var(--mauve-12);
+  --tw-prose-pre-bg: var(--mauve-5);
+  --tw-prose-th-borders: var(--mauve-6);
+  --tw-prose-td-borders: var(--mauve-5);
+
+}
