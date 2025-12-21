@@ -1,6 +1,6 @@
 import { useLoaderData } from "react-router";
 import { Section } from "~/components/section";
-import type { loader } from "./_cv";
+import type { loader } from "./_resume";
 
 export function Experience() {
   let { work } = useLoaderData<typeof loader>();
@@ -27,9 +27,24 @@ export function Experience() {
             </div>
             <h4 className="font-mono text-sm leading-none">{item.position}</h4>
           </div>
-          <div className="mt-2 text-pretty font-mono text-xs leading-5 text-muted-foreground">
-            {item.summary}
+
+          <div className="mt-2 mb-2 text-pretty font-mono text-xs leading-5 text-muted-foreground">
+            {item.summary && (
+              item.summary
+            )}
+
+            {item.highlights && item.highlights.length > 0 && (
+              <ul className="mt-4 list-disc pl-4 space-y-2">
+                {item.highlights.map((highlight, index) => (
+                  <li key={index} className="text-pretty font-mono text-xs text-muted-foreground">
+                    {highlight}
+                  </li>
+                ))}
+              </ul>
+            )}
+
           </div>
+
         </div>
       ))}
     </Section>

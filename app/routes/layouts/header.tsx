@@ -39,11 +39,11 @@ export function Header() {
             <span>bookmarks</span>
           </Link>
           <Link
-            to="/cv"
+            to="/resume"
             className="flex items-center gap-2 text-muted-foreground transition-colors duration-200 hover:text-default"
           >
             <FileCode2 className="h-4 w-4" />
-            cv
+            resume
           </Link>
           <ModeToggle />
         </div>
@@ -109,12 +109,12 @@ export function Header() {
             </Link>
 
             <Link
-              to="/cv"
+              to="/resume"
               className="flex items-center gap-2 text-low transition-colors duration-200 hover:text-default"
               reloadDocument={true}
             >
               <FileCode2 className="h-4 w-4" />
-              cv
+              resume
             </Link>
           </nav>
         </SheetContent>

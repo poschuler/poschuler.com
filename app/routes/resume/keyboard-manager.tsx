@@ -15,7 +15,7 @@ import {
   CommandList,
   CommandShortcut,
 } from "~/components/ui/command";
-import type { loader } from "./_cv";
+import type { loader } from "./_resume";
 
 export function KeyboardManager() {
   let [open, setOpen] = useState(false);

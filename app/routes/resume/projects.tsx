@@ -1,5 +1,5 @@
 import { Section } from "~/components/section";
-import type { loader } from "./_cv";
+import type { loader } from "./_resume";
 
 export function Projects() {
   return (

@@ -9,7 +9,7 @@ This site is built to be a client-centric solution, showcasing robust **Software
 This repository serves two primary purposes:
 
 1. **Codebase:** The source files for the Cloudflare Worker application, front-end assets, and deployment configuration.
-2. **Content:** The original articles, blog posts, and the professional curriculum vitae (CV).
+2. **Content:** The original articles, blog posts, and the professional resume.
 
 ## 💡 Key Technologies
 

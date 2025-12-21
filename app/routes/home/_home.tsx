@@ -12,7 +12,7 @@ export async function loader({ context }: Route.LoaderArgs) {
 export const meta: MetaFunction = () => {
   return [
     { title: "Paul Osorio Schuler | Software Engineer (Node.js, Azure) & MBA" },
-    { name: "description", content: "Software Engineer specializing in highly-scalable backend systems. Expertise in Node.js, TypeScript, Azure, and Domain-Driven Design (DDD). View my full CV, blog and bookmarks." },
+    { name: "description", content: "Software Engineer specializing in highly-scalable backend systems. Expertise in Node.js, TypeScript, Azure, and Domain-Driven Design (DDD). View my full resume, blog and bookmarks." },
     { tagName: "link", rel: "canonical", href: "https://poschuler.com" },
     { name: "og:title", content: "Paul Osorio Schuler | Software Engineer (Node.js, Azure) & MBA" },
     { name: "og:description", content: "Software Engineer specializing in highly-scalable backend systems. Expertise in Node.js, TypeScript, Azure, and Domain-Driven Design (DDD)." },

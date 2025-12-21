@@ -6,7 +6,7 @@ import {
 } from "@radix-ui/react-icons";
 import { Link, useLoaderData } from "react-router";
 import { Globe, Mail } from "lucide-react";
-import type { loader } from "./_cv";
+import type { loader } from "./_resume";
 
 export function Hero() {
   let {
@@ -87,7 +87,7 @@ export function Hero() {
 
         <div className="flex gap-x-1 pt-1 font-mono text-sm text-muted-foreground">
           <Link
-            to="/cv.pdf"
+            to="/resume.pdf"
             reloadDocument
             className="inline-flex items-center justify-center whitespace-nowrap rounded-md border border-default border-input bg-background text-xs font-medium ring-offset-background transition-colors hover:bg-active hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 p-2"
           >

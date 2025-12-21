@@ -1,6 +1,6 @@
 import { useLoaderData } from "react-router";
 import { Section } from "~/components/section";
-import type { loader } from "./_cv";
+import type { loader } from "./_resume";
 
 export function Education() {
   let { education } = useLoaderData<typeof loader>();

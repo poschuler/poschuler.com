@@ -18,7 +18,7 @@ export const meta: MetaFunction = () => {
     { name: "og:description", content: "Explore advanced articles on Domain-Driven Design (DDD), scalable backend systems, and Azure cloud practices. Essential reading for developers and architects." },
     { name: "og:image", content: "https://avatars.githubusercontent.com/u/1238212?v=4" },
     { name: "og:type", content: "website" },
-    { name: "og:url", content: "https://poschuler.com/cv" },
+    { name: "og:url", content: "https://poschuler.com/resume" },
   ];
 };
 
