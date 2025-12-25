@@ -2,6 +2,9 @@
 INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, tags, repository, updated_at)
 VALUES ('implementing-value-objects-in-nodejs', 'en', 'post', 'Implementing Value Objects in Node.js', 'A practical guide to implementing Value Objects in TypeScript and Node.js to create more robust and expressive domain models, inspired by Domain-Driven Design principles.', '2025-11-02', '["nodejs","typescript","ddd","architecture","value-object"]', 'https://github.com/poschuler/nodejs-ddd-value-objects', CURRENT_TIMESTAMP);
 
+INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, tags, repository, updated_at)
+VALUES ('the-nodejs-blueprint-setup-nodejs-express-typescript-project', 'en', 'post', 'The Node.js Blueprint: Setup Node.js, Express & TypeScript Project in 2026', 'The definitive starting point for your next project. Learn to setup Node.js, Express, and TypeScript using a professional, class-based architecture designed for long-term maintainability and scale.', '2025-12-25', '["Nodejs","TypeScript","Express","Backend"]', 'https://github.com/poschuler/nodejs-blueprint/tree/initial-project-setup', CURRENT_TIMESTAMP);
+
 INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, tags, updated_at)
 VALUES ('how-i-would-do-auth', NULL, 'link', 'How I would do auth', 'https://pilcrowonpaper.com/blog/how-i-would-do-auth/', 'pilcrow', '2024-07-31', '["auth","security","webdev"]', CURRENT_TIMESTAMP);
 

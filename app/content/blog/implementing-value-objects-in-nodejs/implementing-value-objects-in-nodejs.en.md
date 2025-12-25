@@ -196,7 +196,6 @@ export class Email extends ValueObject {
 
 ```
 
-✍️ Translation:
 With this implementation, we ensure that any `Email` instance is always a valid instance.
 
 Likewise, we can validate the equality functionality of our class with a simple example.
