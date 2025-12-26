@@ -146,6 +146,9 @@ function App() {
         <Toaster />
         <ScrollRestoration />
         <Scripts />
+        {/* <!-- Cloudflare Web Analytics --> */}
+        <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "502dbbed6f8448b4ac3841afa524b219"}'></script>
+        {/* <!-- End Cloudflare Web Analytics --> */}
       </body>
     </html>
   );
