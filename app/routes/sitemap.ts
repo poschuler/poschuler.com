@@ -1,8 +1,6 @@
-import { generateSitemap, type SitemapRoute } from "@forge42/seo-tools/sitemap";
 import { type LoaderFunctionArgs } from "react-router";
-import { findAll } from "~/models/content.server";
 
-export async function loader({ request, context }: LoaderFunctionArgs) {
+export async function loader({ context }: LoaderFunctionArgs) {
 
     const BLOG_KV = context.cloudflare.env.BLOG_KV;
     const kv_key = `sitemap`;
