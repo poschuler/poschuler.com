@@ -17,8 +17,8 @@ import { getToast } from "remix-toast";
 import { useToast } from "./components/ui/use-toast";
 import { useServerLayoutEffect } from "./utils/use-server-layout-effect";
 import clsx from "clsx";
-import favicon16 from "~/favicon/favicon-16x16.png";
-import favicon32 from "~/favicon/favicon-32x32.png";
+//import favicon16 from "~/favicon/favicon-16x16.png";
+//import favicon32 from "~/favicon/favicon-32x32.png";
 import { Toaster } from "./components/ui/toaster";
 
 export const links: Route.LinksFunction = () => [
@@ -135,8 +135,24 @@ function App() {
         />
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" type="image/png" href={favicon16} sizes="32x32" />
-        <link rel="icon" type="image/png" href={favicon32} sizes="16x16" />
+        <link
+          rel="apple-touch-icon"
+          sizes="180x180"
+          href="/apple-touch-icon.png"
+        />
+        <link
+          rel="icon"
+          type="image/png"
+          sizes="32x32"
+          href="/favicon-32x32.png"
+        />
+        <link
+          rel="icon"
+          type="image/png"
+          sizes="16x16"
+          href="/favicon-16x16.png"
+        />
+        <link rel="manifest" href="/site.webmanifest" />
         <Meta />
         <PreventFlashOnWrongTheme ssrTheme={Boolean(loaderTheme)} />
         <Links />

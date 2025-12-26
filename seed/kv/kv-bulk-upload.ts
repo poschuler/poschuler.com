@@ -9,7 +9,7 @@ const JSON_DIR = path.join(process.cwd(), "seed", "kv", "kv_payloads");
 async function bulkUpload(mode: string) {
     let WRANGLER_ARGS = "--local"
     //const WRANGLER_ARGS = mode === "local" ? "--local" : "";
-    if(mode=== "remote") WRANGLER_ARGS = "--remote"
+    if (mode === "remote") WRANGLER_ARGS = "--remote"
     //const isRemote = mode === "remote";
 
     console.log(`Starting ${mode.toUpperCase()} bulk upload to KV binding: ${KV_BINDING}`);
@@ -20,7 +20,7 @@ async function bulkUpload(mode: string) {
 
     const files = await fsPromise.readdir(JSON_DIR);
 
-    for (const filename of files.filter(f => f.endsWith('.json'))) {
+    for (const filename of files.filter(f => f.endsWith('.json') && f !== 'sitemap.json')) {
 
         const base_filename = filename.replace('.json', '');
         const parts = base_filename.split('.');
@@ -50,6 +50,29 @@ async function bulkUpload(mode: string) {
             console.log((e as Error).message);
         }
     }
+
+    for (const filename of files.filter(f => f === 'sitemap.json')) {
+
+        const kv_key = `sitemap`;
+        const filePath = path.join(JSON_DIR, filename);
+
+        console.log(`Uploading ${kv_key} from ${filename}...`);
+
+        try {
+            const command = `npx wrangler kv key put --binding ${KV_BINDING} "${kv_key}" --path "${filePath}" ${WRANGLER_ARGS} `;
+
+            console.log(command);
+
+            execSync(command, { stdio: 'inherit' });
+
+        } catch (e) {
+            console.error(` -> ❌ FAILED to upload ${kv_key}.`);
+            console.log((e as Error).message);
+        }
+    }
+
+
+
     console.log(`✅ All JSON payloads successfully uploaded to KV (${mode.toUpperCase()}).`);
 }
 
