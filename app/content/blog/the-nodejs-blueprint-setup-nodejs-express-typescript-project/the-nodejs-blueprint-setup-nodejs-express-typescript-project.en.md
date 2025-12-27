@@ -11,78 +11,53 @@ Starting a new Node.js project from scratch can be surprisingly confusing. With 
 
 I wrote this post to simplify that process for 2026. It's a practical starting point designed to help others get it right from day one, while serving as a reliable reference for whenever I need to bootstrap my own projects quickly.
 
-## Prerequisites: Your Development Environment
+## Prerequisites
 
-Before getting started, ensure that Node.js is installed on your system. You can verify your installation by running the following command in your terminal:
+Ensure Node.js v24+ is installed. Verify your environment:
 
 ```bash
 node --version
 ```
 
-This guide is based on Node.js v24, but it should be compatible with other recent versions with minimal adjustments. If you need to install Node.js, you can find the official packages at the [Node.js website](https://nodejs.org/en/download/).
+This guide is based on Node.js v24, but it should be compatible with other recent versions with minimal adjustments.
 
-## Step 1: Project Initialization
+## Step 1: Initialization and Dependencies
 
-Start by creating a dedicated directory for your project and initializing it with npm. Open your terminal and run:
+Initialize the project and install the core stack.
 
 ```bash
-mkdir nodejs-blueprint
-cd nodejs-blueprint
+mkdir nodejs-blueprint && cd nodejs-blueprint
 npm init -y
-```
 
-This sequence creates your project folder, navigates into it, and generates a default `package.json` file. This file will manage your project's dependencies and scripts.
+# Tooling & Types
+npm install -D typescript @types/node @types/express @tsconfig/node24 tsx rimraf 
 
-## Step 2: Installing Dependencies
+# Lint and Format, we install a exact version as Biome documentations recommends
+npm install -D -E @biomejs/biome
 
-Now, we’ll install the packages that form the backbone of the project. I’ve split these into development tools and application runtime dependencies to keep the production environment lean.
-
-### A. TypeScript and Core Tooling
-
-First, we need the tools that help us write and compile our code. Run the following:
-
-```bash
-npm install -D typescript @types/node @tsconfig/node24 tsx rimraf
-```
-
-Here is a breakdown of each package:
-
-- `typescript` & `@types/node`: The essentials for type safety in a Node.js environment.
-- `@tsconfig/node24`: Instead of manual configuration, I use this base config for Node 24. It’s a strict, modern baseline that saves a lot of setup time.
-- `tsx`: This is my go-to for development. It lets you run TypeScript files directly without a manual build step.
-- `rimraf`: A small but essential utility. It ensures our build scripts work across Windows, macOS, and Linux by providing a consistent way to clear the dist folder.
-
-The `-D` flag designates these as development dependencies, which are not required for the production environment.
-
-### B. Express and Environment Management
-
-Now, we’ll install the runtime dependencies. These are the packages that actually run our application. Note that for TypeScript projects, we also need to install the matching type definitions as development tools.
-
-```bash
-# Runtime dependencies
+# Core Stack
 npm install express dotenv
 
-# Type definitions for development
-npm install -D @types/express
 ```
 
-- `express`: Still the industry standard for building predictable, scalable APIs.
-- `dotenv`: Essential for managing environment variables securely.
-- `@types/express`: Strictly for development, so we get full IntelliSense and type checking while coding.
+- `tsx`: Modern TypeScript execution for development with hot-reloading.
 
-## Step 3: Project Configuration
+- `@tsconfig/node24`: A strict baseline for modern Node environments.
 
-Now that the tools are installed, we need to tell them how to behave. We want a setup that is strict enough to catch errors but flexible enough to keep us moving fast.
+- `Biome`: High-performance unified tool for linting and formatting.
 
-### A. TypeScript Configuration (`tsconfig.json`)
+## Step 2: Configuration
 
-To get started, initialize a default `tsconfig.json file` in your project root:
+First, let's initialize the default configuration files:
 
 ```bash
 npx tsc --init
+npx @biomejs/biome init
 ```
 
-The generated file is usually massive and filled with comments you'll likely never read. To keep things clean, I prefer the modern `extends` approach. Replace the entire content of that file with the configuration below:
+Now, we use a modern `extends` approach for TypeScript and a centralized Biome configuration to enforce code quality.
+
+**`tsconfig.json`**
 
 ```json
 {
@@ -103,20 +78,7 @@ The generated file is usually massive and filled with comments you'll likely nev
 }
 ```
 
-By extending the `@tsconfig/node24` base we installed earlier, we inherit sensible defaults for a modern Node environment. We only need to explicitly define where our source code lives (src) and where the compiled JavaScript should go (dist).
-
-### B. Biome for Code Quality (`biome.json`)
-
-For code quality, I’ve moved away from the traditional ESLint and Prettier combination in favor of Biome. It’s a single, high-performance tool that handles both linting and formatting instantly.
-
-To get started, install it and initialize your configuration:
-
-```bash
-npm install --save-dev --save-exact @biomejs/biome
-npx @biomejs/biome init
-```
-
-This creates a biome.json file. I recommend replacing its content with this base configuration to ensure a clean, consistent coding style:
+**`biome.json`**
 
 ```json
 {
@@ -167,9 +129,9 @@ This creates a biome.json file. I recommend replacing its content with this base
 }
 ```
 
-### C. NPM Scripts
+### Automation Scripts
 
-To keep the development process consistent, add the following scripts to your package.json. This ensures that anyone (or any automated pipeline) knows exactly how to build and run the project.
+Standardize the build and development lifecycle within package.json.
 
 ```json
 "scripts": {
@@ -183,32 +145,9 @@ To keep the development process consistent, add the following scripts to your pa
   }
 ```
 
-- `dev`: This is your daily driver. It uses tsx to run your TypeScript code directly with hot-reloading, so you don't have to restart the server every time you save a file.
+## Step 3: Application Structure
 
-- `build`: A two-step process. First, it uses rimraf to wipe any old files in ./dist, then it runs tsc to generate a fresh production build.
-
-- `start`: This is what you'll run in production. It simply runs the compiled JavaScript from your dist folder.
-
-- `biome:lint`: Use these to check for code quality issues. The `:fix` versions are the real time-savers—they automatically repair common linting errors for you.
-
-- `biome:format`: Ensures your code follows a consistent style. Again, using the `:fix` version will automatically reformat your files (indentation, quotes, etc.) based on your biome.json rules.
-
-### D. Environment Variables (`.env`)
-
-In a real-world project, you should never hardcode configuration like port numbers or API keys. Instead, create a .env file in your project root to manage environment-specific settings:
-
-```
-# .env
-PORT=3000
-NODE_ENV=development
-DEBUG=true
-```
-
-⚠️ Important: To avoid accidentally leaking sensitive information, make sure to add `.env` to your `.gitignore` file immediately. I’ve seen many projects compromised simply because a secret was committed to source control by mistake.
-
-## Step 4: Application Structure
-
-A clean, modular folder structure is the difference between a project that's easy to maintain and one that becomes a nightmare. For this blueprint, I use a feature-based layout.
+I use a Feature-Based Layout. By grouping code into features/, we maintain encapsulation and ensure the project remains navigable as it scales.
 
 ```
 src/
@@ -225,72 +164,23 @@ src/
         └── products-routes.ts
 ```
 
-Why this specific layout?
+## Step 4: Implementation
 
-- **Features over Folders:** By grouping code into features/, we keep everything related to a single business capability (like "products") in one place. It makes the project much easier to navigate as you add more functionality.
+### Validated Configuration
 
-- **Separation of Concerns:** server.ts handles the "plumbing" of Express, while app.ts is just the "on switch." This makes testing significantly easier.
+First, define your `.env` file (and don't forget to include it in your `.gitignore`).
 
-- **Centralized Config:** We don't want process.env scattered all over the code. The config/ folder acts as our single source of truth.
+**`.env`**
 
-## Step 5: Building the Application
-
-With our configuration set, it's time to write the code. We’ll start by building a reusable server class.
-
-### A. The Server Class (`src/server.ts`)
-
-Instead of writing a few lines of Express code in a flat file, I encapsulate the logic in a Server class.
-
-I prefer this approach because it provides a clear lifecycle for the server, making the setup much more predictable for the team. A class offers a more discoverable structure that keeps the Express instance private and protected. It’s a pragmatic choice: it gives us cleaner syntax for dependency injection, ensuring the codebase is easy to test and scale from day one.
-
-```typescript
-// src/server.ts
-import express, { type Router } from "express";
-
-// A type defining the properties required to initialize the server.
-type ServerProps = {
-  port: number;
-  routes: Router;
-};
-
-export class Server {
-  private app = express();
-  private readonly port: number;
-  private readonly routes: Router;
-
-  constructor(options: ServerProps) {
-    const { port, routes } = options;
-    this.port = port;
-    this.routes = routes;
-    this.configure();
-  }
-
-  getApp() {
-    return this.app;
-  }
-
-  // Configures the Express application with necessary middleware.
-  private configure() {
-    // Middleware to parse incoming JSON requests.
-    this.app.use(express.json());
-    // Middleware to parse URL-encoded data.
-    this.app.use(express.urlencoded({ extended: true }));
-    // Mount the application routes.
-    this.app.use(this.routes);
-  }
-
-  // Starts the server.
-  public start() {
-    return this.app.listen(this.port, () => {
-      console.log(`Server running on port ${this.port}`);
-    });
-  }
-}
+```
+PORT=3000
+NODE_ENV=development
+DEBUG=true
 ```
 
-### B. Environment Configuration (`src/config/config.ts`)
+Now, we centralize environment variables to prevent runtime failures.
 
-One of the most common points of failure in production is a missing or malformed environment variable. Instead of scattering `process.env` throughout the codebase, I prefer to centralize and validate everything in a single configuration object.
+**`src/config/config.ts`**
 
 ```typescript
 import * as dotenv from "dotenv";
@@ -337,15 +227,62 @@ export const config = {
 };
 ```
 
-This structure ensures the application fails fast; if a critical variable is missing in the .env file, the service won't even start, preventing silent failures deep in your business logic. By using generic helpers, we gain full type safety and IntelliSense, transforming raw strings into reliable numbers and booleans.
+### The Server Class
 
-### C. The Products Feature
+Encapsulating Express in a class provides a predictable lifecycle and keeps the internal instance protected.
 
-To show how the "features" structure works in practice, let’s implement a simple module for managing products. Instead of global folders for all controllers and routes, we keep everything related to "Products" in its own directory.
+**`src/server.ts`**
 
-**Controller (`src/features/products/products-controller.ts`)**
+```typescript
+// src/server.ts
+import express, { type Router } from "express";
 
-The controller is where our request handling logic lives. I prefer using class-based controllers with arrow functions to ensure the `this` context is always preserved without manual binding.
+// A type defining the properties required to initialize the server.
+type ServerProps = {
+  port: number;
+  routes: Router;
+};
+
+export class Server {
+  private app = express();
+  private readonly port: number;
+  private readonly routes: Router;
+
+  constructor(options: ServerProps) {
+    const { port, routes } = options;
+    this.port = port;
+    this.routes = routes;
+    this.configure();
+  }
+
+  getApp() {
+    return this.app;
+  }
+
+  // Configures the Express application with necessary middleware.
+  private configure() {
+    // Middleware to parse incoming JSON requests.
+    this.app.use(express.json());
+    // Middleware to parse URL-encoded data.
+    this.app.use(express.urlencoded({ extended: true }));
+    // Mount the application routes.
+    this.app.use(this.routes);
+  }
+
+  // Starts the server.
+  public start() {
+    return this.app.listen(this.port, () => {
+      console.log(`Server running on port ${this.port}`);
+    });
+  }
+}
+```
+
+### Feature Layer
+
+Controllers use arrow functions to preserve `this` context without manual binding.
+
+**`src/features/products/products-controller.ts`**
 
 ```typescript
 import type { Request, Response } from "express";
@@ -379,9 +316,7 @@ export class ProductsController {
 }
 ```
 
-**Routes (`src/features/products/products-routes.ts`)**
-
-The routes file acts as the entry point for this specific feature. We encapsulate it in a function that returns an Express Router.
+**`src/features/products/products-routes.ts`**
 
 ```typescript
 import { Router } from "express";
@@ -406,17 +341,11 @@ export const productsRoutes = (): Router => {
 };
 ```
 
-Why this is practical:
+## Step 5. Bootstrapping
 
-- Self-Contained Features: If you ever need to delete or move the "Products" functionality, you only have to touch one folder. This is an time-saver in large projects.
+Aggregate feature routes and initialize the server.
 
-- Encapsulation: By initializing the controller inside the routes function, we keep the internal implementation details hidden from the rest of the app.
-
-- Clear Responsibility: The routes file defines where the request goes, and the controller defines what happens when it gets there.
-
-### D. Main Router (`src/routes.ts`)
-
-The main router aggregates all feature-specific routes into a single entry point. This centralized approach keeps the API structure predictable and allows us to implement global endpoints that are critical for the server's lifecycle.
+**`src/routes.ts`**
 
 ```typescript
 import { Router, type Request, type Response } from "express";
@@ -440,11 +369,7 @@ export const appRoutes = (): Router => {
 };
 ```
 
-Including a health check is a practical requirement for any professional deployment. It moves beyond "hoping" the app is live by giving platforms like Azure/AWS/GCP a clear signal to verify the server's availability. It’s an essential detail that ensures the system is ready to be monitored and managed effectively in a production environment.
-
-### E. Application Entry Point (`src/app.ts`)
-
-This is the "on switch" for our entire system. Its only responsibility is to pull in our configuration and routes, and use them to initialize the `Server` class we built earlier.
+**`src/app.ts`**
 
 ```typescript
 import { config } from "./config/config";
@@ -464,17 +389,15 @@ async function main() {
 main();
 ```
 
-This structure ensures a clean separation of concerns; the entry point doesn't contain business logic or server configuration. By using a main() function, we create a perfect spot to handle asynchronous tasks—like database connections or cache warming—before the server starts. It is a short, readable approach that provides total clarity on how the process initializes, making it easy to scale as the system grows.
-
 ## Running Your Application
 
-To start the development server with hot-reloading, run:
+Start the development server with hot-reloading, run:
 
 ```bash
 npm run dev
 ```
 
-The server should initialize and display: Server is running on `http://localhost:3000`. You can now verify the setup by testing these endpoints:
+Verify the setup by testing these endpoints:
 
 - `Health Check`: GET `http://localhost:3000/health`
 
@@ -482,22 +405,8 @@ The server should initialize and display: Server is running on `http://localhost
 
 - `Add Product`: POST `http://localhost:3000/api/products`
 
-## Next Steps
-
-This is just the foundation. I will be covering the following topics in next posts:
-
-- Adding Schema Validation and Error Handling: Ensuring our business logic only processes high-quality data and that the API provides consistent, predictable responses when things go wrong.
-
-- Adding Persistence with Docker & PostgreSQL: Moving beyond in-memory mocks to a professional data layer. We’ll use Docker to spin up a local PostgreSQL instance and integrate it into our architecture.
-
-- Implementing CRUD: Building out the core business logic for our features, ensuring the flow from the router to the database is clean and maintainable.
-
-- Quality & Testing: Implementing a testing strategy that validates our logic from the start. As an architect, I believe quality isn't optional—it's the bedrock of a reliable system.
-
-- Authentication & Security: Hardening the API by implementing identity management to ensure only authorized users can access our resources.
-
 ## Conclusion
 
-Building a Node.js project in 2026 shouldn't feel like starting from scratch every time. By using a class-based server, type-safe config, and a feature-first layout, you’re not just writing code—you’re setting up the foundational layer of what will become a complete, professional repository.
+Building a Node.js project in 2026 shouldn't feel like starting from scratch every time. By using a class-based server, type-safe config, and a feature-first layout, you’re setting up a foundation designed for professional scale.
 
-This is the exact starting point I use to skip the over-engineering phase and get straight to what matters: delivering value. I hope this helps you jump into your next project with the confidence that your base is solid and ready for the real-world features we'll be adding next.
+The foundation is solid. Now we can move forward with the implementation of Schema Validation and Global Error Handling to ensure our API remains resilient and predictable.
