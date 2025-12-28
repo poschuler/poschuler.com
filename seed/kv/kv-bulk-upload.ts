@@ -18,6 +18,8 @@ async function bulkUpload(mode: string) {
         throw new Error(`ERROR: Directory ${JSON_DIR} does not exist. Run 'npm run kv:generate' first.`);
     }
 
+    await clearKv(mode, WRANGLER_ARGS);
+
     const files = await fsPromise.readdir(JSON_DIR);
 
     for (const filename of files.filter(f => f.endsWith('.json') && f !== 'sitemap.json')) {
@@ -80,6 +82,33 @@ const modeArg = process.argv[2];
 if (modeArg !== 'local' && modeArg !== 'remote') {
     console.log("ERROR: Debe especificar el modo: 'local' o 'remote' como argumento.");
     process.exit(1);
+}
+
+async function clearKv(mode: string, wranglerArgs: string) {
+    console.log(`🧹 Cleaning up existing 'blog:' keys in KV...`);
+
+    try {
+        // List keys with the prefix 'blog:'
+        const listCommand = `npx wrangler kv key list --binding ${KV_BINDING} --prefix "blog:" ${wranglerArgs}`;
+        const output = execSync(listCommand, { encoding: 'utf-8' });
+        const keys = JSON.parse(output) as { name: string }[];
+
+        if (keys.length === 0) {
+            console.log("No existing blog keys found. Skipping cleanup.");
+            return;
+        }
+
+        console.log(`Found ${keys.length} keys to delete...`);
+
+        for (const key of keys) {
+            const deleteCmd = `npx wrangler kv key delete --binding ${KV_BINDING} "${key.name}" ${wranglerArgs}`;
+            execSync(deleteCmd, { stdio: 'ignore' }); // ignore stdio to keep logs clean
+        }
+
+        console.log("✅ Cleanup complete.");
+    } catch (e) {
+        console.warn("⚠️ Cleanup failed or no keys found. Continuing with upload.");
+    }
 }
 
 bulkUpload(modeArg).catch(e => {
