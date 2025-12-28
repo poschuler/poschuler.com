@@ -4,7 +4,7 @@ title: 'The Node.js Blueprint: Setup Node.js, Express & TypeScript Project in 20
 description: 'The definitive starting point for your next project. Learn to setup Node.js, Express, and TypeScript using a professional, class-based architecture designed for long-term maintainability and scale.'
 tags: ['Nodejs', 'TypeScript', 'Express', 'Backend']
 publishedAt: '2025-12-25'
-repository: 'https://github.com/poschuler/nodejs-blueprint/tree/initial-project-setup'
+repository: 'https://github.com/poschuler/pragmatic-nodejs-api/tree/feature/initial-project-setup'
 ---
 
 Starting a new Node.js project from scratch can be surprisingly confusing. With so many choices for packages and folder structures, it’s easy to feel overwhelmed before you've even written a line of code.

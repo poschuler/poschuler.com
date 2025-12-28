@@ -1,23 +1,26 @@
 ---
 type: 'post'
-title: 'The Node.js Blueprint: Schema Validation and Global Error Handling'
+title: 'Pragmatic Node.js API #2: Schema Validation and Global Error Handling'
 description: 'Standardize your API integrity by implementing Zod for type-safe validation and a centralized error-handling middleware.'
 tags: ['Nodejs', 'TypeScript', 'Express', 'Backend', 'Zod', 'Error Handling']
 publishedAt: '2025-12-27'
-repository: 'https://github.com/poschuler/nodejs-blueprint/tree/feature/validation-error-handling'
+repository: 'https://github.com/poschuler/pragmatic-nodejs-api/tree/feature/validation-error-handling'
 ---
-
-> **Note:** This post continues from the previous setup. You can find the starting point in the [`initial-setup`](https://github.com/poschuler/nodejs-blueprint/tree/initial-project-setup) branch of the repository.
 
 When building an API, manual input validation often results in a mess of `if` statements and inconsistent error responses. A cleaner approach is to use Zod for schema enforcement and a Global Middleware to catch exceptions.
 
 This approach allows us to:
 
-- Ensure data integrity before business logic executes.
+* Ensure data integrity before business logic executes.
 
-- Standardize API error responses across the entire project.
+* Standardize API error responses across the entire project.
 
-- Remove repetitive `try-catch` boilerplate from controllers.
+* Remove repetitive `try-catch` boilerplate from controllers.
+
+> **Code & Resources:**
+>
+> * **Starting Point:** Use the [`feature/initial-project-setup`](https://github.com/poschuler/pragmatic-nodejs-api/tree/feature/initial-project-setup) branch.
+> * **Final Implementation:** Find the complete code for this part in the [`feature/validation-error-handling`](https://github.com/poschuler/pragmatic-nodejs-api/tree/feature/validation-error-handling) branch.
 
 ## Installing Zod
 
@@ -295,11 +298,11 @@ By intentionally sending malformed data to `POST /api/products`, we verify that 
 
 By offloading validation to Zod and centralizing failure management, we've achieved three architectural goals:
 
-- **Clean Logic**: Controllers focus on the "happy path."
+* **Clean Logic**: Controllers focus on the "happy path."
 
-- **Predictability**: The client receives consistent, structured errors.
+* **Predictability**: The client receives consistent, structured errors.
 
-- **Type Safety**: Runtime data and TypeScript types stay in sync.
+* **Type Safety**: Runtime data and TypeScript types stay in sync.
 
 While the input is now secure, our controller is still directly managing an in-memory array. This creates a tight coupling between our business logic and our data storage.
 

@@ -50,6 +50,8 @@ async function generateSqlSeed() {
     console.log(`Found ${filePaths.length} markdown files to process.`);
 
     let sqlCommands = "";
+    const deleteCommand = `DELETE FROM content;\n`;
+    sqlCommands += deleteCommand;
 
     for (const filePath of filePaths) {
         const filename = path.basename(filePath);
@@ -70,19 +72,19 @@ async function generateSqlSeed() {
         const tagsJson = escapeSql(JSON.stringify(attributes.tags || []));
         const escapedSlug = escapeSql(slug);
         const publishedAt = escapeSql(attributes.publishedAt);
-        
-        
+
+
         if (attributes.type === 'post') {
             if (!lang) {
                 console.warn(`- Skipping post ${filename}: Posts must have a language in their filename.`);
                 continue;
             }
-            
+
             const escapedLang = escapeSql(lang);
             const title = escapeSql(attributes.title);
             const description = escapeSql(attributes.description);
             const repository = escapeSql(attributes.repository);
-            
+
             const insertSql = `
 INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, tags, repository, updated_at)
 VALUES (${escapedSlug}, ${escapedLang}, 'post', ${title}, ${description}, ${publishedAt}, ${tagsJson}, ${repository}, CURRENT_TIMESTAMP);
@@ -91,11 +93,11 @@ VALUES (${escapedSlug}, ${escapedLang}, 'post', ${title}, ${description}, ${publ
             console.log(`✅ Generated SQL for post: ${slug}.${lang}`);
 
         } else if (attributes.type === 'link') {
-            
+
             const title = escapeSql(attributes.title);
             const externalUrl = escapeSql(attributes.externalUrl);
             const source = escapeSql(attributes.source);
-            
+
             const insertSql = `
 INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, tags, updated_at)
 VALUES (${escapedSlug}, NULL, 'link', ${title}, ${externalUrl}, ${source}, ${publishedAt}, ${tagsJson}, CURRENT_TIMESTAMP);
@@ -104,16 +106,16 @@ VALUES (${escapedSlug}, NULL, 'link', ${title}, ${externalUrl}, ${source}, ${pub
             console.log(`🔗 Generated SQL for link: ${slug}`);
         }
     }
-    
+
     try {
         await fs.mkdir(path.dirname(OUTPUT_SQL_FILE), { recursive: true });
         await fs.writeFile(OUTPUT_SQL_FILE, sqlCommands, "utf-8");
-        
+
         console.log(`\n\n🌳 SQL generation complete! File saved to: ${OUTPUT_SQL_FILE}`);
         console.log("-----------------------------------------------------------------");
         console.log(`>>> Ejecute el seeding con el siguiente comando:`);
         console.log(`npx wrangler d1 execute poschuler --remote --file ${path.relative(process.cwd(), OUTPUT_SQL_FILE)}`);
-        
+
     } catch (e) {
         console.error("Failed to write SQL file:", e);
     }
