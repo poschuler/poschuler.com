@@ -11,11 +11,11 @@ export async function loader({ context }: Route.LoaderArgs) {
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Paul Osorio Schuler | Software Engineer (Node.js, Azure) & MBA" },
-    { name: "description", content: "Software Engineer specializing in highly-scalable backend systems. Expertise in Node.js, TypeScript, Azure, and Domain-Driven Design (DDD). View my full resume, blog and bookmarks." },
+    { title: "Paul Osorio Schuler | Principal Full Stack Engineer | .NET • Node.js • React • Cloud & AI" },
+    { name: "description", content: "Designing, scaling, and shipping high-performance software and AI-driven products. Expertise in Node.js, TypeScript, Azure, and Domain-Driven Design (DDD). View my full resume, blog and bookmarks." },
     { tagName: "link", rel: "canonical", href: "https://poschuler.com" },
-    { name: "og:title", content: "Paul Osorio Schuler | Software Engineer (Node.js, Azure) & MBA" },
-    { name: "og:description", content: "Software Engineer specializing in highly-scalable backend systems. Expertise in Node.js, TypeScript, Azure, and Domain-Driven Design (DDD)." },
+    { name: "og:title", content: "Paul Osorio Schuler | Principal Full Stack Engineer | .NET • Node.js • React • Cloud & AI" },
+    { name: "og:description", content: "Designing, scaling, and shipping high-performance software and AI-driven products. Expertise in Node.js, TypeScript, Azure, and Domain-Driven Design (DDD)." },
     { name: "og:image", content: "https://avatars.githubusercontent.com/u/1238212?v=4" },
     { name: "og:type", content: "website" },
     { name: "og:url", content: "https://poschuler.com" },
@@ -44,10 +44,10 @@ export default function Home() {
 
         <div className="max-w-[650px] mx-auto">
           <blockquote className="text-center mt-2 italic text-muted-foreground text-lg">
-            &lt;&lt; Software Engineer & MBA from Peru | 12+ Years Experience &gt;&gt;
+            &lt;&lt; Principal Full Stack Engineer | .NET • Node.js • React &gt;&gt;
           </blockquote>
           <blockquote className="pt-1 text-center mt-2 italic text-muted-foreground text-lg">
-            Currently working as Software Architect, focusing on building client-centric solutions that drive measurable business value.
+            Designing, scaling, and shipping high-performance software and AI-driven products.
           </blockquote>
         </div>
       </section>

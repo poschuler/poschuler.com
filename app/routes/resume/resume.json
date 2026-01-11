@@ -1,11 +1,11 @@
 {
   "basics": {
     "name": "Paul Osorio Schuler",
-    "label": "Full Stack Developer / Software Architect",
+    "label": "Principal Full Stack Engineer | .NET • Node.js • React",
     "image": "https://avatars.githubusercontent.com/u/1238212?v=4",
     "email": "poschuler@gmail.com",
     "url": "https://poschuler.com",
-    "summary": "Full Stack Engineer & Software Architect with 12+ years of experience designing and building scalable enterprise software. Generated $8M+ in business value through automation, managed $2M technology budgets, and led multidisciplinary teams of 20+ members. Specializing in .NET, Node.js, React and Process Automation, with a focus on AI-driven solutions, high-performance architecture, and banking-grade security compliance.",
+    "summary": "Hands-on Principal Full Stack Engineer with 12+ years of experience architecting and shipping scalable enterprise software. Expert in .NET, Node.js, and React, with a focus on distributed systems, cloud infrastructure (GCP/Azure), and Generative AI (Gemini/Vertex). Proven track record of generating $10M+ in business value through automation and leading technical execution for high-performance squads.",
     "location": {
       "address": "Chosica",
       "postalCode": "15472",
@@ -42,60 +42,67 @@
     {
       "row": 9,
       "name": "Chekalo.pe",
-      "position": "Co-Founder & Principal Architect",
+      "position": "Principal Full Stack Engineer",
       "location": "Remote",
       "startDate": "2023",
       "endDate": "present",
       "summary": "",
       "highlights": [
-        "Co-founded and architected an e-commerce comparison platform processing 500K+ products daily from 5+ stores.",
-        "Engineered an ETL pipeline using Vertex Embeddings and Gemini 2.5 Flash for high-precision product matching.",
-        "Designed a polyglot search architecture with Qdrant and OpenSearch, achieving near-instantaneous results.",
-        "Reduced deployment cycles from hours to <5 minutes by implementing self-hosted GitHub Actions on GCP"
+        "Architected and developed a full-stack comparison engine using React Router v7 (Framework Mode), Node.js, and .NET, processing 500K+ products daily.",
+        "Engineered a high-precision ETL pipeline with Python and Airflow, utilizing Vertex Embeddings and Gemini 2.5 Flash in Batch Mode for cost-efficient semantic product matching.",
+        "Built a scalable data ingestion system with custom rate-limiting and rotating user-agents to bypass anti-bot protections, storing raw data in GCS Buckets",
+        "Designed a polyglot storage architecture using Qdrant (Vector DB), OpenSearch, and PostgreSQL on GCP, achieving sub-second search latency",
+        "Automated deployments using self-hosted GitHub Actions runners on GCP, reducing deployment cycles from hours to <5 minutes and eliminating manual operational overhead",
+        "Designed and shipped a high-performance frontend using TypeScript and Tailwind CSS, focusing on Core Web Vitals and seamless cross-device user experience"
       ]
     },
     {
       "row": 8,
       "name": "Scotiabank Perú",
-      "position": "Automation Solution Architect",
+      "position": "Staff Software Engineer",
       "location": "Remote",
       "startDate": "2021",
       "endDate": "present",
       "summary": "",
       "highlights": [
-        "Generated >CAD 2M in annual value through automation initiatives focused on sales and risk mitigation.",
-        "Architected AI-driven solutions (.NET, AI Builder) for sentiment analysis and document extraction with 100% compliance.",
-        "Led and mentored a high-performing team, managing the end-to-end SDLC to meet strategic OKRs and KPIs.",
-        "Modernizing legacy workflows into a scalable, event-driven ecosystem using Camunda and Kafka."
+        "Engineering an event-driven ecosystem to modernize legacy workflows using Kafka and Camunda, improving system decoupling and scalability across the bank's automation infrastructure.",
+        "Leading technical execution and strategy for AI-driven solutions, leveraging .NET, AI Builder, and Microsoft Copilot Studio for document extraction and sentiment analysis.",
+        "Architecting and validating complex automation solutions, serving as the final technical escalation point for developers and tech leads to solve high-complexity bottlenecks.",
+        "Driving a >CAD 2M annual business impact by delivering full-stack automation initiatives focused on sales growth and financial risk mitigation.",
+        "Mentoring a high-performing engineering team and managing the end-to-end SDLC, aligning technical delivery with strategic OKRs and enterprise-level technical standards.",
+        "Spearheading the migration of RPA infrastructure and workflow orchestration platforms, evaluating technical feasibility and implementing security-first guidelines."
       ]
     },
     {
       "row": 7,
       "name": "Banco de Crédito BCP",
-      "position": "Tribe Technical Leader",
+      "position": "Technical Leader",
       "location": "Remote",
       "startDate": "2019",
       "endDate": "2021",
       "summary": "",
       "highlights": [
-        "Led technical execution for 4 squads (20+ members), overseeing software delivery and technology governance.",
-        "Generated USD 8M in business value through bank-wide automation (revenue growth and cost avoidance).",
-        "Managed a USD 2M technology budget, overseeing SaaS infrastructure, licensing, and vendor contracts.",
-        "Defined the CoE governance model, ensuring alignment with security standards and enterprise scalability."
+        "Led technical execution and architecture for 4 cross-functional squads (22+ members), overseeing full-stack delivery and enforcing high-quality engineering standards.",
+        "Delivered USD 8M in business value by engineering bank-wide automation solutions that drove significant revenue growth and operational cost avoidance.",
+        "Defined and implemented the CoE (Center of Excellence) governance model, establishing technical standards for security, performance, and enterprise-grade scalability.",
+        "Optimized a USD 2M technology budget, managing Azure/SaaS infrastructure and vendor contracts to ensure a high-performance, cost-effective tech stack.",
+        "Acted as the primary technical decision-maker, aligning software architecture with banking security standards and long-term scalability goals."
       ]
     },
     {
       "row": 6,
       "name": "Scotiabank Perú",
-      "position": "RPA Tech Leader",
+      "position": "RPA Software Engineer",
       "location": "",
       "startDate": "2016",
       "endDate": "2019",
       "summary": "",
       "highlights": [
-        "Generated USD 500K in impact by deploying the first automation robot for Scotiabank Latam.",
-        "Managed a PEN 2.5M budget and led a 9-person team to scale RPA initiatives bank-wide.",
-        "Established the RPA Governance Model, automating critical business processes and driving a client-centric culture."
+        "Pioneered automation for Scotiabank Latam by developing and deploying the region's first production robot using .NET and Pega Robotics, generating an immediate impact of USD 500K.",
+        "Led a high-performing engineering team of 9 to scale RPA initiatives bank-wide, overseeing a PEN 2.5M technology budget and technical delivery.",
+        "Engineered the RPA Governance Model, establishing the technical standards, security protocols, and development best practices for enterprise-grade scalability.",
+        "Developed and automated critical business processes, bridging the gap between legacy banking systems and modern automated workflows.",
+        "Drove a client-centric engineering culture, aligning automated solutions with measurable business value and operational efficiency."
       ]
     },
     {
