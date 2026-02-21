@@ -9,6 +9,9 @@ VALUES ('pragmatic-nodejs-api-schema-validation-and-global-error-handling', 'en'
 INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, tags, repository, updated_at)
 VALUES ('pragmatic-nodejs-api-setup-nodejs-express-typescript-project', 'en', 'post', 'Pragmatic Node.js API #1: Setup Node.js, Express & TypeScript Project in 2026', 'The definitive starting point for your next project. Learn to setup Node.js, Express, and TypeScript using a professional, class-based architecture designed for long-term maintainability and scale.', '2025-12-25', '["Nodejs","TypeScript","Express","Backend"]', 'https://github.com/poschuler/pragmatic-nodejs-api/tree/feature/initial-project-setup', CURRENT_TIMESTAMP);
 
+INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, tags, repository, updated_at)
+VALUES ('pragmatic-nodejs-api-vertical-slices-and-domain-logic', 'en', 'post', 'Pragmatic Node.js API #3: Vertical Slices Architecture and Domain Logic', 'Organize your Node.js API using Vertical Slices to encapsulate features and maintain a clear separation of concerns, enhancing maintainability and scalability.', '2026-02-20', '["Nodejs","TypeScript","Express","Backend","Vertical Slices","Software Architecture"]', 'https://github.com/poschuler/pragmatic-nodejs-api/tree/feature/vertical-slices-and-domain-logic', CURRENT_TIMESTAMP);
+
 INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, tags, updated_at)
 VALUES ('how-i-would-do-auth', NULL, 'link', 'How I would do auth', 'https://pilcrowonpaper.com/blog/how-i-would-do-auth/', 'pilcrow', '2024-07-31', '["auth","security","webdev"]', CURRENT_TIMESTAMP);
 
