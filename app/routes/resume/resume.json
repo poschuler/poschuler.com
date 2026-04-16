@@ -1,11 +1,11 @@
 {
   "basics": {
     "name": "Paul Osorio Schuler",
-    "label": "Principal Full Stack Engineer | .NET • Node.js • React",
+    "label": "Principal Software Engineer | Node.js • TypeScript",
     "image": "https://avatars.githubusercontent.com/u/1238212?v=4",
     "email": "poschuler@gmail.com",
     "url": "https://poschuler.com",
-    "summary": "Hands-on Principal Full Stack Engineer with 12+ years of experience architecting and shipping scalable enterprise software. Expert in .NET, Node.js, and React, with a focus on distributed systems, cloud infrastructure (GCP/Azure), and Generative AI (Gemini/Vertex). Proven track record of generating $10M+ in business value through automation and leading technical execution for high-performance squads.",
+    "summary": "Hands-on Principal Software Engineer with 12+ years of experience building software across banking, automation, and digital products. Specialized in backend architecture with Node.js / TypeScript, cloud infrastructure (GCP/Azure), and applied AI solutions (Gemini / Vertex AI). Proven track record of leading technical execution, delivering business-critical platforms, and generating $10M+ in business value through software and automation initiatives.",
     "location": {
       "address": "Chosica",
       "postalCode": "15472",
@@ -42,18 +42,19 @@
     {
       "row": 9,
       "name": "Chekalo.pe",
-      "position": "Principal Full Stack Engineer",
+      "position": "Principal Software Engineer",
       "location": "Remote",
       "startDate": "2023",
       "endDate": "present",
       "summary": "",
       "highlights": [
-        "Architected and developed a full-stack comparison engine using React Router v7 (Framework Mode), Node.js, and .NET, processing 500K+ products daily.",
-        "Engineered a high-precision ETL pipeline with Python and Airflow, utilizing Vertex Embeddings and Gemini 2.5 Flash in Batch Mode for cost-efficient semantic product matching.",
-        "Built a scalable data ingestion system with custom rate-limiting and rotating user-agents to bypass anti-bot protections, storing raw data in GCS Buckets",
-        "Designed a polyglot storage architecture using Qdrant (Vector DB), OpenSearch, and PostgreSQL on GCP, achieving sub-second search latency",
-        "Automated deployments using self-hosted GitHub Actions runners on GCP, reducing deployment cycles from hours to <5 minutes and eliminating manual operational overhead",
-        "Designed and shipped a high-performance frontend using TypeScript and Tailwind CSS, focusing on Core Web Vitals and seamless cross-device user experience"
+        "Architected and built a scalable product comparison platform using TypeScript / Node.js, processing 500K+ products daily across multiple retailers.",
+        "Designed and evolved the product ingestion and catalog consolidation pipeline, covering product discovery, normalization, matching, and retailer integrations at scale.",
+        "Built resilient scraping and background processing workflows using queue-based orchestration, rate limiting, retry strategies, and anti-bot resilience mechanisms.",
+        "Designed the search and storage architecture using PostgreSQL, OpenSearch, and Qdrant on Google Cloud, achieving sub-second search performance.",
+        "Implemented targeted AI-assisted enrichment workflows using embeddings, vector similarity, and Gemini for edge-case product matching and metadata validation.",
+        "Automated CI/CD pipelines with self-hosted GitHub Actions runners on Google Cloud, reducing deployment cycles from hours to under 5 minutes.",
+        "Designed and shipped a performant frontend using React and React Router v7, optimizing Core Web Vitals and cross-device UX."
       ]
     },
     {
