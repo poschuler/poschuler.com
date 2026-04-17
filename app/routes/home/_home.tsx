@@ -11,10 +11,10 @@ export async function loader({ context }: Route.LoaderArgs) {
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Paul Osorio Schuler | Principal Full Stack Engineer | .NET • Node.js • React • Cloud & AI" },
+    { title: "Paul Osorio Schuler | Principal Software Engineer | .NET • Node.js • React • Cloud & AI" },
     { name: "description", content: "Designing, scaling, and shipping high-performance software and AI-driven products. Expertise in Node.js, TypeScript, Azure, and Domain-Driven Design (DDD). View my full resume, blog and bookmarks." },
     { tagName: "link", rel: "canonical", href: "https://poschuler.com" },
-    { name: "og:title", content: "Paul Osorio Schuler | Principal Full Stack Engineer | .NET • Node.js • React • Cloud & AI" },
+    { name: "og:title", content: "Paul Osorio Schuler | Principal Software Engineer | .NET • Node.js • React • Cloud & AI" },
     { name: "og:description", content: "Designing, scaling, and shipping high-performance software and AI-driven products. Expertise in Node.js, TypeScript, Azure, and Domain-Driven Design (DDD)." },
     { name: "og:image", content: "https://avatars.githubusercontent.com/u/1238212?v=4" },
     { name: "og:type", content: "website" },
@@ -44,10 +44,10 @@ export default function Home() {
 
         <div className="max-w-[650px] mx-auto">
           <blockquote className="text-center mt-2 italic text-muted-foreground text-lg">
-            &lt;&lt; Principal Full Stack Engineer | .NET • Node.js • React &gt;&gt;
+            Principal Software Engineer | Backend • Node.js • TypeScript
           </blockquote>
           <blockquote className="pt-1 text-center mt-2 italic text-muted-foreground text-lg">
-            Designing, scaling, and shipping high-performance software and AI-driven products.
+            Designing, scaling, and shipping high-performance backend platforms and modern software products.
           </blockquote>
         </div>
       </section>
