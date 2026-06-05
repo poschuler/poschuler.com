@@ -1,11 +1,11 @@
 {
   "basics": {
     "name": "Paul Osorio Schuler",
-    "label": "Full Stack Engineer | TypeScript • Node.js • React",
+    "label": "Staff Software Engineer | Backend • TypeScript • Node.js",
     "image": "https://avatars.githubusercontent.com/u/1238212?v=4",
     "email": "poschuler@gmail.com",
     "url": "https://poschuler.com",
-    "summary": "Full Stack Engineer with 12+ years of experience building scalable digital products and leading enterprise software initiatives across banking and automation. Specialized in TypeScript, Node.js, React, distributed systems, and cloud infrastructure, with practical experience applying AI through Gemini and Vertex AI. Proven track record shipping production systems, leading technical execution, and generating $10M+ in business value through software-driven initiatives.",
+    "summary": "Hands-on Staff Software Engineer with 12+ years of experience building backend systems, enterprise platforms, and digital products across banking and automation. Specialized in backend architecture with TypeScript and Node.js, cloud infrastructure, and event-driven systems. Proven track record of leading technical execution, delivering business-critical platforms, and generating $10M+ in business value through software, automation, and large-scale platform modernization initiatives.",
     "location": {
       "address": "Chosica",
       "postalCode": "15472",
@@ -42,18 +42,17 @@
     {
       "row": 9,
       "name": "Chekalo.pe",
-      "position": "Full Stack Engineer",
+      "position": "Staff Software Engineer",
       "location": "Remote",
       "startDate": "2023",
       "endDate": "present",
       "summary": "",
       "highlights": [
-        "Architected and developed a scalable product comparison platform with React Router v7, Node.js APIs, and Python data pipelines, processing 500K+ products daily across multiple retailers.",
-        "Engineered a high-precision ETL and product matching pipeline using Python, Airflow, Vertex AI, and Gemini to improve catalog normalization and matching accuracy at scale.",
-        "Built scalable data ingestion workflows with rate-limiting, retry strategies, and resilient integration mechanisms for large-scale retailer data pipelines.",
-        "Designed search and storage systems using PostgreSQL, OpenSearch, and Qdrant on Google Cloud, achieving sub-second search latency.",
-        "Automated CI/CD pipelines using self-hosted GitHub Actions runners on GCP, reducing deployment cycles from hours to under 5 minutes.",
-        "Designed and shipped a high-performance frontend using TypeScript and Tailwind CSS, optimizing Core Web Vitals and cross-device user experience."
+        "Architected and built a scalable product comparison platform using TypeScript and Node.js, processing 500K+ products daily across multiple retailers.",
+        "Designed and evolved large-scale product ingestion and catalog consolidation pipelines, covering product discovery, normalization, matching, and retailer integrations.",
+        "Built resilient scraping and background processing workflows using queue-based orchestration, rate limiting, retry strategies, and fault-tolerant mechanisms.",
+        "Designed the search and storage architecture using PostgreSQL, OpenSearch, and vector search technologies on Google Cloud, achieving sub-second search performance.",
+        "Implemented AI-assisted enrichment workflows using embeddings, vector similarity, and Gemini to improve product matching accuracy and metadata validation."
       ]
     },
     {
@@ -65,57 +64,57 @@
       "endDate": "present",
       "summary": "",
       "highlights": [
-        "Leading the modernization of banking workflows through event-driven architectures using Kafka and Camunda, improving scalability and system decoupling across orchestration platforms.",
-        "Driving technical direction and solution architecture for process and workflow initiatives across multiple cross-functional teams.",
-        "Architecting and validating large-scale distributed solutions, coordinating teams to solve high complexity integration and orchestration challenges.",
-        "Delivered enterprise automation and workflow initiatives generating over CAD 2M annually through operational efficiency and risk reduction.",
-        "Mentoring engineers and coordinating end-to-end technical delivery across distributed workflow initiatives.",
-        "Spearheading platform modernization across workflow orchestration, RPA infrastructure, and enterprise integration environments."
+        "Led the modernization of enterprise workflow platforms through event-driven architectures, improving scalability, resilience, and system decoupling across banking operations.",
+        "Drove technical direction and solution architecture for process automation and workflow initiatives across multiple cross-functional teams.",
+        "Architected and validated large-scale distributed solutions, driving technical alignment to address complex integration and orchestration challenges.",
+        "Delivered enterprise automation and workflow initiatives generating over CAD 2M annually through operational efficiency, sales growth, and risk reduction.",
+        "Mentored engineers and led end-to-end technical delivery, establishing engineering standards and guiding platform modernization initiatives across automation and integration environments."
       ]
     },
     {
       "row": 7,
       "name": "Banco de Crédito BCP",
-      "position": "Technical Leader",
+      "position": "Technical Lead",
       "location": "Remote",
       "startDate": "2019",
       "endDate": "2021",
       "summary": "",
       "highlights": [
-        "Led solution architecture and delivery across 4 cross-functional squads (22+ engineers), coordinating large-scale automation and workflow initiatives.",
-        "Delivered USD 8M in business impact through enterprise workflow and automation solutions focused on operational efficiency and revenue growth.",
-        "Defined and implemented the framework for the bank’s automation Center of Excellence (CoE), establishing scalable architecture and engineering practices.",
-        "Standardized delivery practices and architectural decision-making across multiple enterprise automation squads.",
-        "Coordinated cross-team solution design, aligning enterprise platforms with scalability, security, and operational requirements."
+        "Led solution architecture and technical delivery across 4 cross-functional squads (22+ engineers), driving large-scale platform modernization and workflow initiatives.",
+        "Delivered USD 8M in business value through enterprise workflow and modernization initiatives focused on operational efficiency and revenue growth.",
+        "Helped define and implement the bank’s Automation Center of Excellence (CoE), establishing governance frameworks, engineering standards, and operating models for enterprise-scale delivery.",
+        "Standardized engineering and delivery practices across multiple squads, improving solution quality, scalability, and execution consistency.",
+        "Led cross-functional solution design efforts, aligning business, engineering, and operational stakeholders around scalable and secure platform solutions."
       ]
     },
     {
       "row": 6,
       "name": "Scotiabank Perú",
-      "position": "RPA Software Engineer",
+      "position": "Technical Lead, Automation",
       "location": "",
       "startDate": "2016",
       "endDate": "2019",
       "summary": "",
       "highlights": [
-        "Developed and deployed Scotiabank Latam’s first production automation solution using .NET and Pega Robotics, generating an initial business impact of USD 500K.",
-        "Led an engineering team of 9 to scale enterprise workflow and automation initiatives across multiple banking operations.",
-        "Defined technical practices and scalable delivery standards for enterprise automation and orchestration platforms.",
-        "Developed automation solutions integrating legacy banking systems with modern workflow and operational processes."
+        "Pioneered enterprise automation initiatives by developing and deploying Scotiabank Latam’s first production automation solution, generating an initial business impact of USD 500K.",
+        "Scaled automation adoption across banking operations, delivering solutions that improved operational efficiency and business outcomes across multiple business units.",
+        "Defined and implemented the automation governance model, establishing engineering standards, security practices, and scalable delivery frameworks.",
+        "Led and mentored a team of 9 engineers, driving technical delivery and capability growth across enterprise automation initiatives.",
+        "Developed enterprise integrations and workflow solutions that connected legacy banking systems with modern operational processes."
       ]
     },
     {
       "row": 5,
       "name": "Scotiabank Perú",
-      "position": "IT Analyst Jr. → Tech Leader",
+      "position": "IT Analyst → Tech Lead",
       "location": "",
       "startDate": "2014",
       "endDate": "2016",
       "summary": "",
       "highlights": [
-        "Architected and maintained mission-critical features for the Wholesale Banking credit approval platform using .NET and SQL Server, optimizing regional workflows and automating ETL pipelines for large-scale financial operations.",
-        "Led the digital transformation of the savings account onboarding process, reducing onboarding time from over 1 hour to 5 minutes per client and decreasing paper consumption by 95% by modernizing legacy AS400 workflows.",
-        "Improved post-approval financial tracking and workflow automation processes, reducing manual intervention across large-scale corporate lending operations."
+        "Developed and enhanced mission-critical features for the Wholesale Banking credit approval platform, supporting large-scale corporate lending operations.",
+        "Led the digital transformation of the savings account onboarding process, reducing onboarding time from over 1 hour to 5 minutes per client and decreasing paper consumption by 95%.",
+        "Improved financial tracking and workflow automation processes, reducing manual effort and increasing operational efficiency across banking operations."
       ]
     },
     {
