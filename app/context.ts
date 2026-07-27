@@ -1,15 +1,19 @@
 import { createContext } from "react-router";
 
 /**
- * The Worker environment: the bindings `wrangler types` generates from
- * `wrangler.jsonc` (KV, D1), plus the vars supplied through `.dev.vars`
- * locally and secrets in production, which Wrangler cannot infer.
+ * The Worker environment.
+ *
+ * `Env` already covers everything declared in `wrangler.jsonc` — the KV and D1
+ * bindings, and the `vars` block — because `wrangler types` reads that file.
+ * What it cannot see is the secrets: on a machine with `.dev.vars` it infers
+ * them, and on a clean clone (CI) it does not. Declaring them here is what
+ * keeps a fresh checkout type-checking.
  */
 export type AppEnv = Env & {
+  /** Secret. Signs the theme cookie. */
   SESSION_THEME_SECRET: string;
-  DB_DEBUG_FLAG: number;
-  PUBLIC_HOST: string;
-  DEPLOYMENT_ENV: string;
+  /** Declared, currently unread. */
+  DB_DEBUG_FLAG: string;
 };
 
 export type CloudflareContext = {

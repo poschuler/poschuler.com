@@ -39,7 +39,23 @@
 			"id": "a83bad39c6e54c40853d62aa6c80f28b",
 			"remote": false
 		}
-	]
+	],
+	/**
+	 * Non-sensitive configuration lives here, in git, so a deploy cannot forget
+	 * it and a new environment needs no manual step. Only genuinely secret
+	 * values — currently just SESSION_THEME_SECRET, which signs the theme
+	 * cookie — go through `wrangler secret put`.
+	 *
+	 * `.dev.vars` overrides these locally, which is how DEPLOYMENT_ENV becomes
+	 * "development" on a dev machine.
+	 *
+	 * Note: a secret shadows a var of the same name in production. If either of
+	 * these ever stops taking effect, check `wrangler secret list` first.
+	 */
+	"vars": {
+		"DEPLOYMENT_ENV": "production",
+		"PUBLIC_HOST": "https://poschuler.com"
+	}
 	/**
 	 * Smart Placement
 	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
