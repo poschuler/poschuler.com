@@ -109,10 +109,13 @@ Vars, templated in `.vars.template` and supplied through `.dev.vars` locally / s
 
 `pnpm run deploy` builds and ships in one step. Type generation (`wrangler types` + `react-router typegen`) runs on `postinstall` and before `typecheck`; the generated `worker-configuration.d.ts` and `.react-router/` are gitignored, so a fresh clone must install before it type-checks.
 
+**The bundler is Rolldown**, not Rollup or esbuild: Vite 8 replaced both with Rolldown and Oxc. Build output reflects it — the server bundle now carries a `rolldown-runtime` chunk. `vite.config.ts` needs no bundler-specific options, which is why the upgrade required no config changes; if you ever add them, they are `build.rolldownOptions`, not `build.rollupOptions`.
+
 **The package manager is pnpm**, pinned in `package.json` via `packageManager` and enforced by `pnpm-lock.yaml` being the only lockfile. Two consequences worth knowing: pnpm does not hoist transitive dependencies, so a package must be a declared dependency to be importable (`require("esbuild")` fails at the root even though Vite depends on it); and pnpm blocks dependency build scripts unless allow-listed, which is why `pnpm-workspace.yaml` opts `esbuild` and `workerd` in — both download native binaries on install and nothing runs without them.
 
 ## Known defects
 
+- **The build copies `.dev.vars` into `build/server/`.** `@cloudflare/vite-plugin` does this so the built output can be previewed locally, but it means a build run on a machine with real local secrets leaves them in plaintext inside the build directory. `build/` is gitignored and `wrangler deploy` does not turn them into Worker vars (confirmed with `--dry-run`), so nothing leaks by default — but do not ship `build/` anywhere as an artifact. Behaviour predates Vite 8; verified identical on Vite 7.
 - **`app/routes/action.set-theme.ts` returns the action instead of running it.** `createThemeAction(resolver)` builds a handler; the route returns that function rather than calling it with its own args. The endpoint answers `undefined` and never sets the `poschuler__theme` cookie, so a chosen theme does not survive a reload. Verified against a running dev server.
 - **`/blog/:blogSlug` hardcodes `:en`.** The schema, the seed pipeline and the KV key layout are all Locale-aware; the route is not, and no URL carries a Locale. Serving a second Translation needs a routing decision first (`/es/blog/…` vs. a query param vs. content negotiation).
 - **`generate-kv-json.ts` builds its D1 query with nested unescaped double quotes** inside a double-quoted `--command` string. It works only because SQL treats the collapsed quoting as bare identifiers.

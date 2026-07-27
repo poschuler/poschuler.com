@@ -50,7 +50,6 @@
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.47.0",
 		"@cloudflare/workers-types": "^5.20260727.1",
-		"@react-router/cloudflare": "^8.3.0",
 		"@react-router/dev": "^8.3.0",
 		"@tailwindcss/typography": "^0.5.19",
 		"@tailwindcss/vite": "^4.1.13",
@@ -60,8 +59,8 @@
 		"tailwindcss": "^4.1.13",
 		"tailwindcss-animate": "^1.0.7",
 		"typescript": "^5.9.2",
-		"vite": "^7.1.7",
-		"vite-tsconfig-paths": "^5.1.4",
+		"vite": "^8.1.5",
+		"vite-tsconfig-paths": "^6.1.1",
 		"wrangler": "^4.114.0"
 	}
 }
