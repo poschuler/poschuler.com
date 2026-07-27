@@ -1,6 +1,6 @@
 import { BookmarkCheck } from "lucide-react";
 import { useLoaderData, type MetaFunction } from "react-router";
-import { findAllBookmarks, type ContentRowType } from "~/models/content.server";
+import { findAllBookmarks, type BookmarkRowType } from "~/models/content.server";
 import type { Route } from "./+types/_bookmarks";
 import { cloudflareContext } from "~/context";
 
@@ -62,7 +62,7 @@ export default function Bookmarks() {
 }
 
 type BookmarkProps = {
-  bookmark: ContentRowType;
+  bookmark: BookmarkRowType;
 };
 
 function Bookmark({ bookmark }: BookmarkProps) {

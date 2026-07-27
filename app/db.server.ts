@@ -1,83 +1,30 @@
-import type { D1Database, D1Result } from '@cloudflare/workers-types';
+/**
+ * The whole D1 access layer: one function.
+ *
+ * The site never writes — content reaches D1 through the seed pipeline, not
+ * through a request — so `dbExecute` and `dbQueryRow` were removed along with
+ * the rest of the unreachable code. Add them back the day a route needs them.
+ */
 
-function getStatement(db: D1Database, sql: string, values: any[] | null) {
-    const valuesArray = values || [];
+/**
+ * Runs `sql` against `db` and returns its rows.
+ *
+ * `values` are bound, never interpolated. Errors are logged with the statement
+ * that produced them — Workers observability keeps the log, and an error
+ * without its query is close to useless — and then rethrown untouched, so the
+ * route's ErrorBoundary still sees the original failure.
+ */
+export async function dbQuery<T extends Record<string, unknown>>(
+    db: D1Database,
+    sql: string,
+    values: unknown[] = []
+): Promise<T[]> {
+    try {
+        const result = await db.prepare(sql).bind(...values).all<T>();
 
-    const cleanedValues = valuesArray.map(val => val);
-
-    return db.prepare(sql).bind(...cleanedValues);
+        return result.results ?? [];
+    } catch (error) {
+        console.error("D1 dbQuery failed", { sql, error });
+        throw error;
+    }
 }
-
-export const dbQueryRow = async <T = any>(
-    db: D1Database,
-    sql: string,
-    values: any[] | null
-): Promise<T | undefined> => {
-    let start = Date.now();
-
-    try {
-        const statement = getStatement(db, sql, values);
-
-        // Use .first() to fetch a single row object
-        let res = await statement.first<T | null>();
-
-        // if (debugDatabase) {
-        //     let duration = Date.now() - start;
-        //     console.log("D1 Row result", { duration, row: res ? 1 : 0 });
-        // }
-
-        if (res === null) {
-            return undefined;
-        }
-
-        return res;
-    } catch (e) {
-        console.error("D1 dbQueryRow Failed:", e);
-        throw e;
-    }
-    // D1 does not require connection release, so the 'finally' block is removed.
-};
-
-export const dbQuery = async <T = any>(
-    db: D1Database,
-    sql: string,
-    values: any[] | null
-): Promise<T[]> => {
-    let start = Date.now();
-
-    try {
-        const statement = getStatement(db, sql, values);
-
-        // Use .all() to fetch multiple rows
-        let res: D1Result = await statement.all<T>();
-
-        // if (debugDatabase) {
-        //     let duration = Date.now() - start;
-        //     console.log("D1 Query result", { duration, rows: res.results?.length ?? 0 });
-        // }
-
-        return (res.results || []) as T[];
-    } catch (e) {
-        console.error("D1 dbQuery Failed:", e);
-        throw e;
-    }
-};
-
-export const dbExecute = async (
-    db: D1Database,
-    sql: string,
-    values: any[] | null
-): Promise<D1Result> => {
-    let start = Date.now();
-
-    try {
-        const statement = getStatement(db, sql, values);
-
-        let res: D1Result = await statement.run();
-
-        return res;
-    } catch (e) {
-        console.error("D1 dbExecute Failed:", e);
-        throw e;
-    }
-};

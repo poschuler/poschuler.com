@@ -1,6 +1,6 @@
 import { BookmarkCheck, PenLine } from "lucide-react";
 import { useLoaderData, type MetaFunction } from "react-router";
-import { findAllPosts, type ContentRowType } from "~/models/content.server";
+import { findAllPosts, type PostRowType } from "~/models/content.server";
 import type { Route } from "./+types/_blog";
 import { cloudflareContext } from "~/context";
 
@@ -56,7 +56,7 @@ export default function Blog() {
 }
 
 type PostProps = {
-  post: ContentRowType;
+  post: PostRowType;
 };
 
 function Post({ post }: PostProps) {
