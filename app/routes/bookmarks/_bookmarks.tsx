@@ -3,6 +3,7 @@ import { useLoaderData, type MetaFunction } from "react-router";
 import { findAllBookmarks, type BookmarkRowType } from "~/models/content.server";
 import type { Route } from "./+types/_bookmarks";
 import { cloudflareContext } from "~/context";
+import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 
 
 // type LoaderData = {
@@ -15,6 +16,8 @@ export async function loader({ context }: Route.LoaderArgs) {
 
   return { bookmarks };
 }
+
+export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export const meta: MetaFunction = () => {
 

@@ -1,8 +1,9 @@
-import { BookmarkCheck, PenLine } from "lucide-react";
-import { useLoaderData, type MetaFunction } from "react-router";
+import { PenLine } from "lucide-react";
+import { Link, useLoaderData, type MetaFunction } from "react-router";
 import { findAllPosts, type PostRowType } from "~/models/content.server";
 import type { Route } from "./+types/_blog";
 import { cloudflareContext } from "~/context";
+import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
@@ -10,6 +11,8 @@ export async function loader({ context }: Route.LoaderArgs) {
 
   return { posts };
 }
+
+export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export const meta: MetaFunction = () => {
   return [
@@ -68,9 +71,9 @@ function Post({ post }: PostProps) {
 
       <div className="flex gap-2 mt-2 text-low">
         <PenLine className="h-6 w-6" />
-        <a className="text-low" href={`/blog/${post.slug}`}>
+        <Link className="text-low" to={`/blog/${post.slug}`}>
           {post.title}
-        </a>
+        </Link>
       </div>
     </div>
   );

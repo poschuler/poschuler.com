@@ -1,8 +1,9 @@
 import { BookmarkCheck, PenLine } from "lucide-react";
-import { useLoaderData, type MetaFunction } from "react-router";
+import { Link, useLoaderData, type MetaFunction } from "react-router";
 import { findAll, type ContentRowType } from "~/models/content.server";
 import type { Route } from "./+types/_home";
 import { cloudflareContext } from "~/context";
+import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
@@ -10,6 +11,8 @@ export async function loader({ context }: Route.LoaderArgs) {
 
   return { contentItems };
 }
+
+export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export const meta: MetaFunction = () => {
   return [
@@ -33,7 +36,9 @@ export default function Home() {
         <div className="mx-auto relative flex size-28 overflow-hidden rounded-full">
           <img
             src={"https://avatars.githubusercontent.com/u/1238212?v=4"}
-            alt={"github avatar"}
+            alt={"Paul Osorio Schuler"}
+            width={112}
+            height={112}
             className="aspect-auto h-full w-full"
           />
         </div>
@@ -88,9 +93,9 @@ function ContentItem({ item }: ContentItemProps) {
         {item.type === "post" &&
           <>
             <PenLine className="h-6 w-6" />
-            <a className="text-low" href={`/blog/${item.slug}`}>
+            <Link className="text-low" to={`/blog/${item.slug}`}>
               I wrote, {item.title}
-            </a>
+            </Link>
           </>
         }
       </div>

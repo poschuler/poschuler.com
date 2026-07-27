@@ -84,7 +84,13 @@ export function Hero() {
         <div className="flex gap-x-1 pt-1 font-mono text-sm text-muted-foreground"></div>
       </div>
       <span className="flex size-28 shrink-0 overflow-hidden rounded-xl">
-        <img src={image} alt={name} className="aspect-square h-full w-full" />
+        <img
+          src={image}
+          alt={name}
+          width={112}
+          height={112}
+          className="aspect-square h-full w-full"
+        />
       </span>
     </div>
   );
