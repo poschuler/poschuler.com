@@ -1,10 +1,17 @@
 import { type LoaderFunctionArgs } from "react-router";
+import { cloudflareContext } from "~/context";
 
 export async function loader({ context }: LoaderFunctionArgs) {
 
-    const BLOG_KV = context.cloudflare.env.BLOG_KV;
+    const { env } = context.get(cloudflareContext);
+    const BLOG_KV = env.BLOG_KV;
     const kv_key = `sitemap`;
-    const contentPayload = await BLOG_KV.get(kv_key, "json");
+    const contentPayload = await BLOG_KV.get<{ sitemap: string }>(kv_key, {
+        type: "json",
+        // Lets the colo answer from its own cache instead of paying a round
+        // trip to KV's central store on every miss.
+        cacheTtl: 3600,
+    });
 
     if (!contentPayload) {
         throw new Response("Not Found", { status: 404 });
@@ -15,6 +22,9 @@ export async function loader({ context }: LoaderFunctionArgs) {
     return new Response(sitemap, {
         headers: {
             "Content-Type": "text/xml",
+            // Rewritten only by the seed pipeline, so an hour of staleness is
+            // harmless — and it keeps the Worker out of the hot path entirely.
+            "Cache-Control": "public, max-age=3600",
         },
     });
 }

@@ -3,7 +3,7 @@ import path from "node:path";
 import { execSync } from "node:child_process";
 import fm from "front-matter";
 import { marked } from "marked";
-import { generateSitemap, type SitemapRoute } from "@forge42/seo-tools/sitemap";
+import { generateSitemap, type SitemapRoute } from "../../app/lib/seo/sitemap.ts";
 
 const CONTENT_DIR = path.join(process.cwd(), "app", "content", "blog");
 const TEMP_JSON_DIR = path.join(process.cwd(), "seed", "kv", "kv_payloads");
@@ -30,7 +30,7 @@ type ContentRowType = {
 function fetchSlugs(): ContentRowType[] {
     console.log(`\n1. 📡 Fetching slugs from D1 database: ${D1_BINDING_NAME}...`);
 
-    const d1Command = `wrangler d1 execute ${D1_BINDING_NAME} --command "select id_content as "idContent", slug as "slug", lang as "lang", type as "type", title as "title", published_at as "publishedAt", strftime('%Y-%m-%d', published_at) AS "publishedStringDate", description as "description", external_url as "externalUrl", source as "source", tags as "tags" from content where type = 'post' order by published_at desc" --json`;
+    const d1Command = `pnpm exec wrangler d1 execute ${D1_BINDING_NAME} --command "select id_content as "idContent", slug as "slug", lang as "lang", type as "type", title as "title", published_at as "publishedAt", strftime('%Y-%m-%d', published_at) AS "publishedStringDate", description as "description", external_url as "externalUrl", source as "source", tags as "tags" from content where type = 'post' order by published_at desc" --json`;
 
     try {
         const output = execSync(d1Command, { encoding: 'utf-8', stdio: 'pipe' });
@@ -60,7 +60,7 @@ function fetchSlugs(): ContentRowType[] {
 function fetchAll(): ContentRowType[] {
     console.log(`\n1. 📡 Fetching slugs from D1 database: ${D1_BINDING_NAME}...`);
 
-    const d1Command = `wrangler d1 execute ${D1_BINDING_NAME} --command "select id_content as "idContent", slug as "slug", lang as "lang", type as "type", title as "title", published_at as "publishedAt", strftime('%Y-%m-%d', published_at) AS "publishedStringDate", description as "description", external_url as "externalUrl", source as "source", tags as "tags" from content order by published_at desc" --json`;
+    const d1Command = `pnpm exec wrangler d1 execute ${D1_BINDING_NAME} --command "select id_content as "idContent", slug as "slug", lang as "lang", type as "type", title as "title", published_at as "publishedAt", strftime('%Y-%m-%d', published_at) AS "publishedStringDate", description as "description", external_url as "externalUrl", source as "source", tags as "tags" from content order by published_at desc" --json`;
 
     try {
         const output = execSync(d1Command, { encoding: 'utf-8', stdio: 'pipe' });
@@ -152,10 +152,9 @@ async function generateKvJsonFiles() {
         } as SitemapRoute;
     })
 
-    const sitemap = await generateSitemap(
+    const sitemap = generateSitemap(
         {
             domain: stringUrl,
-            ignore: [],
             routes: [
                 { url: "/", lastmod: lastContentDate, changefreq: "monthly", priority: 1.0 },
                 { url: "/resume", lastmod: "2025-12-21", changefreq: "monthly", priority: 0.8 },

@@ -1,21 +1,26 @@
 import { BookmarkCheck, PenLine } from "lucide-react";
-import { useLoaderData, type MetaFunction } from "react-router";
+import { Link, useLoaderData, type MetaFunction } from "react-router";
 import { findAll, type ContentRowType } from "~/models/content.server";
 import type { Route } from "./+types/_home";
+import { cloudflareContext } from "~/context";
+import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 
 export async function loader({ context }: Route.LoaderArgs) {
-  const contentItems = await findAll(context.cloudflare.env.POSCHULER_BD);
+  const { env } = context.get(cloudflareContext);
+  const contentItems = await findAll(env.POSCHULER_BD);
 
   return { contentItems };
 }
 
+export const shouldRevalidate = skipRevalidationOnThemeChange;
+
 export const meta: MetaFunction = () => {
   return [
-    { title: "Paul Osorio Schuler | Full Stack Engineer | TypeScript • Node.js • React • Cloud & AI" },
-    { name: "description", content: "Designing, scaling, and shipping high-performance software and AI-driven products. Expertise in Node.js, TypeScript, Azure, and Domain-Driven Design (DDD). View my full resume, blog and bookmarks." },
+    { title: "Paul Osorio Schuler | Staff Software Engineer | Backend • TypeScript • Node.js" },
+    { name: "description", content: "Writing, bookmarks and resume of Paul Osorio Schuler, a Staff Software Engineer working on backend systems with TypeScript and Node.js." },
     { tagName: "link", rel: "canonical", href: "https://poschuler.com" },
-    { name: "og:title", content: "Paul Osorio Schuler | Full Stack Engineer | TypeScript • Node.js • React • Cloud & AI" },
-    { name: "og:description", content: "Designing, scaling, and shipping high-performance software and AI-driven products. Expertise in Node.js, TypeScript, Azure, and Domain-Driven Design (DDD)." },
+    { name: "og:title", content: "Paul Osorio Schuler | Staff Software Engineer | Backend • TypeScript • Node.js" },
+    { name: "og:description", content: "Writing, bookmarks and resume of Paul Osorio Schuler, a Staff Software Engineer working on backend systems with TypeScript and Node.js." },
     { name: "og:image", content: "https://avatars.githubusercontent.com/u/1238212?v=4" },
     { name: "og:type", content: "website" },
     { name: "og:url", content: "https://poschuler.com" },
@@ -31,7 +36,9 @@ export default function Home() {
         <div className="mx-auto relative flex size-28 overflow-hidden rounded-full">
           <img
             src={"https://avatars.githubusercontent.com/u/1238212?v=4"}
-            alt={"github avatar"}
+            alt={"Paul Osorio Schuler"}
+            width={112}
+            height={112}
             className="aspect-auto h-full w-full"
           />
         </div>
@@ -44,10 +51,7 @@ export default function Home() {
 
         <div className="max-w-[650px] mx-auto">
           <blockquote className="text-center mt-2 italic text-muted-foreground text-lg">
-            Full Stack Engineer | TypeScript • Node.js • React • Cloud & AI
-          </blockquote>
-          <blockquote className="pt-1 text-center mt-2 italic text-muted-foreground text-lg">
-            Designing, scaling, and shipping high-performance software and AI-driven products.
+            Staff Software Engineer | Backend • TypeScript • Node.js
           </blockquote>
         </div>
       </section>
@@ -86,9 +90,9 @@ function ContentItem({ item }: ContentItemProps) {
         {item.type === "post" &&
           <>
             <PenLine className="h-6 w-6" />
-            <a className="text-low" href={`/blog/${item.slug}`}>
+            <Link className="text-low" to={`/blog/${item.slug}`}>
               I wrote, {item.title}
-            </a>
+            </Link>
           </>
         }
       </div>

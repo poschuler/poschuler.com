@@ -114,7 +114,7 @@ VALUES (${escapedSlug}, NULL, 'link', ${title}, ${externalUrl}, ${source}, ${pub
         console.log(`\n\n🌳 SQL generation complete! File saved to: ${OUTPUT_SQL_FILE}`);
         console.log("-----------------------------------------------------------------");
         console.log(`>>> Ejecute el seeding con el siguiente comando:`);
-        console.log(`npx wrangler d1 execute poschuler --remote --file ${path.relative(process.cwd(), OUTPUT_SQL_FILE)}`);
+        console.log(`pnpm exec wrangler d1 execute poschuler --remote --file ${path.relative(process.cwd(), OUTPUT_SQL_FILE)}`);
 
     } catch (e) {
         console.error("Failed to write SQL file:", e);

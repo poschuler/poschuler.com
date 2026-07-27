@@ -1,7 +1,9 @@
 @import "tailwindcss" source(".");
 
-@import "@radix-ui/colors/gray";
-@import "@radix-ui/colors/gray-dark";
+/* Only the six families the `@theme` block below maps onto tokens. Every scale
+ * imported here ships ~2.5 kB of custom properties whether or not anything
+ * reads it, so an unused import is dead weight in render-blocking CSS.
+ * Keep this list in sync with SCALES in scripts/generate-system-dark-css.mjs. */
 @import "@radix-ui/colors/mauve";
 @import "@radix-ui/colors/mauve-dark";
 @import "@radix-ui/colors/indigo";
@@ -14,36 +16,27 @@
 @import "@radix-ui/colors/grass-dark";
 @import "@radix-ui/colors/violet";
 @import "@radix-ui/colors/violet-dark";
-@import "@radix-ui/colors/plum";
-@import "@radix-ui/colors/plum-dark";
-@import "@radix-ui/colors/blue";
-@import "@radix-ui/colors/blue-dark";
-@import "@radix-ui/colors/crimson";
-@import "@radix-ui/colors/crimson-dark";
-@import "@radix-ui/colors/jade";
-@import "@radix-ui/colors/jade-dark";
-@import "@radix-ui/colors/gold";
-@import "@radix-ui/colors/gold-dark";
-@import "@radix-ui/colors/amber";
-@import "@radix-ui/colors/amber-dark";
-@import "@radix-ui/colors/slate";
-@import "@radix-ui/colors/slate-dark";
-@import "@radix-ui/colors/sage";
-@import "@radix-ui/colors/sage-dark";
-@import "@radix-ui/colors/olive";
-@import "@radix-ui/colors/olive-dark";
-@import "@radix-ui/colors/sand";
-@import "@radix-ui/colors/sand-dark";
-@import "@radix-ui/colors/sky";
-@import "@radix-ui/colors/sky-dark";
 
-@plugin "tailwindcss-animate";
-@plugin "tailwindcss-react-aria-components" {
-  prefix: rac;
-}
+/* `.system` (= "follow the OS") under prefers-color-scheme: dark.
+ * Generated — see scripts/generate-system-dark-css.mjs. Must come last so it
+ * overrides the `:root` light values for a `.system` root when the OS is dark. */
+@import "./styles/radix-system-dark.css";
+
+@import "tw-animate-css";
+
 @plugin "@tailwindcss/typography";
 
-@custom-variant dark (&:is(.dark *));
+/* Handles both an explicit `.dark` root and `.system` under an OS dark pref. */
+@custom-variant dark {
+  &:where(.dark, .dark *) {
+    @slot;
+  }
+  &:where(.system, .system *) {
+    @media (prefers-color-scheme: dark) {
+      @slot;
+    }
+  }
+}
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
@@ -58,18 +51,6 @@
   --background-color-solid: var(--mauve-9);
   --background-color-solid-hover: var(--mauve-10);
   --background-color-solid-active: var(--mauve-11);
-
-  --background-color-github: rgb(36 41 46);
-  --background-color-github-hover: rgb(85 85 85);
-  --background-color-github-active: rgb(85 85 85);
-
-  --background-color-gitlab: rgb(226 67 41);
-  --background-color-gitlab-hover: rgb(252 109 38);
-  --background-color-gitlab-active: rgb(252 109 38);
-
-  --background-color-google: var(--gray-1);
-  --background-color-google-hover: var(--gray-2);
-  --background-color-google-active: var(--gray-3);
 
   --background-color-primary-app: var(--indigo-1);
   --background-color-primary-subtle: var(--indigo-2);
@@ -110,29 +91,6 @@
   --background-color-info-app: var(--violet-1);
 
   --background-color-pending-app: var(--amber-1);
-
-  --background-image-hero-text-gradient: linear-gradient(
-    180deg,
-    var(--mauve-12) 0%,
-    var(--blue-11) 100%
-  );
-  --background-image-hero-text-gradient-lg: linear-gradient(
-    96deg,
-    var(--mauve-12) 50%,
-    var(--blue-10) 105%
-  );
-  --background-image-hero-playwright-text-gradient: linear-gradient(
-    120deg,
-    var(--mauve-12) 0%,
-    var(--indigo-11) 70%,
-    var(--blue-10) 80%
-  );
-  --background-image-hero-playwright-text-gradient-dark: linear-gradient(
-    120deg,
-    white 0%,
-    var(--indigo-11) 70%,
-    var(--blue-10) 80%
-  );
 
   --text-color-default: var(--mauve-12);
   --text-color-low: var(--mauve-11);
@@ -175,8 +133,6 @@
   --ring-color-success-hover: var(--grass-8);
   --ring-color-success-active: var(--grass-9);
   --ring-color-success-highlight: var(--grass-12);
-
-  --ring-color-google-default: var(--gray-6);
 
   --border-color-default: var(--mauve-6);
   --border-color-hover: var(--mauve-8);
@@ -261,10 +217,6 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  #root {
-    height: 100%;
-  }
-
   [data-backdrop]::after {
     @apply absolute inset-0 bg-app opacity-60 backdrop-blur-sm;
     content: "";
@@ -279,162 +231,6 @@
     @apply font-semibold;
   }
 }
-
-#nprogress .bar {
-  background: #2563eb !important;
-  height: 3px !important;
-}
-
-.nav-btn {
-  display: none;
-  position: absolute;
-  z-index: 20;
-  user-select: none;
-  -webkit-user-select: none;
-  cursor: pointer;
-}
-
-.nav-btn:hover {
-  background-color: rgb(255, 165, 0);
-}
-
-.nav-btn.custom-prev-button {
-  top: 50%;
-  left: -40px;
-}
-
-.nav-btn.custom-next-button {
-  right: -40px;
-  top: 50%;
-}
-
-@media (min-width: 768px) {
-  .nav-btn {
-    display: block;
-  }
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 10px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #888888;
-  border-radius: 10px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #666666;
-}
-
-.border-gradient {
-  position: relative;
-}
-
-.border-gradient::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: 0.1px;
-  background: linear-gradient(to bottom, var(--indigo-8), var(--mauve-2));
-}
-
-/* Define the container */
-.custom-container {
-  container-type: inline-size;
-}
-
-/* Define masonry layout based on container size */
-/* @container (min-width: 650px) {
-  .masonry {
-    @apply columns-2 !block;
-  }
-}
-
-@container (min-width: 970px) {
-  .masonry {
-    @apply columns-3 !block;
-  }
-}
-
-@container (min-width: 1300px) {
-  .masonry {
-    @apply columns-4 !block;
-  }
-}
-
-@container (min-width: 1650px) {
-  .masonry {
-    @apply columns-5 !block;
-  }
-}
-
-.masonry {
-  @apply grid justify-center;
-} */
-
-/* Define horizontal masonry layout using CSS Grid */
-/* Define horizontal grid layout with wrapping */
-
-@container (min-width: 0) {
-  .horizontal-product-list {
-    @apply grid gap-4;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    grid-auto-rows: auto;
-    justify-items: center;
-  }
-}
-
-@container (min-width: 650px) {
-  .horizontal-product-list {
-    @apply grid gap-4;
-    grid-template-columns: repeat(
-      auto-fill,
-      minmax(320px, 1fr)
-    ); /* Dynamic columns */
-    grid-auto-rows: auto;
-    justify-items: auto;
-  }
-}
-
-@container (min-width: 970px) {
-  .horizontal-product-list {
-    @apply grid gap-4;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    grid-auto-rows: auto;
-    justify-items: auto;
-  }
-}
-
-@container (min-width: 1300px) {
-  .horizontal-product-list {
-    @apply grid gap-4;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    grid-auto-rows: auto;
-    justify-items: auto;
-  }
-}
-
-@container (min-width: 1650px) {
-  .horizontal-product-list {
-    @apply grid gap-4;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    grid-auto-rows: auto;
-    justify-items: auto;
-  }
-}
-
-.horizontal-product-list > * {
-  @apply break-inside-avoid;
-}
-
 
 @utility prose {
   --tw-prose-body: var(--mauve-11);

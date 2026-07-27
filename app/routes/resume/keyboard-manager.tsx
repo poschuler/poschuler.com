@@ -1,12 +1,10 @@
-import {
-  GitHubLogoIcon,
-  LinkedInLogoIcon,
-  TwitterLogoIcon,
-} from "@radix-ui/react-icons";
 import { useLoaderData } from "react-router";
 import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
+import { BrandNetworkIcon } from "~/components/ui/brand-icons";
 import {
+  Command,
+  CommandCollection,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -17,6 +15,20 @@ import {
 } from "~/components/ui/command";
 import type { loader } from "./_resume";
 
+/** True for anything a keystroke could legitimately be meant for. */
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return (
+    target.isContentEditable ||
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement
+  );
+}
+
 export function KeyboardManager() {
   let [open, setOpen] = useState(false);
   let {
@@ -24,18 +36,37 @@ export function KeyboardManager() {
   } = useLoaderData<typeof loader>();
 
   useEffect(() => {
-    let down = (e: KeyboardEvent) => {
-      if (e.key === "j" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setOpen((open) => !open);
+    let down = (event: KeyboardEvent) => {
+      // Never steal a keystroke aimed at a text field — including the palette's
+      // own search input.
+      if (isTypingTarget(event.target)) {
+        return;
       }
 
-      profiles.map((item) => {
-        if (e.key === item.key && (e.metaKey || e.ctrlKey)) {
-          e.preventDefault();
-          window.open(item.url, "_blank", "noopener,noreferrer");
+      if (!event.metaKey && !event.ctrlKey) {
+        return;
+      }
+
+      if (event.key.toLowerCase() === "j" && !event.shiftKey) {
+        event.preventDefault();
+        setOpen((open) => !open);
+        return;
+      }
+
+      // The profile shortcuts additionally require Shift. Without it they sat
+      // on ⌘X (cut), ⌘L (address bar) and ⌘G (find next) — bindings the browser
+      // owns and a reader expects to work.
+      if (!event.shiftKey) {
+        return;
+      }
+
+      for (const profile of profiles) {
+        if (event.key.toLowerCase() === profile.key) {
+          event.preventDefault();
+          window.open(profile.url, "_blank", "noopener,noreferrer");
+          return;
         }
-      });
+      }
     };
 
     document.addEventListener("keydown", down);
@@ -48,66 +79,44 @@ export function KeyboardManager() {
 
   return (
     <>
-      {/* <div className="fixed right-4 bottom-4">
-        <p className="text-sm text-muted-foreground"></p>
-      </div> */}
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Type a command or search..." />
-        <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
-          <CommandGroup heading="Links" className="font-mono">
-            {profiles.map((item) => (
-              <a
-                key={item.row}
-                href={item.url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <CommandItem className="cursor-pointer">
-                  {item.network === "GitHub" && (
-                    <GitHubLogoIcon className="mr-2 size-4 text-muted-foreground" />
-                  )}
-
-                  {item.network === "LinkedIn" && (
-                    <LinkedInLogoIcon className="mr-2 size-4 text-muted-foreground" />
-                  )}
-
-                  {item.network === "X" && (
-                    <TwitterLogoIcon className="mr-2 size-4 text-muted-foreground" />
-                  )}
-
-                  <span className="font-mono">{item.network}</span>
-
-                  {item.network === "GitHub" && (
+        <Command
+          inline
+          open
+          items={profiles}
+          itemToStringValue={(profile) => profile.network}
+        >
+          <CommandInput placeholder="Type a command or search..." />
+          <CommandList>
+            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandGroup heading="Links" className="font-mono">
+              <CommandCollection>
+                {(profile) => (
+                  <CommandItem
+                    key={profile.row}
+                    value={profile}
+                    render={
+                      <a
+                        href={profile.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      />
+                    }
+                  >
+                    <BrandNetworkIcon
+                      network={profile.network}
+                      className="mr-2 size-4 text-muted-foreground"
+                    />
+                    <span className="font-mono">{profile.network}</span>
                     <CommandShortcut className="uppercase">
-                      ⌘{item.key}
+                      ⌘⇧{profile.key}
                     </CommandShortcut>
-                  )}
-
-                  {item.network === "LinkedIn" && (
-                    <CommandShortcut className="uppercase">
-                      ⌘{item.key}
-                    </CommandShortcut>
-                  )}
-
-                  {item.network === "X" && (
-                    <CommandShortcut className="uppercase">
-                      ⌘{item.key}
-                    </CommandShortcut>
-                  )}
-                </CommandItem>
-              </a>
-            ))}
-          </CommandGroup>
-          {/* <CommandSeparator />
-          <CommandGroup heading="Action">
-            <CommandItem>
-              <Printer className="mr-2 size-4" />
-              <span>Print</span>
-              <CommandShortcut>⌘P</CommandShortcut>
-            </CommandItem>
-          </CommandGroup> */}
-        </CommandList>
+                  </CommandItem>
+                )}
+              </CommandCollection>
+            </CommandGroup>
+          </CommandList>
+        </Command>
       </CommandDialog>
       <Button
         onClick={handleClick}
