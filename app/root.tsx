@@ -17,8 +17,6 @@ import { getToast } from "remix-toast";
 import { useToast } from "./components/ui/use-toast";
 import { useServerLayoutEffect } from "./utils/use-server-layout-effect";
 import clsx from "clsx";
-//import favicon16 from "~/favicon/favicon-16x16.png";
-//import favicon32 from "~/favicon/favicon-32x32.png";
 import { Toaster } from "./components/ui/toaster";
 
 export const links: Route.LinksFunction = () => [

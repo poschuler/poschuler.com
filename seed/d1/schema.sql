@@ -1,22 +1,3 @@
-CREATE TABLE feeds (
-    id_feed INTEGER PRIMARY KEY AUTOINCREMENT,
-    content TEXT NOT NULL,
-    date TEXT NOT NULL, -- Stored as ISO8601 string (e.g., '2025-12-09 23:59:59.123')
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now'))
-);
-
-CREATE TABLE projects (
-    id_project INTEGER PRIMARY KEY AUTOINCREMENT,
-    img_url TEXT NOT NULL,
-    project_url TEXT NOT NULL,
-    title TEXT NOT NULL,
-    content TEXT NOT NULL,
-    date TEXT NOT NULL, -- Stored as ISO8601 string
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now'))
-);
-
 CREATE TABLE content (
     id_content INTEGER PRIMARY KEY AUTOINCREMENT,
 
