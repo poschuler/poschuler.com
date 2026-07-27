@@ -1,11 +1,8 @@
 import { Link, useLoaderData } from "react-router";
 import type { Route } from "./+types/_$blog-slug";
 import { cloudflareContext } from "~/context";
-// import path from "node:path";
-// import fs from "node:fs";
-// import fm from "front-matter";
-// import { marked } from "marked";
 import { GitHubIcon } from "~/components/ui/brand-icons";
+import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 
 
 interface PostAttributes {
@@ -25,40 +22,35 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 
     const blogSlug = params.blogSlug;
 
-    //const postsPath = path.join(process.cwd(), "app", "content", "blog");
-    //const filePath = path.join(postsPath, blogSlug, `${blogSlug}.en.md`);
-
     const { env } = context.get(cloudflareContext);
     const BLOG_KV = env.BLOG_KV;
     const kv_key = `blog:${blogSlug}:en`;
-    const contentPayload = await BLOG_KV.get(kv_key, "json");
+    const contentPayload = await BLOG_KV.get<BlogContentPayload>(kv_key, {
+        type: "json",
+        // A Post body only changes when the seed pipeline runs, so let the colo
+        // answer from its own cache instead of reaching KV's central store.
+        cacheTtl: 3600,
+    });
 
     if (!contentPayload) {
         throw new Response("Not Found", { status: 404 });
     }
 
-    const { attributes, html } = contentPayload as BlogContentPayload;
+    const { attributes, html } = contentPayload;
 
-    // try {
-        //const fileContent = fs.readFileSync(filePath, "utf-8");
-
-        //const { attributes, body } = fm<PostAttributes>(fileContent);
-        // const html = marked(body);
-
-        return {
-            title: attributes.title,
-            tags: attributes.tags,
-            description: attributes.description,
-            publishedAt: new Date(attributes.publishedAt).toLocaleDateString(),
-            html,
-            slug: blogSlug,
-            repository: attributes.repository,
-        };
-    // } catch (error) {
-    //     // If the file doesn't exist, throw a 404 response
-    //     throw new Response("Not Found", { status: 404 });
-    // }
+    // Deliberately not returning `attributes.tags`: nothing renders them, and a
+    // loader's return value ships twice — once in the HTML, once in hydration.
+    return {
+        title: attributes.title,
+        description: attributes.description,
+        publishedAt: new Date(attributes.publishedAt).toLocaleDateString(),
+        html,
+        slug: blogSlug,
+        repository: attributes.repository,
+    };
 }
+
+export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export function meta({ loaderData }: Route.MetaArgs) {
 
