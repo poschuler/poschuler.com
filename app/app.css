@@ -1,7 +1,9 @@
 @import "tailwindcss" source(".");
 
-@import "@radix-ui/colors/gray";
-@import "@radix-ui/colors/gray-dark";
+/* Only the six families the `@theme` block below maps onto tokens. Every scale
+ * imported here ships ~2.5 kB of custom properties whether or not anything
+ * reads it, so an unused import is dead weight in render-blocking CSS.
+ * Keep this list in sync with SCALES in scripts/generate-system-dark-css.mjs. */
 @import "@radix-ui/colors/mauve";
 @import "@radix-ui/colors/mauve-dark";
 @import "@radix-ui/colors/indigo";
@@ -14,28 +16,6 @@
 @import "@radix-ui/colors/grass-dark";
 @import "@radix-ui/colors/violet";
 @import "@radix-ui/colors/violet-dark";
-@import "@radix-ui/colors/plum";
-@import "@radix-ui/colors/plum-dark";
-@import "@radix-ui/colors/blue";
-@import "@radix-ui/colors/blue-dark";
-@import "@radix-ui/colors/crimson";
-@import "@radix-ui/colors/crimson-dark";
-@import "@radix-ui/colors/jade";
-@import "@radix-ui/colors/jade-dark";
-@import "@radix-ui/colors/gold";
-@import "@radix-ui/colors/gold-dark";
-@import "@radix-ui/colors/amber";
-@import "@radix-ui/colors/amber-dark";
-@import "@radix-ui/colors/slate";
-@import "@radix-ui/colors/slate-dark";
-@import "@radix-ui/colors/sage";
-@import "@radix-ui/colors/sage-dark";
-@import "@radix-ui/colors/olive";
-@import "@radix-ui/colors/olive-dark";
-@import "@radix-ui/colors/sand";
-@import "@radix-ui/colors/sand-dark";
-@import "@radix-ui/colors/sky";
-@import "@radix-ui/colors/sky-dark";
 
 /* `.system` (= "follow the OS") under prefers-color-scheme: dark.
  * Generated — see scripts/generate-system-dark-css.mjs. Must come last so it
@@ -154,8 +134,6 @@
   --ring-color-success-active: var(--grass-9);
   --ring-color-success-highlight: var(--grass-12);
 
-  --ring-color-google-default: var(--gray-6);
-
   --border-color-default: var(--mauve-6);
   --border-color-hover: var(--mauve-8);
   --border-color-active: var(--mauve-9);
@@ -237,10 +215,6 @@
     color: var(--text-color-default);
     height: 100%;
     -webkit-font-smoothing: antialiased;
-  }
-
-  #root {
-    height: 100%;
   }
 
   [data-backdrop]::after {

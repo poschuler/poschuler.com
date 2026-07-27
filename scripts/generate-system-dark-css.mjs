@@ -26,23 +26,12 @@ const repoRoot = resolve(__dirname, "..");
 
 // Every scale `app/app.css` imports, in the same order. Keep the two in sync.
 const SCALES = [
-  "gray",
   "mauve",
   "indigo",
   "tomato",
   "amber",
   "grass",
   "violet",
-  "plum",
-  "blue",
-  "crimson",
-  "jade",
-  "gold",
-  "slate",
-  "sage",
-  "olive",
-  "sand",
-  "sky",
 ];
 
 function darkFileFor(scale) {
