@@ -26,3 +26,13 @@ export type CloudflareContext = {
  * `workers/app.ts`.
  */
 export const cloudflareContext = createContext<CloudflareContext>();
+
+/**
+ * The per-request CSP nonce. Set in `workers/app.ts` alongside the header that
+ * names it, and handed to `<ServerRouter nonce>` in `entry.server.tsx`, which
+ * stamps it onto every inline script React Router emits.
+ *
+ * Defaults to an empty string so a missing provider degrades to "no nonce"
+ * rather than throwing mid-render.
+ */
+export const nonceContext = createContext<string>("");
