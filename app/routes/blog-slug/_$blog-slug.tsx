@@ -1,5 +1,6 @@
-import { Link, useLoaderData, type MetaFunction } from "react-router";
+import { Link, useLoaderData } from "react-router";
 import type { Route } from "./+types/_$blog-slug";
+import { cloudflareContext } from "~/context";
 // import path from "node:path";
 // import fs from "node:fs";
 // import fm from "front-matter";
@@ -20,16 +21,6 @@ interface BlogContentPayload {
     html: string;
 }
 
-interface LoaderData {
-    title: string;
-    description: string;
-    tags: string[];
-    publishedAt: string;
-    html: string;
-    slug: string;
-    repository?: string;
-}
-
 export async function loader({ params, context }: Route.LoaderArgs) {
 
     const blogSlug = params.blogSlug;
@@ -37,7 +28,8 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     //const postsPath = path.join(process.cwd(), "app", "content", "blog");
     //const filePath = path.join(postsPath, blogSlug, `${blogSlug}.en.md`);
 
-    const BLOG_KV = context.cloudflare.env.BLOG_KV;
+    const { env } = context.get(cloudflareContext);
+    const BLOG_KV = env.BLOG_KV;
     const kv_key = `blog:${blogSlug}:en`;
     const contentPayload = await BLOG_KV.get(kv_key, "json");
 
@@ -68,9 +60,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     // }
 }
 
-export const meta: MetaFunction = ({ data }) => {
+export function meta({ loaderData }: Route.MetaArgs) {
 
-    const { title, description, slug } = data as LoaderData;
+    const { title, description, slug } = loaderData;
 
     return [
         { title: `${title} | Paul Osorio Schuler` },
@@ -82,7 +74,7 @@ export const meta: MetaFunction = ({ data }) => {
         { name: "og:type", content: "article" },
         { name: "og:url", content: `https://poschuler.com/blog/${slug}` },
     ];
-};
+}
 
 export default function BlogSlug() {
     const { html, publishedAt, title, repository } = useLoaderData<typeof loader>();

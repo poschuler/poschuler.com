@@ -1,10 +1,12 @@
 import { type LoaderFunctionArgs } from "react-router";
+import { cloudflareContext } from "~/context";
 
 export async function loader({ context }: LoaderFunctionArgs) {
 
-    const BLOG_KV = context.cloudflare.env.BLOG_KV;
+    const { env } = context.get(cloudflareContext);
+    const BLOG_KV = env.BLOG_KV;
     const kv_key = `sitemap`;
-    const contentPayload = await BLOG_KV.get(kv_key, "json");
+    const contentPayload = await BLOG_KV.get<{ sitemap: string }>(kv_key, "json");
 
     if (!contentPayload) {
         throw new Response("Not Found", { status: 404 });

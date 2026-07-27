@@ -76,6 +76,15 @@ route loader          knows the request, picks the query
        └─ app/db.server.ts     dbQuery / dbQueryRow / dbExecute over D1
 ```
 
+A loader reaches its bindings through the typed context, never a global:
+
+```ts
+export async function loader({ context }: Route.LoaderArgs) {
+  const { env } = context.get(cloudflareContext);
+  return { posts: await findAllPosts(env.POSCHULER_BD) };
+}
+```
+
 Rules that hold across `content.server.ts`:
 
 - **Queries alias snake_case columns to camelCase in SQL**, not in JavaScript. `id_content as "idContent"` — the mapping lives in one place, next to the query.

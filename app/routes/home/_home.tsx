@@ -2,9 +2,11 @@ import { BookmarkCheck, PenLine } from "lucide-react";
 import { useLoaderData, type MetaFunction } from "react-router";
 import { findAll, type ContentRowType } from "~/models/content.server";
 import type { Route } from "./+types/_home";
+import { cloudflareContext } from "~/context";
 
 export async function loader({ context }: Route.LoaderArgs) {
-  const contentItems = await findAll(context.cloudflare.env.POSCHULER_BD);
+  const { env } = context.get(cloudflareContext);
+  const contentItems = await findAll(env.POSCHULER_BD);
 
   return { contentItems };
 }

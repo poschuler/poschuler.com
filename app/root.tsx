@@ -13,6 +13,7 @@ import type { Route } from "./+types/root";
 import "./app.css";
 import { PreventFlashOnWrongTheme, ThemeProvider, useTheme } from "remix-themes";
 import { getThemeResolver } from "./sessions/theme-session.server";
+import { cloudflareContext } from "./context";
 import { getToast } from "remix-toast";
 import { useToast } from "./components/ui/use-toast";
 import { useServerLayoutEffect } from "./utils/use-server-layout-effect";
@@ -47,7 +48,8 @@ export const links: Route.LinksFunction = () => [
 
 
 export async function loader({ request, context }: Route.LoaderArgs) {
-  const themeSessionResolver = getThemeResolver(context.cloudflare.env);
+  const { env } = context.get(cloudflareContext);
+  const themeSessionResolver = getThemeResolver(env);
   const { getTheme } = await themeSessionResolver(request);
   const { toast, headers } = await getToast(request);
 

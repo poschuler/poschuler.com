@@ -2,9 +2,11 @@ import { BookmarkCheck, PenLine } from "lucide-react";
 import { useLoaderData, type MetaFunction } from "react-router";
 import { findAllPosts, type ContentRowType } from "~/models/content.server";
 import type { Route } from "./+types/_blog";
+import { cloudflareContext } from "~/context";
 
 export async function loader({ context }: Route.LoaderArgs) {
-  const posts = await findAllPosts(context.cloudflare.env.POSCHULER_BD);
+  const { env } = context.get(cloudflareContext);
+  const posts = await findAllPosts(env.POSCHULER_BD);
 
   return { posts };
 }

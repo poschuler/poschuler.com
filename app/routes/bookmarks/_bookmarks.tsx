@@ -2,6 +2,7 @@ import { BookmarkCheck } from "lucide-react";
 import { useLoaderData, type MetaFunction } from "react-router";
 import { findAllBookmarks, type ContentRowType } from "~/models/content.server";
 import type { Route } from "./+types/_bookmarks";
+import { cloudflareContext } from "~/context";
 
 
 // type LoaderData = {
@@ -9,7 +10,8 @@ import type { Route } from "./+types/_bookmarks";
 // };
 
 export async function loader({ context }: Route.LoaderArgs) {
-  const bookmarks = await findAllBookmarks(context.cloudflare.env.POSCHULER_BD);
+  const { env } = context.get(cloudflareContext);
+  const bookmarks = await findAllBookmarks(env.POSCHULER_BD);
 
   return { bookmarks };
 }

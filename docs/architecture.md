@@ -17,7 +17,9 @@ Cloudflare Worker  (workers/app.ts → createRequestHandler)
   └──▶ cdn.poschuler.dev    — the Resume PDF, proxied
 ```
 
-`workers/app.ts` is the only entry point. It declares the `Env` type (bindings + vars) and augments React Router's `AppLoadContext` so every loader reaches bindings through `context.cloudflare.env`. Nothing is read from `process.env` at runtime and there is no module-level singleton holding a binding — the Workers runtime forbids capturing request-scoped state across requests.
+`workers/app.ts` is the only entry point. Per request it builds a `RouterContextProvider`, sets the `cloudflareContext` declared in `app/context.ts`, and hands it to the request handler; loaders then read bindings with `const { env } = context.get(cloudflareContext)`. Nothing is read from `process.env` at runtime and there is no module-level singleton holding a binding — the Workers runtime forbids capturing request-scoped state across requests.
+
+`app/context.ts` also owns the `AppEnv` type: the bindings `wrangler types` generates from `wrangler.jsonc` intersected with the vars that only exist in `.dev.vars`/secrets. Adding a binding means editing `wrangler.jsonc` and regenerating; adding a var means editing `AppEnv` by hand.
 
 ## The content pipeline
 
@@ -109,7 +111,7 @@ Vars, templated in `.vars.template` and supplied through `.dev.vars` locally / s
 
 ## Known defects
 
-- **`app/routes/robots.ts:8`** reads `context.cloudflare.env.process.env.PUBLIC_HOST`. There is no `process` on `Env`; the var is `context.cloudflare.env.PUBLIC_HOST`. The `typeof … !== "string"` guard means this throws its own "Missing env" error rather than a property access error, which masks the real cause.
+- **`app/routes/action.set-theme.ts` returns the action instead of running it.** `createThemeAction(resolver)` builds a handler; the route returns that function rather than calling it with its own args. The endpoint answers `undefined` and never sets the `poschuler__theme` cookie, so a chosen theme does not survive a reload. Verified against a running dev server.
 - **`/blog/:blogSlug` hardcodes `:en`.** The schema, the seed pipeline and the KV key layout are all Locale-aware; the route is not, and no URL carries a Locale. Serving a second Translation needs a routing decision first (`/es/blog/…` vs. a query param vs. content negotiation).
 - **`generate-kv-json.ts` builds its D1 query with nested unescaped double quotes** inside a double-quoted `--command` string. It works only because SQL treats the collapsed quoting as bare identifiers.
 - **The sitemap's `/resume` `lastmod` is the hardcoded string `2025-12-21`.**

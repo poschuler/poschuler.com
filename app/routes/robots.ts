@@ -1,16 +1,16 @@
 import { generateRobotsTxt } from "@forge42/seo-tools/robots";
 import { type LoaderFunctionArgs } from "react-router";
+import { cloudflareContext } from "~/context";
 
-export async function loader({ request, context }: LoaderFunctionArgs) {
-  const isProduction = context.cloudflare.env.DEPLOYMENT_ENV === "production";
-  //const domain = new URL(request.url).origin;
+export async function loader({ context }: LoaderFunctionArgs) {
+  const { env } = context.get(cloudflareContext);
+  const isProduction = env.DEPLOYMENT_ENV === "production";
 
-  if (typeof context.cloudflare.env.process.env.PUBLIC_HOST !== "string") {
+  if (typeof env.PUBLIC_HOST !== "string") {
     throw new Error("Missing env: PUBLIC_HOST");
   }
 
-  const stringUrl = context.cloudflare.env.process.env.PUBLIC_HOST;
-  const baseUrl = new URL(stringUrl);
+  const baseUrl = new URL(env.PUBLIC_HOST);
 
   //console.log(baseUrl.origin);
 
