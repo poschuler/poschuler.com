@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Ralph configuration — tells scripts/ralph.sh which GitHub issues to work, and
+# how. This file is *sourced* by ralph.sh. Set values only; don't add logic here.
+
+# ── What to work ────────────────────────────────────────────────────────────
+# Ordered list of GitHub issue numbers. Each entry is either a single issue
+# (e.g. 50) or an inclusive range "A-B" (e.g. "51-53" → 51, 52, 53). The order
+# in this array IS the priority; ranges expand in place. Ralph processes them
+# top-to-bottom, one fresh claude session per issue. At least one entry required.
+RALPH_ISSUES=(
+  "91-94"
+  95
+  99
+)
+
+# ── How to work ─────────────────────────────────────────────────────────────
+# Ralph runs the whole list in ONE git worktree, forked from RALPH_BASE_REF, and
+# opens ONE draft PR back to RALPH_BASE_REF when done. The PR title/body are
+# derived from the issues' own titles, so they read well on their own.
+#
+# Branch name: leave EMPTY to auto-generate a unique per-run branch
+# "ralph/<timestamp>" — each run gets its own branch + PR, so batches never
+# collide. Set a STABLE name instead ONLY to resume a dependent multi-issue
+# batch after a fail-fast (a re-run then reuses that worktree and skips the
+# issues already closed).
+RALPH_BRANCH=""
+
+# Base branch the run branch forks from, and the PR target.
+RALPH_BASE_REF="dev"
+
+# Only process an issue that carries this label; others are skipped with a
+# warning. Set to "" to disable the gate and attempt every issue in the list.
+RALPH_REQUIRE_LABEL="ready-for-agent"
+
+# Open a draft PR against RALPH_BASE_REF when the list finishes (needs gh).
+# Ralph never merges — the merge is always yours.
+RALPH_OPEN_PR=1
+
+# After each issue's implement session, run a SECOND isolated claude session
+# (fresh context) that code-reviews the implementation commit, checks the
+# acceptance criteria, fixes any errors it finds, and commits the fixes. Set to
+# 0 to skip it.
+RALPH_REVIEW=1
+
+# ── How each headless claude session runs ───────────────────────────────────
+# Model per step: the implementer and the reviewer can differ (e.g. implement
+# with sonnet, review with opus). RALPH_REVIEW_MODEL defaults to RALPH_MODEL.
+RALPH_MODEL="claude-sonnet-5"          # step 1: implement
+RALPH_REVIEW_MODEL="claude-opus-4-8"   # step 2: code-review
+RALPH_PERMISSION_MODE="auto"
+
+# Max issues to actually run per invocation (empty = unlimited). Skipped issues
+# (already closed / missing label) do NOT count. --max-iterations overrides this.
+RALPH_MAX_ITERATIONS=""
