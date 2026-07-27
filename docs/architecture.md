@@ -19,7 +19,9 @@ Cloudflare Worker  (workers/app.ts → createRequestHandler)
 
 `workers/app.ts` is the only entry point. Per request it builds a `RouterContextProvider`, sets the `cloudflareContext` declared in `app/context.ts`, and hands it to the request handler; loaders then read bindings with `const { env } = context.get(cloudflareContext)`. There is no module-level singleton holding a binding — the Workers runtime forbids capturing request-scoped state across requests.
 
-The one exception is `app/color-scheme-cookie.ts`, which reads `process.env` because `createCookie` runs at module scope, before any request exists. It reads through a `requireEnv` helper that throws on a missing value, so a deploy without `SESSION_THEME_SECRET` fails to boot instead of quietly signing cookies with a placeholder.
+**No exceptions, and one of them was paid for.** `app/color-scheme-cookie.ts` briefly built its cookie at module scope from `process.env`, throwing on a missing value. It took production down: the module is evaluated on the way to serving *any* request, so a missing var meant error 1101 on every route — the whole site off to protect a theme preference. The cookie is now built per request from the `env` in `cloudflareContext`, like everything else.
+
+Two rules came out of it. **Read bindings inside the request, never at module scope** — what works in dev, where the Vite plugin populates `process.env` from `.dev.vars`, is not what runs at the edge. And **size the blast radius to the feature**: reading the cookie degrades to the default theme and logs, while writing it still throws, so a misconfigured Worker serves every page and only the toggle fails.
 
 `app/context.ts` also owns the `AppEnv` type: the bindings `wrangler types` generates from `wrangler.jsonc` intersected with the vars that only exist in `.dev.vars`/secrets. Adding a binding means editing `wrangler.jsonc` and regenerating; adding a var means editing `AppEnv` by hand.
 
