@@ -16,14 +16,14 @@ export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Paul Osorio Schuler's Blog | Software Architecture, Node.js & Azure" },
-    { name: "description", content: "Advanced technical articles and insights by Software Architect Paul Osorio Schuler on Domain-Driven Design (DDD), scalable backend systems, Node.js, and Azure cloud best practices." },
+    { title: "Blog | Paul Osorio Schuler" },
+    { name: "description", content: "Long-form articles by Paul Osorio Schuler on building backend systems with Node.js and TypeScript: API structure, domain-driven design and software architecture." },
     { tagName: "link", rel: "canonical", href: "https://poschuler.com/blog" },
-    { name: "og:title", content: "Technical Insights from a Software Architect: Azure, Node.js & DDD" },
-    { name: "og:description", content: "Explore advanced articles on Domain-Driven Design (DDD), scalable backend systems, and Azure cloud practices. Essential reading for developers and architects." },
+    { name: "og:title", content: "Blog | Paul Osorio Schuler" },
+    { name: "og:description", content: "Long-form articles by Paul Osorio Schuler on building backend systems with Node.js and TypeScript: API structure, domain-driven design and software architecture." },
     { name: "og:image", content: "https://avatars.githubusercontent.com/u/1238212?v=4" },
     { name: "og:type", content: "website" },
-    { name: "og:url", content: "https://poschuler.com/resume" },
+    { name: "og:url", content: "https://poschuler.com/blog" },
   ];
 };
 
@@ -36,7 +36,7 @@ export default function Blog() {
 
         <div className="text-center">
           <h1 className="scroll-m-20 text-3xl font-semibold tracking-tight lg:text-4xl mt-8">
-            Articles & Insights
+            Articles
           </h1>
         </div>
 

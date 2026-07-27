@@ -25,11 +25,11 @@ export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Paul Osorio Schuler | Resume and Professional Profile of Software Engineer" },
-    { name: "description", content: "Paul Osorio Schuler's full resume. Software Engineer with 12+ years of experience focusing on client-centric solutions, Azure cloud architecture, and technical leadership. View my full professional history." },
+    { title: "Resume | Paul Osorio Schuler" },
+    { name: "description", content: "The professional history of Paul Osorio Schuler, Staff Software Engineer: roles, education, skills and certificates, from 12+ years building backend systems in banking and automation." },
     { tagName: "link", rel: "canonical", href: "https://poschuler.com/resume" },
-    { name: "og:title", content: "Resume of Paul Osorio Schuler (Software Engineer with 12+ Years of experience)" },
-    { name: "og:description", content: "Paul Osorio Schuler's full resume. Software Engineer with 12+ years of experience focusing on client-centric solutions, Azure cloud architecture, and technical leadership. View my full professional history." },
+    { name: "og:title", content: "Resume | Paul Osorio Schuler" },
+    { name: "og:description", content: "The professional history of Paul Osorio Schuler, Staff Software Engineer: roles, education, skills and certificates, from 12+ years building backend systems in banking and automation." },
     { name: "og:image", content: "https://avatars.githubusercontent.com/u/1238212?v=4" },
     { name: "og:type", content: "website" },
     { name: "og:url", content: "https://poschuler.com/resume" },

@@ -22,11 +22,11 @@ export const shouldRevalidate = skipRevalidationOnThemeChange;
 export const meta: MetaFunction = () => {
 
   return [
-    { title: `Technical Resources and Bookmarks | Paul Osorio Schuler` },
-    { name: "description", content: `Links I've bookmarked and learned from` },
+    { title: `Bookmarks | Paul Osorio Schuler` },
+    { name: "description", content: `External articles Paul Osorio Schuler has read and kept, on TypeScript, web development, auth and security, accessibility and performance.` },
     { tagName: "link", rel: "canonical", href: `https://poschuler.com/bookmarks` },
-    { name: "og:title", content: `Technical Resources and Bookmarks | Paul Osorio Schuler` },
-    { name: "og:description", content: `Links I've bookmarked and learned from` },
+    { name: "og:title", content: `Bookmarks | Paul Osorio Schuler` },
+    { name: "og:description", content: `External articles Paul Osorio Schuler has read and kept, on TypeScript, web development, auth and security, accessibility and performance.` },
     { name: "og:image", content: "https://avatars.githubusercontent.com/u/1238212?v=4" },
     { name: "og:type", content: "website" },
     { name: "og:url", content: `https://poschuler.com/bookmarks` },
@@ -42,7 +42,7 @@ export default function Bookmarks() {
 
         <div className="text-center">
           <h1 className="scroll-m-20 text-3xl font-semibold tracking-tight lg:text-4xl mt-8">
-            Interesting Reads & Resources
+            Bookmarks
           </h1>
         </div>
 
