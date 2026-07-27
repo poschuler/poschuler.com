@@ -1,50 +1,141 @@
-# 🚀 poschuler.com
+# poschuler.com
 
-The official repository for **poschuler.com**, the personal platform and professional portfolio of Paul Osorio Schuler, Software Engineer & MBA.
+The personal site of **Paul Osorio Schuler** — Staff Software Engineer, backend, TypeScript and Node.js. It holds what he writes, what he reads, and his professional history: [poschuler.com](https://poschuler.com).
 
-This site is built to be a client-centric solution, showcasing robust **Software Architecture** patterns and practical applications of cloud technologies (with an emphasis on **Azure** integration).
+The whole site is a single Cloudflare Worker. There is no separate API, no origin server and no client-side data fetching — React Router runs in framework mode with SSR, so every loader executes at the edge and the browser receives rendered HTML.
 
-## 📄 Repository Content
+## What's inside
 
-This repository serves two primary purposes:
+| Page         | What it shows                                                        |
+| ------------ | -------------------------------------------------------------------- |
+| `/`          | The Timeline — Posts and Bookmarks interleaved, newest first          |
+| `/blog`      | Long-form articles, written here                                      |
+| `/bookmarks` | External articles worth endorsing, credited to their source           |
+| `/resume`    | Structured professional history, plus a PDF download                  |
 
-1. **Codebase:** The source files for the Cloudflare Worker application, front-end assets, and deployment configuration.
-2. **Content:** The original articles, blog posts, and the professional resume.
+## How content works
 
-## 💡 Key Technologies
+**Markdown files are the source of truth, and the Worker never parses Markdown.** Everything under `app/content/` is versioned in git, and a build-time pipeline splits each file in two:
 
-* **Platform:** Cloudflare Workers (High-performance global deployment)
-* **Database:** Cloudflare D1
-* **Storage:** Cloudflare KV
+```
+app/content/**/*.md            ← authored here, versioned in git
+   │
+   ├─ front matter ──▶ D1 (content)      metadata: title, dates, tags, source
+   └─ body ──────────▶ KV  (blog:<slug>:<locale>)   pre-rendered HTML
+```
 
-| Component | Technology | Purpose |
-| :--- | :--- | :--- |
-| **Platform** | Cloudflare Workers | High-performance, globally distributed deployment (Edge Computing). |
-| **Front-end** | **React** | Component-based UI library for creating dynamic and maintainable user interfaces. |
-| **Routing** | React Router v7 (Framework Mode) | Efficient, framework-style routing for managing application state and navigation. |
-| **Styling** | Tailwind CSS | Utility-first CSS framework for rapid, consistent, and maintainable styling. |
-| **Data Storage** | **Cloudflare D1** | Serverless SQL database for persistent, structured data (e.g., blog metadata). |
-| **Key-Value Store**| **Cloudflare KV** | Key-Value store for fast, globally consistent storage (e.g., caching or simple content). |
+Serving a Post is therefore one KV read, and listing Content Items is one indexed D1 query — no Markdown parsing on the request path. That is why `front-matter` and `marked` are dependencies yet appear in no runtime import. See [ADR 0001](docs/adr/0001-markdown-as-source-of-truth-derived-into-d1-and-kv.md).
 
-## ⚖️ Licensing
+## Stack
 
-Due to the nature of this repository containing both code and original creative content, **Dual Licensing** is applied to ensure proper attribution and reuse terms for all assets.
+| Layer            | Choice                          | Notes                                                     |
+| ---------------- | ------------------------------- | --------------------------------------------------------- |
+| Platform         | Cloudflare Workers              | The only runtime; `workers_dev` off, own domain only       |
+| Framework        | React Router v8, framework mode | SSR, config-based routes in `app/routes.ts`                |
+| UI               | React 19 + Base UI              | Headless primitives wrapped in `app/components/ui/`        |
+| Styling          | Tailwind CSS v4 + Radix Colors  | Semantic tokens in `@theme`; no default Tailwind palette   |
+| Metadata store   | Cloudflare D1                   | Hand-written SQL, no ORM — see [ADR 0002](docs/adr/0002-hand-written-sql-over-d1-without-an-orm.md) |
+| Content store    | Cloudflare KV                   | Rendered Post HTML and the sitemap, read-only at runtime   |
+| Validation       | Zod                             | Cookie parsing                                             |
+| Build            | Vite 8 (Rolldown + Oxc)         | Not Rollup, not esbuild                                    |
+| Package manager  | pnpm                            | Pinned via `packageManager`; the only lockfile             |
 
-### 1. Source Code License (MIT)
+## Getting started
 
-The underlying software (all configuration files, build scripts, templates, and Worker JavaScript/TypeScript) is licensed under the **MIT License**.
+Requires **Node 22+** (developed on 24) and **pnpm** — `corepack enable` picks up the pinned version.
 
-You are free to use, modify, and distribute the code, provided you include the original copyright and license notice.
+```bash
+git clone https://github.com/poschuler/poschuler.com.git
+cd poschuler.com
+pnpm install                       # also runs `wrangler types`
 
-* **See the full license text in the [LICENSE](LICENSE) file.**
+cp .vars.template .dev.vars        # then fill SESSION_THEME_SECRET
+openssl rand -base64 32            # a value for it
+```
 
-### 2. Content License (CC BY-NC 4.0)
+`SESSION_THEME_SECRET` and `DEPLOYMENT_ENV` are read at startup and **throw if missing** — the theme cookie is signed with the first, and a Worker that cannot sign it should not boot.
 
-All original textual content, including articles, blog posts, and explanations, is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International License**.
+Create the local D1 table, then seed the two stores **in that order** — the KV generator reads the already-seeded D1 table to decide which Posts to render:
 
-This means you are free to share and adapt the content, provided you:
+```bash
+pnpm exec wrangler d1 execute poschuler --file ./seed/d1/schema.sql --local
+pnpm run d1:seed:local             # front matter → seed.sql → D1
+pnpm run kv:seed:local             # bodies → JSON payloads → KV
+pnpm run dev
+```
 
-* **A**ttribute the work to Paul Osorio Schuler.
-* Use it for **Non-Commercial** purposes.
+`:remote` variants of both seed scripts do the same against the deployed resources.
 
-* **View the full legal terms here: [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)**
+## Adding content
+
+A **Post** is a folder plus a locale-suffixed file, `app/content/blog/<slug>/<slug>.en.md`:
+
+```yaml
+---
+type: 'post'
+title: 'Implementing Value Objects in Node.js'
+description: 'A practical guide to…'
+tags: ['nodejs', 'typescript', 'ddd']
+publishedAt: '2025-11-02'
+repository: 'https://github.com/…'   # optional, renders a repo link
+---
+```
+
+A **Bookmark** is a single file, `app/content/bookmarks/<slug>.md`, front matter only — the body stays at the source:
+
+```yaml
+---
+type: 'link'
+title: "The Copenhagen Book"
+source: 'pilcrow'
+externalUrl: "https://thecopenhagenbook.com/"
+publishedAt: '2024-07-30'
+tags: ['auth', 'security', 'webdev']
+---
+```
+
+The filename is the Slug, and it never changes once published — it is the URL. Re-run both seed scripts after adding a file; the KV upload replaces every `blog:` key rather than merging.
+
+## Commands
+
+| Command                  | What it does                                              |
+| ------------------------ | --------------------------------------------------------- |
+| `pnpm run dev`           | Dev server on workerd, with the local D1 and KV            |
+| `pnpm run build`         | Production build into `build/`                             |
+| `pnpm run preview`       | Build, then serve the built output                         |
+| `pnpm run typecheck`     | Regenerate types (`wrangler` + `react-router`), then `tsc` |
+| `pnpm run deploy`        | Build and ship in one step                                 |
+| `pnpm run d1:seed:local` | Regenerate `seed.sql` and apply it locally                 |
+| `pnpm run kv:seed:local` | Regenerate KV payloads and upload them locally             |
+
+The generated `worker-configuration.d.ts` and `.react-router/` are gitignored, so a fresh clone must install before it type-checks.
+
+> **Note:** the build copies `.dev.vars` into `build/server/` so the output can be previewed locally. `build/` is gitignored and `wrangler deploy` does not turn those into Worker vars — but never publish `build/` as an artifact.
+
+## Layout
+
+```
+app/
+  content/        Markdown — the source of truth
+  components/ui/  Shared Base UI primitives
+  models/         Named domain queries over D1
+  routes/         One folder per route, entry file prefixed with _
+  lib/seo/        Hand-rolled sitemap and robots.txt renderers
+seed/             Build-time generators for D1 and KV
+workers/app.ts    The Worker entry point
+docs/             Architecture, design conventions and ADRs
+```
+
+## Documentation
+
+- [`CONTEXT.md`](CONTEXT.md) — the domain vocabulary. What a Post, a Bookmark, a Slug and the Timeline mean here.
+- [`docs/architecture.md`](docs/architecture.md) — runtime shape, the content pipeline, data stores, caching, known defects.
+- [`docs/design.md`](docs/design.md) — UI and module conventions: color, theming, component layers, data access.
+- [`docs/adr/`](docs/adr/) — the decisions worth recording, and why.
+
+## Licensing
+
+Dual-licensed, because the repository holds both code and original writing.
+
+- **Source code — [MIT](LICENSE).** Configuration, build scripts, templates and all Worker TypeScript. Use, modify and distribute it, keeping the copyright and licence notice.
+- **Content — [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).** Articles, posts and explanations. Share and adapt them with attribution to Paul Osorio Schuler, for non-commercial purposes.
