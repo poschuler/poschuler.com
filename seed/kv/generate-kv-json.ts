@@ -3,7 +3,7 @@ import path from "node:path";
 import { execSync } from "node:child_process";
 import fm from "front-matter";
 import { marked } from "marked";
-import { generateSitemap, type SitemapRoute } from "@forge42/seo-tools/sitemap";
+import { generateSitemap, type SitemapRoute } from "../../app/lib/seo/sitemap.ts";
 
 const CONTENT_DIR = path.join(process.cwd(), "app", "content", "blog");
 const TEMP_JSON_DIR = path.join(process.cwd(), "seed", "kv", "kv_payloads");
@@ -152,10 +152,9 @@ async function generateKvJsonFiles() {
         } as SitemapRoute;
     })
 
-    const sitemap = await generateSitemap(
+    const sitemap = generateSitemap(
         {
             domain: stringUrl,
-            ignore: [],
             routes: [
                 { url: "/", lastmod: lastContentDate, changefreq: "monthly", priority: 1.0 },
                 { url: "/resume", lastmod: "2025-12-21", changefreq: "monthly", priority: 0.8 },

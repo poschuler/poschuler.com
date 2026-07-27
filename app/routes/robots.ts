@@ -1,4 +1,4 @@
-import { generateRobotsTxt } from "@forge42/seo-tools/robots";
+import { generateRobotsTxt } from "~/lib/seo/robots";
 import { type LoaderFunctionArgs } from "react-router";
 import { cloudflareContext } from "~/context";
 

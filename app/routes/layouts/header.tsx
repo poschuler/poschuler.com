@@ -64,11 +64,17 @@ export function Header() {
       </nav>
 
       <Sheet>
-        <SheetTrigger asChild>
-          <Button variant="outline" size="icon" className="shrink-0 md:hidden">
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle navigation menu</span>
-          </Button>
+        <SheetTrigger
+          render={
+            <Button
+              variant="outline"
+              size="icon"
+              className="shrink-0 md:hidden"
+            />
+          }
+        >
+          <Menu className="h-5 w-5" />
+          <span className="sr-only">Toggle navigation menu</span>
         </SheetTrigger>
         <SheetContent side="right">
           <nav className="grid gap-6 text-lg font-medium">

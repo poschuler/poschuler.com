@@ -12,5 +12,5 @@ Content is authored as Markdown files under `app/content/` and versioned in git,
 
 - **D1 must be seeded before KV.** `seed/kv/generate-kv-json.ts` queries the seeded `content` table to decide which Posts to render. Running `kv:seed` against an empty D1 silently produces nothing.
 - **Publishing is a deploy-time act, not a runtime one.** Merging a `.md` file changes nothing until the seed scripts run; the content stores are not self-updating.
-- `front-matter`, `marked` and `@forge42/seo-tools` are runtime dependencies of the seed scripts only — they never appear in a Worker import, which looks like dead weight in `package.json` until you know why.
+- `front-matter` and `marked` are runtime dependencies of the seed scripts only — they never appear in a Worker import, which looks like dead weight in `package.json` until you know why.
 - The same Post exists in three places (Markdown, D1 row, KV value). Markdown wins every disagreement; the other two are regenerated wholesale, never patched.

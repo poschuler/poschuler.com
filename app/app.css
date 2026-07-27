@@ -37,13 +37,26 @@
 @import "@radix-ui/colors/sky";
 @import "@radix-ui/colors/sky-dark";
 
-@plugin "tailwindcss-animate";
-@plugin "tailwindcss-react-aria-components" {
-  prefix: rac;
-}
+/* `.system` (= "follow the OS") under prefers-color-scheme: dark.
+ * Generated — see scripts/generate-system-dark-css.mjs. Must come last so it
+ * overrides the `:root` light values for a `.system` root when the OS is dark. */
+@import "./styles/radix-system-dark.css";
+
+@import "tw-animate-css";
+
 @plugin "@tailwindcss/typography";
 
-@custom-variant dark (&:is(.dark *));
+/* Handles both an explicit `.dark` root and `.system` under an OS dark pref. */
+@custom-variant dark {
+  &:where(.dark, .dark *) {
+    @slot;
+  }
+  &:where(.system, .system *) {
+    @media (prefers-color-scheme: dark) {
+      @slot;
+    }
+  }
+}
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,

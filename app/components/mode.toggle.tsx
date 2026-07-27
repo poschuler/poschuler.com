@@ -1,43 +1,46 @@
-import { Moon, Sun, SunMoon } from "lucide-react";
-import { Theme, useTheme } from "remix-themes";
-import { ClientOnly } from "remix-utils/client-only";
+import { Monitor, Moon, Sun } from "lucide-react";
+import { Form, useRouteLoaderData } from "react-router";
 import { IconButton } from "~/components/ui/icon-button";
+import type { ColorScheme } from "~/color-scheme-cookie";
 
+type RootData = { colorScheme?: ColorScheme };
+
+const LIGHT = { value: "light", Icon: Sun, label: "claro" } as const;
+const DARK = { value: "dark", Icon: Moon, label: "oscuro" } as const;
+const SYSTEM = { value: "system", Icon: Monitor, label: "automático" } as const;
+
+const BY_VALUE = { light: LIGHT, dark: DARK, system: SYSTEM };
+/** Cycle order — light → dark → system → light. */
+const NEXT = { light: DARK, dark: SYSTEM, system: LIGHT };
+
+/**
+ * One button that advances the theme, rather than three that sit there.
+ *
+ * The whole mechanism is a plain POST to `/set-theme`: the server owns the
+ * choice, so there is no client JS, no provider and no flash of the wrong
+ * theme to prevent — the class is already on `<html>` in the first byte.
+ */
 export function ModeToggle() {
-  const [theme, setTheme] = useTheme();
-
-  const toggleTheme = () => {
-    setTheme((prevTheme) =>
-      prevTheme === Theme.LIGHT ? Theme.DARK : Theme.LIGHT
-    );
-  };
+  const root = useRouteLoaderData("root") as RootData | undefined;
+  const active = root?.colorScheme ?? "system";
+  const current = BY_VALUE[active] ?? SYSTEM;
+  const next = NEXT[current.value];
+  const { Icon } = current;
 
   return (
-    <ClientOnly fallback={<StaticModeToggle />}>
-      {() => (
-        <IconButton
-          variant="outline"
-          onPress={toggleTheme}
-        >
-          {theme === Theme.LIGHT && (
-            <Moon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          )}
-
-          {theme === Theme.DARK && (
-            <Sun className="h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-          )}
-          <span className="sr-only">Toggle theme</span>
-        </IconButton>
-      )}
-    </ClientOnly>
-  );
-}
-
-function StaticModeToggle() {
-  return (
-    <IconButton variant="outline">
-      <SunMoon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-      <span className="sr-only">Toggle theme</span>
-    </IconButton>
+    <Form navigate={false} method="POST" action="/set-theme" className="shrink-0">
+      <IconButton
+        type="submit"
+        variant="outline"
+        name="color-scheme"
+        value={next.value}
+        title={`Tema ${current.label} — cambiar a ${next.label}`}
+      >
+        <Icon className="h-[1.2rem] w-[1.2rem]" />
+        <span className="sr-only">
+          Tema {current.label}. Cambiar a tema {next.label}
+        </span>
+      </IconButton>
+    </Form>
   );
 }

@@ -1,12 +1,10 @@
-import {
-  GitHubLogoIcon,
-  LinkedInLogoIcon,
-  TwitterLogoIcon,
-} from "@radix-ui/react-icons";
 import { useLoaderData } from "react-router";
 import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
+import { BrandNetworkIcon } from "~/components/ui/brand-icons";
 import {
+  Command,
+  CommandCollection,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -48,66 +46,44 @@ export function KeyboardManager() {
 
   return (
     <>
-      {/* <div className="fixed right-4 bottom-4">
-        <p className="text-sm text-muted-foreground"></p>
-      </div> */}
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Type a command or search..." />
-        <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
-          <CommandGroup heading="Links" className="font-mono">
-            {profiles.map((item) => (
-              <a
-                key={item.row}
-                href={item.url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <CommandItem className="cursor-pointer">
-                  {item.network === "GitHub" && (
-                    <GitHubLogoIcon className="mr-2 size-4 text-muted-foreground" />
-                  )}
-
-                  {item.network === "LinkedIn" && (
-                    <LinkedInLogoIcon className="mr-2 size-4 text-muted-foreground" />
-                  )}
-
-                  {item.network === "X" && (
-                    <TwitterLogoIcon className="mr-2 size-4 text-muted-foreground" />
-                  )}
-
-                  <span className="font-mono">{item.network}</span>
-
-                  {item.network === "GitHub" && (
+        <Command
+          inline
+          open
+          items={profiles}
+          itemToStringValue={(profile) => profile.network}
+        >
+          <CommandInput placeholder="Type a command or search..." />
+          <CommandList>
+            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandGroup heading="Links" className="font-mono">
+              <CommandCollection>
+                {(profile) => (
+                  <CommandItem
+                    key={profile.row}
+                    value={profile}
+                    render={
+                      <a
+                        href={profile.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      />
+                    }
+                  >
+                    <BrandNetworkIcon
+                      network={profile.network}
+                      className="mr-2 size-4 text-muted-foreground"
+                    />
+                    <span className="font-mono">{profile.network}</span>
                     <CommandShortcut className="uppercase">
-                      ⌘{item.key}
+                      ⌘{profile.key}
                     </CommandShortcut>
-                  )}
-
-                  {item.network === "LinkedIn" && (
-                    <CommandShortcut className="uppercase">
-                      ⌘{item.key}
-                    </CommandShortcut>
-                  )}
-
-                  {item.network === "X" && (
-                    <CommandShortcut className="uppercase">
-                      ⌘{item.key}
-                    </CommandShortcut>
-                  )}
-                </CommandItem>
-              </a>
-            ))}
-          </CommandGroup>
-          {/* <CommandSeparator />
-          <CommandGroup heading="Action">
-            <CommandItem>
-              <Printer className="mr-2 size-4" />
-              <span>Print</span>
-              <CommandShortcut>⌘P</CommandShortcut>
-            </CommandItem>
-          </CommandGroup> */}
-        </CommandList>
+                  </CommandItem>
+                )}
+              </CommandCollection>
+            </CommandGroup>
+          </CommandList>
+        </Command>
       </CommandDialog>
       <Button
         onClick={handleClick}

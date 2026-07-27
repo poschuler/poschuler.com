@@ -5,7 +5,7 @@ import { cloudflareContext } from "~/context";
 // import fs from "node:fs";
 // import fm from "front-matter";
 // import { marked } from "marked";
-import { GitHubLogoIcon } from "@radix-ui/react-icons";
+import { GitHubIcon } from "~/components/ui/brand-icons";
 
 
 interface PostAttributes {
@@ -88,7 +88,7 @@ export default function BlogSlug() {
                 {/* show fancy repository design  flex items-center gap-2 text-muted-foreground transition-colors duration-200 hover:text-default*/}
                 {repository && (
                     <p className="flex items-center gap-2">
-                        <GitHubLogoIcon className="size-6" />
+                        <GitHubIcon className="size-6" />
                         <Link
                             to={repository}
                             target="_blank"

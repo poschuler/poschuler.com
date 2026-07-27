@@ -11,14 +11,12 @@ import {
 
 import type { Route } from "./+types/root";
 import "./app.css";
-import { PreventFlashOnWrongTheme, ThemeProvider, useTheme } from "remix-themes";
-import { getThemeResolver } from "./sessions/theme-session.server";
-import { cloudflareContext } from "./context";
-import { getToast } from "remix-toast";
-import { useToast } from "./components/ui/use-toast";
+import { getColorScheme } from "./color-scheme-cookie";
+import { getToast, type ToastMessage } from "remix-toast";
+import { Toast } from "@base-ui/react/toast";
 import { useServerLayoutEffect } from "./utils/use-server-layout-effect";
-import clsx from "clsx";
 import { Toaster } from "./components/ui/toaster";
+import { ToastProvider } from "./components/ui/toast";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -47,15 +45,15 @@ export const links: Route.LinksFunction = () => [
 // };
 
 
-export async function loader({ request, context }: Route.LoaderArgs) {
-  const { env } = context.get(cloudflareContext);
-  const themeSessionResolver = getThemeResolver(env);
-  const { getTheme } = await themeSessionResolver(request);
-  const { toast, headers } = await getToast(request);
+export async function loader({ request }: Route.LoaderArgs) {
+  const [colorScheme, { toast, headers }] = await Promise.all([
+    getColorScheme(request),
+    getToast(request),
+  ]);
 
   return data(
     {
-      theme: getTheme(),
+      colorScheme,
       toast,
     },
     {
@@ -66,55 +64,48 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   );
 }
 
-export default function AppWithProviders({ loaderData }: Route.ComponentProps) {
-  const { theme: loaderTheme } = loaderData;
+export default function AppWithProviders() {
+  return <App />;
+}
 
-  return (
-    <ThemeProvider
-      specifiedTheme={loaderTheme}
-      themeAction="/action/set-theme"
-      disableTransitionOnThemeChange={true}
-    >
-      <App />
-    </ThemeProvider>
-  );
+const toastTitles = {
+  info: "Info.",
+  success: "Mensaje",
+  error: "Error",
+  warning: "Alerta",
+} as const;
+
+/**
+ * Replays a toast handed over by the loader. Lives below `ToastProvider`
+ * because `useToastManager` reads that context.
+ */
+function ServerToast({
+  toast: loaderToast,
+}: {
+  toast: ToastMessage | undefined;
+}) {
+  const { add } = Toast.useToastManager();
+
+  useServerLayoutEffect(() => {
+    if (!loaderToast) {
+      return;
+    }
+
+    add({
+      type: loaderToast.type === "error" ? "destructive" : "default",
+      title: toastTitles[loaderToast.type],
+      description: loaderToast.message,
+    });
+  }, [loaderToast]);
+
+  return null;
 }
 
 function App() {
-  const { theme: loaderTheme, toast: loaderToast } =
-    useLoaderData<typeof loader>();
-
-  const [theme] = useTheme();
-  const { toast } = useToast();
-
-  useServerLayoutEffect(() => {
-    if (loaderToast) {
-      let title = "";
-      switch (loaderToast.type) {
-        case "info":
-          title = "Info.";
-          break;
-        case "success":
-          title = "Mensaje";
-          break;
-        case "error":
-          title = "Error";
-          break;
-        case "warning":
-          title = "Alerta";
-          break;
-      }
-
-      toast({
-        variant: loaderToast.type === "error" ? "destructive" : "default",
-        title: title,
-        description: loaderToast.message,
-      });
-    }
-  }, [loaderToast]);
+  const { colorScheme, toast: loaderToast } = useLoaderData<typeof loader>();
 
   return (
-    <html lang="en" className={clsx(theme)}>
+    <html lang="en" className={colorScheme}>
       <head>
         <link
           rel="apple-touch-icon"
@@ -154,12 +145,14 @@ function App() {
         />
         <link rel="manifest" href="/site.webmanifest" />
         <Meta />
-        <PreventFlashOnWrongTheme ssrTheme={Boolean(loaderTheme)} />
         <Links />
       </head>
       <body>
-        <Outlet />
-        <Toaster />
+        <ToastProvider limit={1}>
+          <Outlet />
+          <ServerToast toast={loaderToast} />
+          <Toaster />
+        </ToastProvider>
         <ScrollRestoration />
         <Scripts />
         {/* <!-- Cloudflare Web Analytics --> */}

@@ -1,7 +1,7 @@
 import { type RouteConfig, layout, route } from "@react-router/dev/routes";
 
 export default [
-    route("/action/set-theme", "routes/action.set-theme.ts"),
+    route("/set-theme", "routes/set-theme.ts"),
     route("/resume.pdf", "routes/resume-pdf/_resume-pdf.tsx"),
     route("/robots.txt", "routes/robots.ts"),
     route("/sitemap.xml", "routes/sitemap.ts"),

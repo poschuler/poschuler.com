@@ -33,10 +33,10 @@ app/content/**/*.md                       ← source of truth, versioned in git
    │
    └─ body ──────────▶ seed/kv/generate-kv-json.ts ──▶ seed/kv/kv_payloads/*.json ──▶ KV
                          (marked → HTML)                                    `blog:<slug>:<locale>`
-                         (@forge42/seo-tools)                               `sitemap`
+                         (app/lib/seo/sitemap.ts)                           `sitemap`
 ```
 
-Both generators are Node scripts run from the developer's machine, never in the Worker. That is why `front-matter`, `marked` and `@forge42/seo-tools` appear in `dependencies` yet are absent from every runtime import.
+Both generators are Node scripts run from the developer's machine, never in the Worker. That is why `front-matter` and `marked` appear in `dependencies` yet are absent from every runtime import. Sitemap and `robots.txt` rendering is hand-rolled in `app/lib/seo/`, with no third-party SEO dependency.
 
 The KV generator reads the *already-seeded* D1 table (via `wrangler d1 execute --json`) to decide which Posts to render, so **D1 must be seeded before KV**. The npm scripts encode that order:
 

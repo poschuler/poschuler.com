@@ -1,11 +1,6 @@
-import {
-  DownloadIcon,
-  GitHubLogoIcon,
-  LinkedInLogoIcon,
-  TwitterLogoIcon,
-} from "@radix-ui/react-icons";
 import { Link, useLoaderData } from "react-router";
-import { Globe, Mail } from "lucide-react";
+import { Download, Globe, Mail } from "lucide-react";
+import { BrandNetworkIcon } from "~/components/ui/brand-icons";
 import type { loader } from "./_resume";
 
 export function Hero() {
@@ -70,17 +65,7 @@ export function Hero() {
               rel="noreferrer"
               className="inline-flex size-8 items-center justify-center whitespace-nowrap rounded-md border border-default border-input bg-background text-sm font-medium ring-offset-background transition-colors hover:bg-active hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
             >
-              {profile.network === "GitHub" && (
-                <GitHubLogoIcon className="size-4" />
-              )}
-
-              {profile.network === "LinkedIn" && (
-                <LinkedInLogoIcon className="size-4" />
-              )}
-
-              {profile.network === "X" && (
-                <TwitterLogoIcon className="size-4" />
-              )}
+              <BrandNetworkIcon network={profile.network} className="size-4" />
             </a>
           ))}
         </div>
@@ -91,7 +76,7 @@ export function Hero() {
             reloadDocument
             className="inline-flex items-center justify-center whitespace-nowrap rounded-md border border-default border-input bg-background text-xs font-medium ring-offset-background transition-colors hover:bg-active hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 p-2"
           >
-            <DownloadIcon className="size-4 mr-2" />
+            <Download className="size-4 mr-2" />
             <span>Download as PDF</span>
           </Link>
         </div>
