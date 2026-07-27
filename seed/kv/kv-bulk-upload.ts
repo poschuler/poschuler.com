@@ -41,7 +41,7 @@ async function bulkUpload(mode: string) {
         console.log(`Uploading ${kv_key} from ${filename}...`);
 
         try {
-            const command = `npx wrangler kv key put --binding ${KV_BINDING} "${kv_key}" --path "${filePath}" ${WRANGLER_ARGS} `;
+            const command = `pnpm exec wrangler kv key put --binding ${KV_BINDING} "${kv_key}" --path "${filePath}" ${WRANGLER_ARGS} `;
 
             console.log(command);
 
@@ -61,7 +61,7 @@ async function bulkUpload(mode: string) {
         console.log(`Uploading ${kv_key} from ${filename}...`);
 
         try {
-            const command = `npx wrangler kv key put --binding ${KV_BINDING} "${kv_key}" --path "${filePath}" ${WRANGLER_ARGS} `;
+            const command = `pnpm exec wrangler kv key put --binding ${KV_BINDING} "${kv_key}" --path "${filePath}" ${WRANGLER_ARGS} `;
 
             console.log(command);
 
@@ -89,7 +89,7 @@ async function clearKv(mode: string, wranglerArgs: string) {
 
     try {
         // List keys with the prefix 'blog:'
-        const listCommand = `npx wrangler kv key list --binding ${KV_BINDING} --prefix "blog:" ${wranglerArgs}`;
+        const listCommand = `pnpm exec wrangler kv key list --binding ${KV_BINDING} --prefix "blog:" ${wranglerArgs}`;
         const output = execSync(listCommand, { encoding: 'utf-8' });
         const keys = JSON.parse(output) as { name: string }[];
 
@@ -101,7 +101,7 @@ async function clearKv(mode: string, wranglerArgs: string) {
         console.log(`Found ${keys.length} keys to delete...`);
 
         for (const key of keys) {
-            const deleteCmd = `npx wrangler kv key delete --binding ${KV_BINDING} "${key.name}" ${wranglerArgs}`;
+            const deleteCmd = `pnpm exec wrangler kv key delete --binding ${KV_BINDING} "${key.name}" ${wranglerArgs}`;
             execSync(deleteCmd, { stdio: 'ignore' }); // ignore stdio to keep logs clean
         }
 

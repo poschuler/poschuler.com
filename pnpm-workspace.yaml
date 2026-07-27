@@ -1,0 +1,8 @@
+# pnpm blocks dependency build scripts by default. These two need theirs:
+# esbuild and workerd each download a platform-specific native binary on
+# install, and neither Vite nor the Workers runtime starts without it.
+allowBuilds:
+  esbuild: true
+  workerd: true
+minimumReleaseAgeExclude:
+  - '@cloudflare/workers-types@5.20260727.1'

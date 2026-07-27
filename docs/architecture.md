@@ -41,8 +41,8 @@ Both generators are Node scripts run from the developer's machine, never in the 
 The KV generator reads the *already-seeded* D1 table (via `wrangler d1 execute --json`) to decide which Posts to render, so **D1 must be seeded before KV**. The npm scripts encode that order:
 
 ```
-npm run d1:seed:local    # generate seed.sql, then wrangler d1 execute --local
-npm run kv:seed:local    # generate JSON payloads, then wrangler kv key put --local
+pnpm run d1:seed:local    # generate seed.sql, then wrangler d1 execute --local
+pnpm run kv:seed:local    # generate JSON payloads, then wrangler kv key put --local
 ```
 
 `:remote` variants do the same against the deployed resources. `kv-bulk-upload.ts` deletes every existing `blog:` key before uploading, making the upload a full replacement rather than a merge.
@@ -107,7 +107,9 @@ Vars, templated in `.vars.template` and supplied through `.dev.vars` locally / s
 | `DEPLOYMENT_ENV`       | `"production"` tightens the theme cookie to `.poschuler.com` + `secure` |
 | `DB_DEBUG_FLAG`        | declared, currently unread                                 |
 
-`npm run deploy` builds and ships in one step. Type generation (`wrangler types` + `react-router typegen`) runs on `postinstall` and before `typecheck`; the generated `worker-configuration.d.ts` and `.react-router/` are gitignored, so a fresh clone must install before it type-checks.
+`pnpm run deploy` builds and ships in one step. Type generation (`wrangler types` + `react-router typegen`) runs on `postinstall` and before `typecheck`; the generated `worker-configuration.d.ts` and `.react-router/` are gitignored, so a fresh clone must install before it type-checks.
+
+**The package manager is pnpm**, pinned in `package.json` via `packageManager` and enforced by `pnpm-lock.yaml` being the only lockfile. Two consequences worth knowing: pnpm does not hoist transitive dependencies, so a package must be a declared dependency to be importable (`require("esbuild")` fails at the root even though Vite depends on it); and pnpm blocks dependency build scripts unless allow-listed, which is why `pnpm-workspace.yaml` opts `esbuild` and `workerd` in — both download native binaries on install and nothing runs without them.
 
 ## Known defects
 
