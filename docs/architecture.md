@@ -94,7 +94,7 @@ Routes are declared explicitly in `app/routes.ts` (config-based, not file-system
 | `/resume`        | none   | none           | `app/routes/resume/resume.json`, imported at build time |
 | `/resume.pdf`    | fetch  | 1 day          | proxies `cdn.poschuler.dev`, forces `Content-Disposition: attachment` |
 | `/sitemap.xml`   | KV     | 1 hour         | serves the pre-generated XML verbatim       |
-| `/robots.txt`    | none   | 1 hour         | generated per request from `PUBLIC_HOST`    |
+| `/robots.txt`    | none   | 1 hour         | `PUBLIC_HOST`, or the request's own origin  |
 | `/set-theme`     | cookie | none           | writes the cookie, then redirects back      |
 | `*`              | none   | none           | 404, inside the layout so it keeps the header |
 
@@ -126,16 +126,20 @@ Two layers, and the split between them is deliberate.
 
 `wrangler.jsonc` declares the bindings, `nodejs_compat`, and observability (logs and traces persisted at full sampling). `workers_dev` is off — the site is served from its own domain only.
 
-Vars, templated in `.vars.template` and supplied through `.dev.vars` locally / secrets in production:
+**Configuration splits on one question: is the value secret?**
 
-| Var                    | Used by                                                   |
-| ---------------------- | --------------------------------------------------------- |
-| `SESSION_THEME_SECRET` | signs the `poschuler__color-scheme` cookie; **startup throws if missing** |
-| `DEPLOYMENT_ENV`       | `"production"` tightens the theme cookie to `poschuler.com` + `secure`; **startup throws if missing** |
-| `PUBLIC_HOST`          | canonical origin for `robots.txt`; the loader throws if unset |
-| `DB_DEBUG_FLAG`        | declared, currently unread                                 |
+| Value                  | Where it lives            | Used by                                                     |
+| ---------------------- | ------------------------- | ----------------------------------------------------------- |
+| `SESSION_THEME_SECRET` | secret (`wrangler secret`) | signs the `poschuler__color-scheme` cookie                   |
+| `DEPLOYMENT_ENV`       | `vars` in `wrangler.jsonc` | `"production"` gives the theme cookie `Secure` + its domain  |
+| `PUBLIC_HOST`          | `vars` in `wrangler.jsonc` | canonical origin in `robots.txt`                             |
+| `DB_DEBUG_FLAG`        | `.dev.vars` only           | declared, currently unread                                   |
 
-The first two are read at module scope by `color-scheme-cookie.ts`, so a missing value fails the Worker's startup check and the deploy with it. That is the intent: the alternative is a site that serves happily while signing every cookie with a placeholder.
+Non-secret values belong in `wrangler.jsonc`, in git, where a deploy cannot forget them and a new environment needs no manual step. Only the signing secret is invisible to the repository. `.dev.vars` overrides both locally — that is how `DEPLOYMENT_ENV` becomes `"development"` on a dev machine, keeping the cookie off `Secure` and off `.poschuler.com`.
+
+**A secret shadows a var of the same name in production.** If a var in `wrangler.jsonc` appears to have no effect, check `wrangler secret list` before anything else.
+
+Neither is required to boot. `SESSION_THEME_SECRET` throws only when the cookie is written, and `robots.txt` falls back to the request's own origin. Both limits were learned the hard way — see the note under Shape, and the `robots.txt` entry under Known defects.
 
 `pnpm run deploy` builds and ships in one step. Type generation (`wrangler types` + `react-router typegen`) runs on `postinstall` and before `typecheck`; the generated `worker-configuration.d.ts` and `.react-router/` are gitignored, so a fresh clone must install before it type-checks.
 
@@ -151,6 +155,7 @@ The first two are read at module scope by `color-scheme-cookie.ts`, so a missing
 - **The sitemap's `/resume` `lastmod` is the hardcoded string `2025-12-21`.**
 - **`generate-kv-json.ts` carries two near-identical fetchers**, `fetchSlugs` and `fetchAll`, differing only in a `where` clause. Only `fetchAll` is called.
 - **Nothing runs `typecheck` automatically.** There are no tests and no CI: `.github/` does not exist. `pnpm run typecheck` passes today, but only because someone remembers to run it.
+- **Cloudflare prepends a managed `robots.txt`.** The zone has AI Crawl Control's managed robots.txt on, which blocks the AI training crawlers and adds Content Signals. It merges with this Worker's response *only when the origin answers 200* — while `/robots.txt` was throwing on a missing `PUBLIC_HOST`, Cloudflare's block was served alone and the failure was invisible, `Sitemap:` line and all. If that line ever disappears again, request the route directly before suspecting the dashboard.
 - **Post HTML is never sanitised.** `marked` passes raw HTML in Markdown straight through, and the route injects the result with `dangerouslySetInnerHTML`. The only author is Paul and every file is reviewed in git, so the exposure is self-inflicted rather than remote — and the CSP now blocks the script vector. Sanitising at seed time (the pipeline, not the Worker) is the fix if that ever stops being true.
 
 ## Inherited code (removed)
