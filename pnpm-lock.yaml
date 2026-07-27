@@ -41,9 +41,6 @@ importers:
       react-router:
         specifier: ^8.3.0
         version: 8.3.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      remix-toast:
-        specifier: ^4.0.0
-        version: 4.0.0(react-router@8.3.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8))
       remix-utils:
         specifier: ^10.0.0
         version: 10.0.0(react-router@8.3.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)
@@ -1290,11 +1287,6 @@ packages:
     resolution: {integrity: sha512-9u/XQ1pvrQtYyMpZe7DXKv2p5CNvyVwzUB6uhLAnQwHMSgKMBR62lc7AHljaeteeHXn11XTAaLLUVZYVZyuRBQ==}
     engines: {node: '>= 20.19.0'}
 
-  remix-toast@4.0.0:
-    resolution: {integrity: sha512-6VUYEYOIPU02Fp3hThh8nz8C6w30EUoSlal5ATf/hfHAIEEXksVTSRMNiuh9R3hcdAQwQC7V8WjxK8tM7ZmlBw==}
-    peerDependencies:
-      react-router: '>=7.9.0'
-
   remix-utils@10.0.0:
     resolution: {integrity: sha512-v5voIsJQof6e/1m8te4qyH5YXATWxv+zEgbxd98CwtVxRLCXVc+P9rQ2uDRRYPLCvF9A2ZBOizK0ZTUfm4qJpw==}
     engines: {node: '>=22.22.0'}
@@ -2488,11 +2480,6 @@ snapshots:
   react@19.2.8: {}
 
   readdirp@5.0.0: {}
-
-  remix-toast@4.0.0(react-router@8.3.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)):
-    dependencies:
-      react-router: 8.3.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      zod: 4.4.3
 
   remix-utils@10.0.0(react-router@8.3.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8):
     optionalDependencies:
