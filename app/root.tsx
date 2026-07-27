@@ -11,6 +11,7 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 import { getColorScheme } from "./color-scheme-cookie";
+import { cloudflareContext } from "./context";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -28,8 +29,10 @@ export const links: Route.LinksFunction = () => [
 // No `meta` here on purpose: a route that forgets its own `meta` should render
 // with none at all, rather than silently inheriting the home page's title.
 
-export async function loader({ request }: Route.LoaderArgs) {
-  return { colorScheme: await getColorScheme(request) };
+export async function loader({ request, context }: Route.LoaderArgs) {
+  const { env } = context.get(cloudflareContext);
+
+  return { colorScheme: await getColorScheme(request, env) };
 }
 
 /**
