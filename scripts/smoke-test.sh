@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+#
+# Cold start check: serve the built Worker with no secrets and no `.dev.vars`,
+# and assert the site still answers.
+#
+# This exists because of a real outage. A module read `process.env` while it was
+# being evaluated and threw on a missing value, which took down every route on
+# the site to protect a theme preference. Nothing caught it before deploy: the
+# machine it was written on had a `.dev.vars` with the value in it, so it only
+# failed where no one was looking.
+#
+# So the point is not that the pages render — it is that they render with
+# nothing configured. Run it after `pnpm build`.
+#
+# "Nothing configured" means no vars and no secrets. It does not mean no data:
+# D1 and KV are seeded first, from the fixtures committed to this repo, because
+# empty stores are not a state production is ever in. A 404 from an empty KV
+# would say nothing about the code and would fail every run.
+
+set -euo pipefail
+
+PORT="${PORT:-4173}"
+BASE="http://localhost:${PORT}"
+
+# Derived, not hardcoded: a Slug never changes once published, but which Posts
+# exist does.
+FIRST_PAYLOAD=$(find seed/kv/kv_payloads -name '*.en.json' | sort | head -1)
+POST_SLUG=$(basename "${FIRST_PAYLOAD}" .en.json)
+
+ROUTES=(/ /blog /bookmarks /resume /robots.txt /sitemap.xml "/blog/${POST_SLUG}")
+
+if [[ ! -d build/client ]]; then
+	echo "error: no build found. Run 'pnpm build' first." >&2
+	exit 1
+fi
+
+# A dev machine has a `.dev.vars`, and with it in place this whole script is
+# theatre: every value it is supposed to be running without is simply there,
+# and a Worker that cannot boot in CI passes here. So the run takes it away and
+# gives it back — including the copy `@cloudflare/vite-plugin` leaves inside
+# `build/server/`, which the preview reads and which alone is enough to hide
+# the failure. That copy is build output; the next build recreates it.
+DEV_VARS_STASH=""
+
+if [[ -f .dev.vars ]]; then
+	DEV_VARS_STASH=".dev.vars.smoke-stash.$$"
+	mv .dev.vars "${DEV_VARS_STASH}"
+	echo "==> Set .dev.vars aside for the run (restored when it ends)"
+fi
+
+rm -f build/server/.dev.vars
+
+cleanup() {
+	if [[ -n "${PREVIEW_PID:-}" ]]; then
+		kill "${PREVIEW_PID}" 2>/dev/null || true
+	fi
+
+	if [[ -n "${DEV_VARS_STASH}" && -f "${DEV_VARS_STASH}" ]]; then
+		mv "${DEV_VARS_STASH}" .dev.vars
+	fi
+}
+
+trap cleanup EXIT INT TERM
+
+# Both stores are filled from files that are in git, applied locally — no
+# network, no Cloudflare credentials, nothing touching the deployed resources.
+# `seed.sql` deletes and re-inserts, so running this repeatedly is safe; the
+# schema is the only step that objects to already existing.
+echo "==> Seeding the local D1 and KV from the committed fixtures"
+pnpm exec wrangler d1 execute poschuler --file ./seed/d1/schema.sql --local >/dev/null 2>&1 ||
+	echo "    (schema already applied)"
+pnpm exec wrangler d1 execute poschuler --file ./seed/d1/seed.sql --local >/dev/null
+pnpm run kv:upload:local >/dev/null
+
+# Refuse to run against something already listening. Without this the readiness
+# probe below is happy to talk to whatever answers on the port — a stale preview
+# from an earlier run serving an older build, which passes every check and
+# tells you nothing about the code you just changed.
+if curl -fsS -o /dev/null --max-time 2 "${BASE}/robots.txt" 2>/dev/null; then
+	echo "error: something is already listening on port ${PORT}." >&2
+	echo "       Stop it first, or set PORT to a free one." >&2
+	exit 1
+fi
+
+echo "==> Starting the Worker with no vars and no secrets"
+pnpm exec vite preview --port "${PORT}" --strictPort >/tmp/smoke-preview.log 2>&1 &
+PREVIEW_PID=$!
+
+for _ in $(seq 60); do
+	if curl -fsS -o /dev/null "${BASE}/robots.txt" 2>/dev/null; then
+		break
+	fi
+	if ! kill -0 "${PREVIEW_PID}" 2>/dev/null; then
+		echo "error: the Worker exited before serving anything." >&2
+		cat /tmp/smoke-preview.log >&2
+		exit 1
+	fi
+	sleep 1
+done
+
+failed=0
+
+echo "==> Every route answers"
+for route in "${ROUTES[@]}"; do
+	status=$(curl -s -o /dev/null -w "%{http_code}" "${BASE}${route}")
+
+	if [[ "${status}" == "200" ]]; then
+		printf '    ok   %-24s %s\n' "${route}" "${status}"
+	else
+		printf '    FAIL %-24s %s\n' "${route}" "${status}"
+		failed=1
+	fi
+done
+
+# A 200 holding an empty page would pass everything above. Matching on the Slug
+# rather than on a title keeps this free of HTML-escaping guesswork.
+echo "==> Those pages carry content, not just a status code"
+for route in / /blog "/blog/${POST_SLUG}"; do
+	# Held in a variable rather than piped into grep: under `pipefail`, grep -q
+	# exits on the first match and curl dies of SIGPIPE, failing the pipeline
+	# precisely when the check succeeds.
+	body=$(curl -s "${BASE}${route}")
+
+	if grep -qF "${POST_SLUG}" <<<"${body}"; then
+		printf '    ok   %-24s mentions %s\n' "${route}" "${POST_SLUG}"
+	else
+		printf '    FAIL %-24s does not mention %s\n' "${route}" "${POST_SLUG}"
+		failed=1
+	fi
+done
+
+# The theme toggle is the one thing that legitimately fails without its secret —
+# it signs a cookie, and signing with a placeholder is worse than not signing.
+# What must not happen is that failure spreading: this is the outage, in a test.
+echo "==> A failing theme toggle stays confined to its own endpoint"
+curl -s -o /dev/null -X POST "${BASE}/set-theme" \
+	-H "Content-Type: application/x-www-form-urlencoded" \
+	-d "colorScheme=dark" || true
+
+for route in / /resume; do
+	status=$(curl -s -o /dev/null -w "%{http_code}" "${BASE}${route}")
+
+	if [[ "${status}" == "200" ]]; then
+		printf '    ok   %-24s %s after the failed toggle\n' "${route}" "${status}"
+	else
+		printf '    FAIL %-24s %s after the failed toggle\n' "${route}" "${status}"
+		failed=1
+	fi
+done
+
+if [[ "${failed}" -ne 0 ]]; then
+	echo
+	echo "Smoke test failed. Worker log:" >&2
+	cat /tmp/smoke-preview.log >&2
+	exit 1
+fi
+
+echo
+echo "Cold start OK."

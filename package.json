@@ -10,6 +10,7 @@
 		"dev": "react-router dev",
 		"postinstall": "pnpm run cf-typegen",
 		"preview": "pnpm run build && vite preview",
+		"smoke": "pnpm run build && bash ./scripts/smoke-test.sh",
 		"typecheck": "pnpm run cf-typegen && react-router typegen && tsc -b",
 		"kv:generate": "node ./seed/kv/generate-kv-json.ts",
 		"kv:upload:local": "node ./seed/kv/kv-bulk-upload.ts local",
@@ -20,7 +21,9 @@
 		"d1:upsert:local": "wrangler d1 execute poschuler --file ./seed/d1/seed.sql --local",
 		"d1:upsert:remote": "wrangler d1 execute poschuler --file ./seed/d1/seed.sql --remote",
 		"d1:seed:local": "pnpm run d1:generate && pnpm run d1:upsert:local",
-		"d1:seed:remote": "pnpm run d1:generate && pnpm run d1:upsert:remote"
+		"d1:seed:remote": "pnpm run d1:generate && pnpm run d1:upsert:remote",
+		"verify:stores:local": "node ./seed/verify-stores.ts local",
+		"verify:stores:remote": "node ./seed/verify-stores.ts remote"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.6.0",
