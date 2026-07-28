@@ -25,7 +25,10 @@ function DialogOverlay({
   return (
     <BaseDialog.Backdrop
       className={cn(
-        "fixed inset-0 z-50 bg-black/80 data-[open]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[open]:fade-in-0",
+        // Same clock as the popup, and `fill-mode-forwards` so the faded-out
+        // end state holds: on the default `animation-fill-mode: none` the
+        // backdrop snapped back to full black until Base UI unmounted it.
+        "fixed inset-0 z-50 bg-black/80 duration-200 data-[open]:animate-in data-[open]:fade-in-0 data-[closed]:animate-out data-[closed]:fade-out-0 data-[closed]:fill-mode-forwards",
         className,
       )}
       {...props}
@@ -43,7 +46,7 @@ function DialogContent({
       <DialogOverlay />
       <BaseDialog.Popup
         className={cn(
-          "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[open]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[open]:fade-in-0 data-[closed]:zoom-out-95 data-[open]:zoom-in-95 data-[closed]:slide-out-to-left-1/2 data-[closed]:slide-out-to-top-[48%] data-[open]:slide-in-from-left-1/2 data-[open]:slide-in-from-top-[48%] sm:rounded-lg",
+          "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[open]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[open]:fade-in-0 data-[closed]:zoom-out-95 data-[open]:zoom-in-95 data-[closed]:slide-out-to-left-1/2 data-[closed]:slide-out-to-top-[48%] data-[open]:slide-in-from-left-1/2 data-[open]:slide-in-from-top-[48%] data-[closed]:fill-mode-forwards sm:rounded-lg",
           className,
         )}
         {...props}

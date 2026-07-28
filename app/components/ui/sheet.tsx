@@ -26,7 +26,11 @@ function SheetOverlay({
   return (
     <BaseDialog.Backdrop
       className={cn(
-        "fixed inset-0 z-50 bg-black/80 data-[open]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[open]:fade-in-0",
+        // The backdrop has to run on the panel's clock: left on the 150ms
+        // default it finished fading half a close early and — with the default
+        // `animation-fill-mode: none` — snapped back to full black until the
+        // panel's own animation ended and Base UI unmounted the pair.
+        "fixed inset-0 z-50 bg-black/80 data-[open]:animate-in data-[open]:fade-in-0 data-[open]:duration-500 data-[closed]:animate-out data-[closed]:fade-out-0 data-[closed]:duration-300 data-[closed]:fill-mode-forwards",
         className,
       )}
       {...props}
@@ -35,7 +39,10 @@ function SheetOverlay({
 }
 
 const sheetVariants = cva(
-  "fixed z-50 gap-4 bg-subtle p-6 shadow-lg transition ease-in-out data-[open]:animate-in data-[closed]:animate-out data-[closed]:duration-300 data-[open]:duration-500",
+  // `fill-mode-forwards` holds the off-screen end state: Base UI unmounts a
+  // frame or two after the animation finishes, and without it the panel snaps
+  // back into view for that gap.
+  "fixed z-50 gap-4 bg-subtle p-6 shadow-lg transition ease-in-out data-[open]:animate-in data-[closed]:animate-out data-[closed]:duration-300 data-[open]:duration-500 data-[closed]:fill-mode-forwards",
   {
     variants: {
       side: {
