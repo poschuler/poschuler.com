@@ -1,5 +1,4 @@
 .DS_Store
-.env
 /node_modules/
 *.tsbuildinfo
 .vscode/
@@ -14,11 +13,17 @@
 # Cloudflare
 .mf
 .wrangler
-.dev.vars*
 worker-configuration.d.ts
 
-
-!.dev.vars.example
+# Local configuration. Every one of these can hold the signing secret, so the
+# patterns are wildcards rather than exact names: wrangler loads `.env`,
+# `.env.local`, `.env.<environment>` and `.env.<environment>.local`, and the
+# smoke test parks a `.dev.vars.smoke-stash.<pid>` for the length of its run.
+#
+# The committed template is `.vars.template` — not `.dev.vars.example`, which
+# nothing here creates. It matches none of these patterns and is tracked.
+.env*
+.dev.vars*
 !.env.example
 
 .claude/
