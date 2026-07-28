@@ -60,11 +60,11 @@ export function meta({ loaderData }: Route.MetaArgs) {
         { title: `${title} | Paul Osorio Schuler` },
         { name: "description", content: `${description}` },
         { tagName: "link", rel: "canonical", href: `https://poschuler.com/blog/${slug}` },
-        { name: "og:title", content: `${title}` },
-        { name: "og:description", content: `${description}` },
-        { name: "og:image", content: "https://avatars.githubusercontent.com/u/1238212?v=4" },
-        { name: "og:type", content: "article" },
-        { name: "og:url", content: `https://poschuler.com/blog/${slug}` },
+        { property: "og:title", content: `${title}` },
+        { property: "og:description", content: `${description}` },
+        { property: "og:image", content: "https://avatars.githubusercontent.com/u/1238212?v=4" },
+        { property: "og:type", content: "article" },
+        { property: "og:url", content: `https://poschuler.com/blog/${slug}` },
     ];
 }
 

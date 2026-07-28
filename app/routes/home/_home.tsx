@@ -19,11 +19,11 @@ export const meta: MetaFunction = () => {
     { title: "Paul Osorio Schuler | Staff Software Engineer | Backend • TypeScript • Node.js" },
     { name: "description", content: "Writing, bookmarks and resume of Paul Osorio Schuler, a Staff Software Engineer working on backend systems with TypeScript and Node.js." },
     { tagName: "link", rel: "canonical", href: "https://poschuler.com" },
-    { name: "og:title", content: "Paul Osorio Schuler | Staff Software Engineer | Backend • TypeScript • Node.js" },
-    { name: "og:description", content: "Writing, bookmarks and resume of Paul Osorio Schuler, a Staff Software Engineer working on backend systems with TypeScript and Node.js." },
-    { name: "og:image", content: "https://avatars.githubusercontent.com/u/1238212?v=4" },
-    { name: "og:type", content: "website" },
-    { name: "og:url", content: "https://poschuler.com" },
+    { property: "og:title", content: "Paul Osorio Schuler | Staff Software Engineer | Backend • TypeScript • Node.js" },
+    { property: "og:description", content: "Writing, bookmarks and resume of Paul Osorio Schuler, a Staff Software Engineer working on backend systems with TypeScript and Node.js." },
+    { property: "og:image", content: "https://avatars.githubusercontent.com/u/1238212?v=4" },
+    { property: "og:type", content: "website" },
+    { property: "og:url", content: "https://poschuler.com" },
   ];
 };
 

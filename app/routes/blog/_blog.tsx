@@ -19,11 +19,11 @@ export const meta: MetaFunction = () => {
     { title: "Blog | Paul Osorio Schuler" },
     { name: "description", content: "Long-form articles by Paul Osorio Schuler on building backend systems with Node.js and TypeScript: API structure, domain-driven design and software architecture." },
     { tagName: "link", rel: "canonical", href: "https://poschuler.com/blog" },
-    { name: "og:title", content: "Blog | Paul Osorio Schuler" },
-    { name: "og:description", content: "Long-form articles by Paul Osorio Schuler on building backend systems with Node.js and TypeScript: API structure, domain-driven design and software architecture." },
-    { name: "og:image", content: "https://avatars.githubusercontent.com/u/1238212?v=4" },
-    { name: "og:type", content: "website" },
-    { name: "og:url", content: "https://poschuler.com/blog" },
+    { property: "og:title", content: "Blog | Paul Osorio Schuler" },
+    { property: "og:description", content: "Long-form articles by Paul Osorio Schuler on building backend systems with Node.js and TypeScript: API structure, domain-driven design and software architecture." },
+    { property: "og:image", content: "https://avatars.githubusercontent.com/u/1238212?v=4" },
+    { property: "og:type", content: "website" },
+    { property: "og:url", content: "https://poschuler.com/blog" },
   ];
 };
 
