@@ -53,7 +53,7 @@ cp .vars.template .dev.vars        # then fill SESSION_THEME_SECRET
 openssl rand -base64 32            # a value for it
 ```
 
-`SESSION_THEME_SECRET` and `DEPLOYMENT_ENV` are read at startup and **throw if missing** — the theme cookie is signed with the first, and a Worker that cannot sign it should not boot.
+`SESSION_THEME_SECRET` signs the theme cookie. Nothing reads it at startup: without it the site still serves every page in the default theme, and only the toggle itself fails.
 
 Create the local D1 table, then seed the two stores **in that order** — the KV generator reads the already-seeded D1 table to decide which Posts to render:
 

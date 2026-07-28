@@ -135,7 +135,7 @@ done
 echo "==> A failing theme toggle stays confined to its own endpoint"
 curl -s -o /dev/null -X POST "${BASE}/set-theme" \
 	-H "Content-Type: application/x-www-form-urlencoded" \
-	-d "colorScheme=dark" || true
+	-d "color-scheme=dark" || true
 
 for route in / /resume; do
 	status=$(curl -s -o /dev/null -w "%{http_code}" "${BASE}${route}")

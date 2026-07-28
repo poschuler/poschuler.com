@@ -51,7 +51,7 @@ pnpm run d1:seed:local    # generate seed.sql, then wrangler d1 execute --local
 pnpm run kv:seed:local    # generate JSON payloads, then wrangler kv key put --local
 ```
 
-`:remote` variants do the same against the deployed resources. `kv-bulk-upload.ts` deletes every existing `blog:` key before uploading, making the upload a full replacement rather than a merge.
+`:remote` variants do the same against the deployed resources. `kv-bulk-upload.ts` uploads every payload first and only then removes `blog:` keys with nothing behind them, so the result is a full replacement without a moment where a published Post is missing.
 
 ## Data stores
 
@@ -122,7 +122,7 @@ Two layers, and the split between them is deliberate.
 
 **Public HTTP caching, on the three routes whose response is the same for everyone.** `robots.txt` and `sitemap.xml` get an hour, the Resume PDF a day; the PDF is additionally fetched with `cf: { cacheTtl, cacheEverything }` so a warm colo does not re-fetch it from the CDN. The response bodies change only when the seed pipeline runs, so staleness is bounded and the Worker leaves the hot path entirely.
 
-**No public caching on HTML — and this is a constraint, not an omission.** The colour scheme is a class on `<html>`, resolved per request from the `poschuler__color-scheme` cookie. A shared cache would hand one visitor's theme to the next. Making documents cacheable means first taking the theme out of the server-rendered markup (`prefers-color-scheme` only, no cookie), and that trades away the toggle's `system`/explicit distinction. Do not add `Cache-Control: public` to a document route without doing that first.
+**No public caching on HTML — and this is a constraint, not an omission.** The colour scheme is a class on `<html>`, resolved per request from the `__Host-poschuler-color-scheme` cookie. A shared cache would hand one visitor's theme to the next. Making documents cacheable means first taking the theme out of the server-rendered markup (`prefers-color-scheme` only, no cookie), and that trades away the toggle's `system`/explicit distinction. Do not add `Cache-Control: public` to a document route without doing that first.
 
 **KV reads pass `cacheTtl: 3600`**, which is where the blog's latency win actually comes from: the colo answers from its own cache instead of paying a round trip to KV's central store. That is safe regardless of the cookie, because it caches the *body*, not the rendered document.
 
@@ -134,12 +134,14 @@ Two layers, and the split between them is deliberate.
 
 | Value                  | Where it lives            | Used by                                                     |
 | ---------------------- | ------------------------- | ----------------------------------------------------------- |
-| `SESSION_THEME_SECRET` | secret (`wrangler secret`) | signs the `poschuler__color-scheme` cookie                   |
-| `DEPLOYMENT_ENV`       | `vars` in `wrangler.jsonc` | `"production"` gives the theme cookie `Secure` + its domain  |
+| `SESSION_THEME_SECRET` | secret (`wrangler secret`) | signs the `__Host-poschuler-color-scheme` cookie              |
 | `PUBLIC_HOST`          | `vars` in `wrangler.jsonc` | canonical origin in `robots.txt`                             |
+| `DEPLOYMENT_ENV`       | `vars` in `wrangler.jsonc` | declared, no longer read — see below                         |
 | `DB_DEBUG_FLAG`        | `.dev.vars` only           | declared, currently unread                                   |
 
-Non-secret values belong in `wrangler.jsonc`, in git, where a deploy cannot forget them and a new environment needs no manual step. Only the signing secret is invisible to the repository. `.dev.vars` overrides both locally — that is how `DEPLOYMENT_ENV` becomes `"development"` on a dev machine, keeping the cookie off `Secure` and off `.poschuler.com`.
+Non-secret values belong in `wrangler.jsonc`, in git, where a deploy cannot forget them and a new environment needs no manual step. Only the signing secret is invisible to the repository, and `.dev.vars` overrides the rest locally.
+
+**`DEPLOYMENT_ENV` no longer has a reader**, and the way it lost one is worth keeping. It used to decide whether the theme cookie got `Secure` and `Domain=poschuler.com`. While the var was missing in production the cookie was emitted host-only; the day it was finally deployed the same cookie gained a `Domain`, and a browser treats those as two different cookies of the same name. Both get sent, the first one wins, and every returning visitor had their theme frozen while each click wrote the new value somewhere nothing would read it. The cookie is now `__Host-` prefixed, which forbids `Domain` outright — see `app/color-scheme-cookie.ts`. Nothing else consulted the var.
 
 **A secret shadows a var of the same name in production.** If a var in `wrangler.jsonc` appears to have no effect, check `wrangler secret list` before anything else.
 
