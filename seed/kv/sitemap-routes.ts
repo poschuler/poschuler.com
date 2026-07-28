@@ -27,16 +27,22 @@ export const RESUME_LASTMOD = "2025-12-21";
  * `items` must arrive newest first: each section's `lastmod` is taken from the
  * head of its list rather than by scanning for a maximum. That is how the D1
  * query orders them (`order by published_at desc`), and this depends on it.
+ *
+ * `fallbackLastmod` dates a section with nothing in it. It must not be the
+ * clock: the same content would then produce a different sitemap tomorrow,
+ * which is the whole reason this parameter exists rather than being read
+ * inside — and it is now checked, because CI compares the regenerated payloads
+ * against the committed ones byte for byte.
  */
 export function buildSitemapRoutes(
   items: SitemapContentItem[],
-  today: string,
+  fallbackLastmod: string,
 ): SitemapRoute[] {
   const posts = items.filter((item) => item.type === "post");
   const bookmarks = items.filter((item) => item.type === "link");
 
   const lastModOf = (list: SitemapContentItem[]) =>
-    list.length > 0 ? list[0].publishedStringDate : today;
+    list.length > 0 ? list[0].publishedStringDate : fallbackLastmod;
 
   return [
     { url: "/", lastmod: lastModOf(items), changefreq: "monthly", priority: 1.0 },

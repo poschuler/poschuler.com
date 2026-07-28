@@ -6,10 +6,17 @@ on:
   pull_request:
     branches: [main]
 
-# A second push to the same branch makes the first run pointless.
+# A second push to the same branch makes the first run pointless — except on
+# `main`, where a run is a publication. There, cancelling could land between the
+# seed and the deploy and leave the stores ahead of the code, which is the exact
+# split this workflow exists to prevent. Runs on `main` therefore queue instead.
+#
+# A superseded run that is still *pending* is dropped, and that is fine: it has
+# executed nothing, and `main` is linear, so the run that replaced it carries
+# its commits too.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   verify:
@@ -37,6 +44,14 @@ jobs:
       # so this needs no credentials and touches nothing deployed.
       - run: pnpm test
 
+      # The stores are seeded from the committed fixtures and never regenerated,
+      # so a Markdown edit without a regeneration would republish the previous
+      # version in silence. This runs the generators and fails if their output
+      # differs from what is in git. No credentials: it reads the local D1,
+      # which is why it belongs here and not in `publish`. See the script.
+      - name: The committed fixtures match the Markdown
+        run: pnpm run check:fixtures
+
       - run: pnpm build
 
       # The runner has no `.dev.vars` and no secrets, which is the whole point:
@@ -44,26 +59,35 @@ jobs:
       - name: Cold start
         run: bash scripts/smoke-test.sh
 
-  # Seeds the deployed D1 and KV so that what Workers Builds deploys has its
-  # content already in place. Gated on `verify`: nothing reaches production
-  # until the build and the cold start have passed.
+  # One job owns the whole publication: schema, stores, deploy. Splitting it
+  # would put the order in `needs:` rather than in a list of steps, and would
+  # break the deploy outright — `wrangler deploy` finds the built Worker through
+  # `.wrangler/deploy/config.json`, a gitignored build artefact. On a fresh
+  # runner without it, wrangler falls back to the root `wrangler.jsonc`, whose
+  # `main` is the unbuilt entry point and which declares no assets: a green run
+  # shipping the wrong Worker with no static files.
   #
   # `main` only, and never on a pull request. There is one D1 and one KV — no
   # per-environment resources — so a run from any other branch would overwrite
   # live content with a work in progress.
-  seed:
-    name: Seed and verify the remote stores
+  publish:
+    name: Seed the stores and deploy
     needs: verify
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+
+    # Generous on purpose. This job installs, seeds, verifies, builds and
+    # deploys, and a timeout firing part-way through is indistinguishable from
+    # the cancellation the concurrency rule above is written to avoid.
+    timeout-minutes: 20
 
     # Points at a GitHub Environment, so protection rules (required reviewers,
     # a wait timer) can be added later without touching this file.
     environment: production
 
-    # Both are read by wrangler directly. The token needs two account-scoped
-    # permissions and no more: D1:Edit and Workers KV Storage:Edit.
+    # Both are read by wrangler directly. The token needs three account-scoped
+    # permissions and no more: D1:Edit, Workers KV Storage:Edit, and Workers
+    # Scripts:Edit for the deploy.
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -80,10 +104,18 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # The committed seed.sql and payloads are uploaded as they are; the
-      # generators are not re-run here, because regenerating needs the Markdown
-      # and D1 in step and would make a push able to publish content that was
-      # never reviewed as a diff. Both steps upsert, so re-running is a no-op.
+      # First, before anything is written. The schema is applied by hand — there
+      # is no migration tool, see ADR 0002 — so a commit that changes the
+      # table's shape can arrive with the deployed table still on the old one.
+      # Seeding into that, or deploying code that reads it, is a broken page
+      # rather than a degraded one.
+      - name: The deployed schema matches the repository
+        run: pnpm run verify:schema:remote
+
+      # The committed seed.sql and payloads are uploaded as they are; `verify`
+      # has already established that they are what the generators produce. Both
+      # steps upsert and neither empties anything first, so re-running is a
+      # no-op and there is no moment where a published Post is missing.
       - name: Seed D1
         run: pnpm exec wrangler d1 execute poschuler --file ./seed/d1/seed.sql --remote --yes
 
@@ -91,6 +123,35 @@ jobs:
         run: pnpm run kv:upload:remote
 
       # Reads back what is actually in the stores. The seed steps report what
-      # they sent; only this says what is there.
+      # they sent; only this says what is there. Before the deploy, so the code
+      # never goes live over content that failed to land.
       - name: Verify the remote stores
         run: pnpm run verify:stores:remote
+
+      # Builds and ships in one step, in this workspace, for the reason in the
+      # job comment above.
+      - name: Build and deploy
+        run: pnpm run deploy
+
+      # A green deploy means the upload succeeded, not that the site works. This
+      # repo has shipped a Worker that threw on every route, and a `/robots.txt`
+      # that answered 500 for weeks; both were invisible to everything upstream
+      # of here. Asking the site is the only step that can see it.
+      - name: The deployed site answers
+        run: |
+          set -euo pipefail
+
+          for route in / /blog /sitemap.xml /robots.txt; do
+            for attempt in 1 2 3; do
+              if curl -fsS -o /dev/null --max-time 10 "https://poschuler.com${route}"; then
+                echo "ok   ${route}"
+                continue 2
+              fi
+
+              echo "     ${route} did not answer (attempt ${attempt})"
+              sleep 5
+            done
+
+            echo "error: https://poschuler.com${route} is not answering after the deploy." >&2
+            exit 1
+          done

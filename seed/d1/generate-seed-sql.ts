@@ -34,7 +34,13 @@ async function getMarkdownFilePaths(dir: string): Promise<string[]> {
     });
 
     const nestedFiles = await Promise.all(filePromises);
-    return nestedFiles.flat();
+
+    // Sorted, because `readdir` order is not specified by Node or by POSIX — it
+    // is whatever the filesystem hands back. The statement order in `seed.sql`
+    // follows it, so without this the same content can regenerate into a
+    // different file on a different machine, and CI compares the regenerated
+    // file against the committed one.
+    return nestedFiles.flat().sort();
 }
 
 async function generateSqlSeed() {
