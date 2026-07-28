@@ -1,11 +1,8 @@
-import { useLoaderData } from "react-router";
 import { Section } from "~/components/section";
-import type { loader } from "./_resume";
+import { basics } from "./resume.json";
 
 export function About() {
-  let {
-    basics: { summary },
-  } = useLoaderData<typeof loader>();
+  let { summary } = basics;
 
   return (
     <Section title="About">

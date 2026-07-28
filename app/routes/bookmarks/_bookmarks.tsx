@@ -25,11 +25,11 @@ export const meta: MetaFunction = () => {
     { title: `Bookmarks | Paul Osorio Schuler` },
     { name: "description", content: `External articles Paul Osorio Schuler has read and kept, on TypeScript, web development, auth and security, accessibility and performance.` },
     { tagName: "link", rel: "canonical", href: `https://poschuler.com/bookmarks` },
-    { name: "og:title", content: `Bookmarks | Paul Osorio Schuler` },
-    { name: "og:description", content: `External articles Paul Osorio Schuler has read and kept, on TypeScript, web development, auth and security, accessibility and performance.` },
-    { name: "og:image", content: "https://avatars.githubusercontent.com/u/1238212?v=4" },
-    { name: "og:type", content: "website" },
-    { name: "og:url", content: `https://poschuler.com/bookmarks` },
+    { property: "og:title", content: `Bookmarks | Paul Osorio Schuler` },
+    { property: "og:description", content: `External articles Paul Osorio Schuler has read and kept, on TypeScript, web development, auth and security, accessibility and performance.` },
+    { property: "og:image", content: "https://avatars.githubusercontent.com/u/1238212?v=4" },
+    { property: "og:type", content: "website" },
+    { property: "og:url", content: `https://poschuler.com/bookmarks` },
   ];
 };
 

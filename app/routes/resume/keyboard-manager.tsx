@@ -1,4 +1,3 @@
-import { useLoaderData } from "react-router";
 import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { BrandNetworkIcon } from "~/components/ui/brand-icons";
@@ -13,7 +12,7 @@ import {
   CommandList,
   CommandShortcut,
 } from "~/components/ui/command";
-import type { loader } from "./_resume";
+import { basics } from "./resume.json";
 
 /** True for anything a keystroke could legitimately be meant for. */
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -31,9 +30,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
 
 export function KeyboardManager() {
   let [open, setOpen] = useState(false);
-  let {
-    basics: { profiles },
-  } = useLoaderData<typeof loader>();
+  let { profiles } = basics;
 
   useEffect(() => {
     let down = (event: KeyboardEvent) => {

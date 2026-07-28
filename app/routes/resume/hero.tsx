@@ -1,20 +1,17 @@
-import { Link, useLoaderData } from "react-router";
+import { Link } from "react-router";
 import { Download, Globe, Mail } from "lucide-react";
 import { BrandNetworkIcon } from "~/components/ui/brand-icons";
-import type { loader } from "./_resume";
+import { basics, languages } from "./resume.json";
 
 export function Hero() {
   let {
-    basics: {
-      name,
-      label,
-      image,
-      location: { city, region, url, countryCode },
-      profiles,
-      email,
-    },
-    languages,
-  } = useLoaderData<typeof loader>();
+    name,
+    label,
+    image,
+    location: { city, region, url, countryCode },
+    profiles,
+    email,
+  } = basics;
 
   return (
     <div className="flex items-center justify-between">

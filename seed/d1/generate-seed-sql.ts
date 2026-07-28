@@ -49,9 +49,13 @@ async function generateSqlSeed() {
 
     console.log(`Found ${filePaths.length} markdown files to process.`);
 
+    // Inserts first, prune last — never `DELETE FROM content` up front. Applied
+    // to the remote database, a leading truncate empties the live table and the
+    // site serves an empty Timeline until the inserts land. The partial unique
+    // indexes on (slug, lang) and (slug) make `INSERT OR REPLACE` a real upsert,
+    // so nothing needs clearing to stay idempotent.
     let sqlCommands = "";
-    const deleteCommand = `DELETE FROM content;\n`;
-    sqlCommands += deleteCommand;
+    const seededKeys: string[] = [];
 
     for (const filePath of filePaths) {
         const filename = path.basename(filePath);
@@ -90,6 +94,7 @@ INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_
 VALUES (${escapedSlug}, ${escapedLang}, 'post', ${title}, ${description}, ${publishedAt}, ${tagsJson}, ${repository}, CURRENT_TIMESTAMP);
 `;
             sqlCommands += insertSql;
+            seededKeys.push(`${slug}:${lang}`);
             console.log(`✅ Generated SQL for post: ${slug}.${lang}`);
 
         } else if (attributes.type === 'link') {
@@ -103,9 +108,18 @@ INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, p
 VALUES (${escapedSlug}, NULL, 'link', ${title}, ${externalUrl}, ${source}, ${publishedAt}, ${tagsJson}, CURRENT_TIMESTAMP);
 `;
             sqlCommands += insertSql;
+            seededKeys.push(`${slug}:`);
             console.log(`🔗 Generated SQL for link: ${slug}`);
         }
     }
+
+    // Whatever is left is a Content Item whose Markdown file is gone. The key is
+    // `slug:lang` because a Slug alone does not identify a Post — `(slug, lang)`
+    // does, and a Bookmark has no Locale.
+    const keyList = seededKeys.map((key) => escapeSql(key)).join(", ");
+    sqlCommands += `
+DELETE FROM content WHERE slug || ':' || ifnull(lang, '') NOT IN (${keyList});
+`;
 
     try {
         await fs.mkdir(path.dirname(OUTPUT_SQL_FILE), { recursive: true });

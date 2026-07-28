@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { execSync } from "node:child_process";
 import fm from "front-matter";
-import { marked } from "marked";
+import { renderPostHtml } from "./markdown.ts";
 import { generateSitemap, type SitemapRoute } from "../../app/lib/seo/sitemap.ts";
 
 const CONTENT_DIR = path.join(process.cwd(), "app", "content", "blog");
@@ -119,7 +119,7 @@ async function generateKvJsonFiles() {
             const fileContent = await fs.readFile(filePath, "utf-8");
             const { attributes, body } = fm<PostAttributes>(fileContent);
 
-            const html = await marked.parse(body);
+            const html = await renderPostHtml(body);
 
             const payload: BlogContentPayload = { attributes, html };
 

@@ -36,11 +36,13 @@ app/content/**/*.md                       ← source of truth, versioned in git
    │                     (front-matter)                   (committed)          metadata only
    │
    └─ body ──────────▶ seed/kv/generate-kv-json.ts ──▶ seed/kv/kv_payloads/*.json ──▶ KV
-                         (marked → HTML)                                    `blog:<slug>:<locale>`
+                         (seed/kv/markdown.ts)                              `blog:<slug>:<locale>`
                          (app/lib/seo/sitemap.ts)                           `sitemap`
 ```
 
 Both generators are Node scripts run from the developer's machine, never in the Worker. That is why `front-matter` and `marked` appear in `dependencies` yet are absent from every runtime import. Sitemap and `robots.txt` rendering is hand-rolled in `app/lib/seo/`, with no third-party SEO dependency.
+
+**`seed/kv/markdown.ts` is where Post HTML is made safe, and the only place it can be.** The Worker injects what it reads from KV with `dangerouslySetInnerHTML` and never looks at it again, so the HTML has to arrive already sanitised. Raw HTML in a Markdown body is escaped rather than passed through, and `javascript:`-style URLs on links and images are dropped while their text survives — `marked` does neither on its own; its URL handling is only `encodeURI`. Sanitising here rather than in the Worker costs nothing per visit, and the only process that writes to KV is this pipeline. The trade is that a Post cannot embed HTML — no YouTube iframe. Allowing some requires an allow-list here, not a change in the route.
 
 The KV generator reads the *already-seeded* D1 table (via `wrangler d1 execute --json`) to decide which Posts to render, so **D1 must be seeded before KV**. The npm scripts encode that order:
 
@@ -91,7 +93,7 @@ Routes are declared explicitly in `app/routes.ts` (config-based, not file-system
 | `/blog`          | D1     | none           | `findAllPosts`                              |
 | `/bookmarks`     | D1     | none           | `findAllBookmarks`                          |
 | `/blog/:blogSlug`| KV     | none           | Locale hardcoded to `en`; body injected via `dangerouslySetInnerHTML` |
-| `/resume`        | none   | none           | `app/routes/resume/resume.json`, imported at build time |
+| `/resume`        | none   | none           | no loader — sections import `resume.json` directly      |
 | `/resume.pdf`    | fetch  | 1 day          | proxies `cdn.poschuler.dev`, forces `Content-Disposition: attachment` |
 | `/sitemap.xml`   | KV     | 1 hour         | serves the pre-generated XML verbatim       |
 | `/robots.txt`    | none   | 1 hour         | `PUBLIC_HOST`, or the request's own origin  |
@@ -99,6 +101,8 @@ Routes are declared explicitly in `app/routes.ts` (config-based, not file-system
 | `*`              | none   | none           | 404, inside the layout so it keeps the header |
 
 Every route above except the last four sits inside `routes/layouts/_layout.tsx`, which supplies the sticky header — the 404 included, so a lost visitor still has navigation. `/resume.pdf`, `/sitemap.xml`, `/robots.txt` and `/set-theme` are resource routes outside it.
+
+**`/resume` deliberately has no loader.** The Resume is a static document that changes only when `resume.json` is edited and the site redeployed, so each section imports it. Returning it from a loader instead sent all 14 kB down twice in every response — once as rendered HTML, once again as the hydration payload beneath it, 12 kB of the 70 kB the page weighed. As a plain import it rides inside the hashed route chunk, fetched once and cached; the chunk grew 10 kB and every visit saves 12. Route data that is per-request belongs in a loader; a document baked into the build does not.
 
 **Content routes export `shouldRevalidate`.** React Router revalidates every active loader after a form submission, which would make each theme toggle cost a D1 query or a KV read. `app/lib/revalidation.ts` suppresses exactly that one case — `formAction === "/set-theme"` — and defers to the default for everything else, so navigations and any future action still revalidate.
 
@@ -147,6 +151,35 @@ Neither is required to boot. `SESSION_THEME_SECRET` throws only when the cookie 
 
 **The package manager is pnpm**, pinned in `package.json` via `packageManager` and enforced by `pnpm-lock.yaml` being the only lockfile. Two consequences worth knowing: pnpm does not hoist transitive dependencies, so a package must be a declared dependency to be importable (`require("esbuild")` fails at the root even though Vite depends on it); and pnpm blocks dependency build scripts unless allow-listed, which is why `pnpm-workspace.yaml` opts `esbuild` and `workerd` in — both download native binaries on install and nothing runs without them.
 
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push to `main` or `dev` and on every pull request into `main`: install, `pnpm typecheck`, `pnpm build`, then `scripts/smoke-test.sh`.
+
+**The smoke test is the part that earns its keep.** It serves the built Worker with no secrets and no `.dev.vars`, asserts that every public route answers 200 and actually carries content, then posts to `/set-theme` without the signing secret and checks the site is *still* serving. That is the outage, written down as a test: a module read `process.env` at evaluation time and threw on a missing value, taking every route down to protect a theme preference, and it survived review because the machine it was written on had a `.dev.vars` holding the value. Nothing about the code looked wrong; only the empty environment showed it. Reintroducing that bug turns every route red here.
+
+**No configuration is not the same as no data.** D1 and KV are seeded first, from `seed/d1/seed.sql` and `seed/kv/kv_payloads/`, both committed and both applied with `--local` — no network, no Cloudflare credentials, nothing near the deployed resources. Empty stores are not a state production is ever in, and they are not harmless either: `/sitemap.xml` reads the pre-generated XML from KV and throws 404 when it is missing, so without seeding the check fails on every run for a reason that has nothing to do with the code.
+
+Run it locally with `pnpm run smoke`. It moves `.dev.vars` aside for the duration and puts it back when it ends, including the copy the build leaves in `build/server/`. Without that the script is theatre on a dev machine: every value it is meant to run without is simply present, and a Worker that cannot boot in CI passes locally.
+
+Three conditions the script enforces on itself, each one learned by getting it wrong first: it refuses to start if something is already listening on the port, because a stale preview from an earlier run answers every check happily while serving an older build; it holds each response in a variable instead of piping it into `grep -q`, because under `pipefail` grep exits on the first match, curl dies of SIGPIPE and the pipeline fails exactly when the check passes; and it derives the Post Slug it requests from the payload files rather than hardcoding one.
+
+### Seeding production
+
+A second job, `seed`, runs only on a push to `main` and only after `verify` passes. It applies `seed/d1/seed.sql` and uploads `seed/kv/kv_payloads/` to the deployed stores, then reads both back with `seed/verify-stores.ts`. Its credentials, `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, are secrets of the `production` environment rather than of the repository, and that environment only accepts deployments from `main`. Repository secrets are readable by every workflow in the repo; environment secrets reach only a job that declares `environment: production`, and only from an allowed branch — so the restriction holds even if this file is edited badly. The token needs `D1:Edit` and `Workers KV Storage:Edit`, and nothing else.
+
+**`main` only, and never on a pull request.** There is one D1 and one KV — no per-environment resources — so a seed from any other branch would overwrite live content with a work in progress.
+
+**Both halves are idempotent, and neither empties anything first.** That property is load-bearing now that this runs unattended:
+
+- **D1** upserts and then prunes. The partial unique indexes on `(slug, lang)` and `(slug)` make `INSERT OR REPLACE` a genuine upsert, so `generate-seed-sql.ts` emits the inserts first and closes with a `DELETE … WHERE slug || ':' || ifnull(lang,'') NOT IN (…)` that removes only rows no Markdown file backs any more. It used to open with `DELETE FROM content`, which on the remote database empties the live table and serves an empty Timeline until the inserts land.
+- **KV** writes before it deletes. `kv-bulk-upload.ts` uploads every payload in one `kv bulk put` — a `put` over an existing key is a replacement — and only then removes `blog:` keys with no payload behind them. It used to clear every key first and upload them back one at a time, so every published Post 404'd for the length of the upload.
+
+**The verifier is separate from the seed on purpose.** The seed scripts report what they *sent*; `verify-stores.ts` reports what is *there*. It derives its expectations from the Markdown files rather than from the generated SQL — a generator that silently dropped a file would otherwise produce a seed and a check that agree with each other and with nothing else — and it compares each KV value against its payload as parsed JSON. Run it by hand with `pnpm run verify:stores:local` or `:remote`.
+
+One sharp edge worth knowing: `wrangler kv key get` does not fail on a missing key. It prints `Value not found` and exits 0, so the verifier treats an unparseable read as a missing key rather than letting it surface as a crash.
+
+**Deploys are still not this workflow's job.** Workers Builds deploys on push to `main` on Cloudflare's side, which means the deploy and this seed run concurrently with no ordering between them. That is tolerable because both are idempotent and the Worker reads its content at request time: the worst case is a newly published Post 404ing for the seconds between the deploy going live and the seed finishing. What it does *not* tolerate is a failing seed going unnoticed — hence the verify step.
+
 ## Known defects
 
 - **The build copies `.dev.vars` into `build/server/`.** `@cloudflare/vite-plugin` does this so the built output can be previewed locally, but it means a build run on a machine with real local secrets leaves them in plaintext inside the build directory. `build/` is gitignored and `wrangler deploy` does not turn them into Worker vars (confirmed with `--dry-run`), so nothing leaks by default — but do not ship `build/` anywhere as an artifact. Behaviour predates Vite 8; verified identical on Vite 7.
@@ -154,9 +187,12 @@ Neither is required to boot. `SESSION_THEME_SECRET` throws only when the cookie 
 - **`generate-kv-json.ts` builds its D1 query with nested unescaped double quotes** inside a double-quoted `--command` string. It works only because SQL treats the collapsed quoting as bare identifiers.
 - **The sitemap's `/resume` `lastmod` is the hardcoded string `2025-12-21`.**
 - **`generate-kv-json.ts` carries two near-identical fetchers**, `fetchSlugs` and `fetchAll`, differing only in a `where` clause. Only `fetchAll` is called.
-- **Nothing runs `typecheck` automatically.** There are no tests and no CI: `.github/` does not exist. `pnpm run typecheck` passes today, but only because someone remembers to run it.
+- **`seed/d1/d1-upsert.ts` is an empty file**, committed and imported by nothing.
+- **`…setup-nodejs-express-typescript-project.en-old.md` is never published.** Its front matter says `type: post`, but `en-old` is not a Locale the generator recognises, so it is skipped with a warning nobody reads and no row or KV key exists for it. It is either a draft that should not be in `app/content/`, or a Translation that needs a real Locale.
+- **CI seeds production but never regenerates.** The `seed` job uploads the committed `seed.sql` and payloads as they are. Editing a Markdown file without re-running the generators leaves the stores holding the previous version, and nothing fails — the content pipeline is still a step someone has to remember.
+- **There are still no tests.** CI typechecks, builds and smoke-tests a cold start, which is enough to catch a Worker that will not boot — but nothing asserts what a page actually renders. A route that returns 200 and the wrong content passes.
 - **Cloudflare prepends a managed `robots.txt`.** The zone has AI Crawl Control's managed robots.txt on, which blocks the AI training crawlers and adds Content Signals. It merges with this Worker's response *only when the origin answers 200* — while `/robots.txt` was throwing on a missing `PUBLIC_HOST`, Cloudflare's block was served alone and the failure was invisible, `Sitemap:` line and all. If that line ever disappears again, request the route directly before suspecting the dashboard.
-- **Post HTML is never sanitised.** `marked` passes raw HTML in Markdown straight through, and the route injects the result with `dangerouslySetInnerHTML`. The only author is Paul and every file is reviewed in git, so the exposure is self-inflicted rather than remote — and the CSP now blocks the script vector. Sanitising at seed time (the pipeline, not the Worker) is the fix if that ever stops being true.
+- **KV can still hold unsanitised HTML from before the pipeline sanitised it.** The Worker trusts whatever it reads, so the guarantee is only as old as the last seed run. Every currently published Post re-renders byte-for-byte identically, so nothing needed re-uploading — but a payload written by an older pipeline and never regenerated would keep whatever it holds.
 
 ## Inherited code (removed)
 
