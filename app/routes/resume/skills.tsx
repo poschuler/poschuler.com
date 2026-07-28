@@ -1,10 +1,7 @@
-import { useLoaderData } from "react-router";
 import { Section } from "~/components/section";
-import type { loader } from "./_resume";
+import { skills } from "./resume.json";
 
 export function Skills() {
-  let { skills } = useLoaderData<typeof loader>();
-
   return (
     <Section title="Skills">
       <div className="flex flex-wrap gap-1">

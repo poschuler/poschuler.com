@@ -1,10 +1,7 @@
-import { useLoaderData } from "react-router";
 import { Section } from "~/components/section";
-import type { loader } from "./_resume";
+import { work } from "./resume.json";
 
 export function Experience() {
-  let { work } = useLoaderData<typeof loader>();
-
   return (
     <Section title="Work Experience">
       {work.map((item) => (

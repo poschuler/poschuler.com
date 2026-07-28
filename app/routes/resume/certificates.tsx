@@ -1,10 +1,7 @@
-import { useLoaderData } from "react-router";
 import { Section } from "~/components/section";
-import type { loader } from "./_resume";
+import { certificates } from "./resume.json";
 
 export function Certificates() {
-  let { certificates } = useLoaderData<typeof loader>();
-
   return (
     <Section title="Certificates">
       <div className="-mx-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 print:grid-cols-3 print:gap-2">

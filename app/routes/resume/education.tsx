@@ -1,10 +1,7 @@
-import { useLoaderData } from "react-router";
 import { Section } from "~/components/section";
-import type { loader } from "./_resume";
+import { education } from "./resume.json";
 
 export function Education() {
-  let { education } = useLoaderData<typeof loader>();
-
   return (
     <Section title="Education">
       {education.map((item) => (
