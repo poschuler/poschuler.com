@@ -4,6 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 
+import { kvKeyFor } from "./kv-keys.ts";
+
 /**
  * Uploads the generated KV payloads, locally or to the deployed namespace.
  *
@@ -21,24 +23,6 @@ import { execFileSync } from "node:child_process";
 
 const KV_BINDING = "BLOG_KV";
 const JSON_DIR = path.join(process.cwd(), "seed", "kv", "kv_payloads");
-
-/** `<slug>.<locale>.json` → `blog:<slug>:<locale>`, and the sitemap stands alone. */
-function kvKeyFor(filename: string): string | null {
-    if (filename === "sitemap.json") {
-        return "sitemap";
-    }
-
-    const base = filename.replace(/\.json$/, "");
-    const parts = base.split(".");
-    const locale = parts.pop();
-    const slug = parts.join(".");
-
-    if (!slug || !locale) {
-        return null;
-    }
-
-    return `blog:${slug}:${locale}`;
-}
 
 function wrangler(args: string[], wranglerArgs: string[]): string {
     return execFileSync("pnpm", ["exec", "wrangler", ...args, ...wranglerArgs], {
