@@ -1,0 +1,34 @@
+{
+  // Checked on its own rather than as a `references` entry of `tsconfig.json`:
+  // `tsc -b` refuses to build a referenced project that disables emit, and every
+  // project here is a type check with no output. `pnpm typecheck` runs it as a
+  // second, separate `tsc -p`.
+  //
+  // Tests live outside `app/` on purpose. `docs/architecture.md` is explicit
+  // that "a new orphan is a defect" there, and a `.test.ts` under `app/**` would
+  // also drag Vitest's types into the Worker's own type check.
+  "extends": "./tsconfig.json",
+  // `.react-router/types` supplies the generated `Route.LoaderArgs` of every
+  // route these tests import.
+  "include": [".react-router/types/**/*", "tests/**/*", "vitest.config.ts"],
+  "compilerOptions": {
+    "strict": true,
+    // DOM because the content route modules are `.tsx` and export components,
+    // even though nothing here renders them.
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    // `vite/client` for the `import.meta.env` that `root.tsx` and the Worker
+    // entry read — both are pulled in transitively by the route imports.
+    "types": ["node", "vite/client", "./worker-configuration.d.ts"],
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "rootDirs": [".", "./.react-router/types"],
+    "paths": {
+      "~/*": ["./app/*"]
+    },
+    "esModuleInterop": true,
+    "resolveJsonModule": true
+  }
+}

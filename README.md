@@ -104,6 +104,9 @@ The filename is the Slug, and it never changes once published — it is the URL.
 | `pnpm run build`         | Production build into `build/`                             |
 | `pnpm run preview`       | Build, then serve the built output                         |
 | `pnpm run typecheck`     | Regenerate types (`wrangler` + `react-router`), then `tsc` |
+| `pnpm test`              | Vitest — unit, plus integration against a local D1 and KV  |
+| `pnpm run test:watch`    | The same, in watch mode                                    |
+| `pnpm run test:coverage` | Coverage over the modules the suite is meant to cover      |
 | `pnpm run smoke`         | Build, then serve it with nothing configured and check it answers |
 | `pnpm run deploy`        | Build and ship in one step                                 |
 | `pnpm run d1:seed:local` | Regenerate `seed.sql` and apply it locally                 |
@@ -125,15 +128,18 @@ app/
   lib/seo/        Hand-rolled sitemap and robots.txt renderers
 seed/             Build-time generators for D1 and KV
 workers/app.ts    The Worker entry point
+tests/            Vitest — unit and integration, never beside the code
 scripts/          Local tooling, including the cold-start smoke test
 docs/             Architecture, design conventions and ADRs
 ```
 
+Tests live in `tests/` rather than next to what they cover, because `app/` holds only code reachable from a route — a `.test.ts` there would be an orphan by this repo's own rule.
+
 ## CI
 
-Every push to `main` or `dev`, and every pull request into `main`, runs a typecheck, a build, and a cold start: the built Worker is served with no secrets and no `.dev.vars`, and each public route has to answer and carry content. That last step exists because a missing variable once took the whole site down, and the only environment where it showed was the one nobody had — an empty one.
+Every push to `main` or `dev`, and every pull request into `main`, runs a typecheck, the test suite, a build, and a cold start: the built Worker is served with no secrets and no `.dev.vars`, and each public route has to answer and carry content. That last step exists because a missing variable once took the whole site down, and the only environment where it showed was the one nobody had — an empty one.
 
-The local D1 and KV are seeded first, from the fixtures committed under `seed/`, applied with `--local`.
+The tests and the cold start do not overlap. The cold start proves the Worker boots with nothing configured; the tests prove it answers correctly — a route returning 200 with the wrong content passes the first and fails the second. Both seed their stores from the fixtures committed under `seed/`, applied with `--local`, so neither needs credentials.
 
 On a push to `main`, and only once those checks pass, a second job seeds the **deployed** D1 and KV from the same committed fixtures and then reads both back to confirm they hold what the repo says. Both halves upsert rather than clear-and-rewrite, so running it repeatedly changes nothing and no request ever lands on a half-empty store. It reads `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` from the `production` environment, which only accepts `main`.
 
