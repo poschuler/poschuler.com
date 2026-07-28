@@ -15,6 +15,11 @@
 .wrangler
 worker-configuration.d.ts
 
+# The publish job tees `wrangler deploy` here so the next step can read the
+# version id back out of it. Runner-only, but nothing good comes of committing
+# a deploy transcript.
+deploy.log
+
 # Local configuration. Every one of these can hold the signing secret, so the
 # patterns are wildcards rather than exact names: wrangler loads `.env`,
 # `.env.local`, `.env.<environment>` and `.env.<environment>.local`, and the

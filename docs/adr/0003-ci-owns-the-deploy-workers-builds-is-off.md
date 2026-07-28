@@ -1,6 +1,6 @@
 # CI owns the deploy; Workers Builds is off
 
-A push to `main` used to start two independent things that never learned about each other: the CI `seed` job, which wrote the deployed D1 and KV, and Cloudflare's Workers Builds, which built and deployed the Worker on its own side. Nothing ordered them and nothing failed when only one succeeded. Workers Builds is now disconnected and `.github/workflows/ci.yml` runs the whole publication in one job — verify the deployed schema, seed both stores, read them back, build, `wrangler deploy`, then ask the site whether it answers.
+A push to `main` used to start two independent things that never learned about each other: the CI `seed` job, which wrote the deployed D1 and KV, and Cloudflare's Workers Builds, which built and deployed the Worker on its own side. Nothing ordered them and nothing failed when only one succeeded. Workers Builds is now disconnected and `.github/workflows/ci.yml` runs the whole publication in one job — verify the deployed schema, seed both stores, read them back, build, `wrangler deploy`, then confirm the uploaded version is the one serving.
 
 ## Considered Options
 
@@ -16,3 +16,4 @@ A push to `main` used to start two independent things that never learned about e
 - **Build and deploy must stay in one job.** `wrangler deploy` finds the built Worker through `.wrangler/deploy/config.json`, a gitignored build artefact written by `@cloudflare/vite-plugin`. On a runner without it, wrangler falls back to the root `wrangler.jsonc`, whose `main` is the unbuilt entry point and which declares no assets — a green run shipping the wrong Worker.
 - **`wrangler.jsonc` must keep no `route`/`routes` key and `workers_dev: false`.** That is Cloudflare's documented configuration for "the dashboard owns the routes", and it is what keeps `poschuler.com` attached. Adding a `routes` key would hand that over to Wrangler. Secrets are safe either way: `wrangler deploy` never deletes them.
 - **Build logs before the switchover live only in Cloudflare's history**, and Cloudflare does not document what disconnecting keeps.
+- **The run cannot check that the site serves.** The first attempt did exactly that and failed on its first execution against a perfectly healthy site: Bot Fight Mode challenges automated clients from datacentre networks, and it cannot be skipped by any rule on this plan. The last step therefore confirms the uploaded version is live rather than that it works — a real gap, recorded under Known defects, and one that belongs to continuous monitoring rather than to this workflow.
