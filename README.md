@@ -104,9 +104,11 @@ The filename is the Slug, and it never changes once published — it is the URL.
 | `pnpm run build`         | Production build into `build/`                             |
 | `pnpm run preview`       | Build, then serve the built output                         |
 | `pnpm run typecheck`     | Regenerate types (`wrangler` + `react-router`), then `tsc` |
+| `pnpm run smoke`         | Build, then serve it with nothing configured and check it answers |
 | `pnpm run deploy`        | Build and ship in one step                                 |
 | `pnpm run d1:seed:local` | Regenerate `seed.sql` and apply it locally                 |
 | `pnpm run kv:seed:local` | Regenerate KV payloads and upload them locally             |
+| `pnpm run verify:stores:local` | Read D1 and KV back and check they match the repo    |
 
 The generated `worker-configuration.d.ts` and `.react-router/` are gitignored, so a fresh clone must install before it type-checks.
 
@@ -123,8 +125,19 @@ app/
   lib/seo/        Hand-rolled sitemap and robots.txt renderers
 seed/             Build-time generators for D1 and KV
 workers/app.ts    The Worker entry point
+scripts/          Local tooling, including the cold-start smoke test
 docs/             Architecture, design conventions and ADRs
 ```
+
+## CI
+
+Every push to `main` or `dev`, and every pull request into `main`, runs a typecheck, a build, and a cold start: the built Worker is served with no secrets and no `.dev.vars`, and each public route has to answer and carry content. That last step exists because a missing variable once took the whole site down, and the only environment where it showed was the one nobody had — an empty one.
+
+The local D1 and KV are seeded first, from the fixtures committed under `seed/`, applied with `--local`.
+
+On a push to `main`, and only once those checks pass, a second job seeds the **deployed** D1 and KV from the same committed fixtures and then reads both back to confirm they hold what the repo says. Both halves upsert rather than clear-and-rewrite, so running it repeatedly changes nothing and no request ever lands on a half-empty store. It reads `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` from the `production` environment, which only accepts `main`.
+
+Deploying the Worker itself is not this workflow's job — Workers Builds does that on its own side.
 
 ## Documentation
 

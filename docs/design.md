@@ -117,6 +117,8 @@ Rules that hold across `content.server.ts`:
 
 Every user-facing route exports its own `meta`, and each one supplies the full set: `title`, `description`, canonical link, `og:title`, `og:description`, `og:image`, `og:type`, `og:url`. There is deliberately no shared helper and no `meta` on the root, so a page that forgets its own renders with none rather than silently inheriting the home page's. Copy the block from a neighbouring route.
 
+**Open Graph descriptors use `property`, never `name`.** That is what the OG protocol specifies, and scrapers that follow it strictly — LinkedIn among them — ignore a `name`. Only `description` stays a `name`, because that one is an HTML meta tag rather than an OG one.
+
 `og:type` is `"article"` for a Post and `"website"` for everything else. `og:image` is the GitHub avatar throughout.
 
 **Write metadata the way the rest of the site is written.** Titles name the page — `Blog | Paul Osorio Schuler`, not `Paul Osorio Schuler's Blog | Software Architecture, Node.js & Azure`. Descriptions say what is on the page, in plain words, and only claim what the page actually contains: the blog once advertised Azure while no Post mentioned it. No "advanced", no "insights", no "essential reading". This is a notebook, and the metadata is part of its voice.
@@ -137,5 +139,3 @@ One consequence to remember inside the mobile sheet: client-side navigation leav
 ## Known inconsistencies
 
 - **Spanish strings in `mode.toggle.tsx`.** The button's `title` and screen-reader label read "Tema claro — cambiar a oscuro" while the document is `lang="en"`. Per `AGENTS.md`, shipped strings are English.
-- **Open Graph tags use `name`, not `property`.** All 25 of them, across every route. The OG protocol specifies `property`; scrapers that follow it strictly — LinkedIn among them — ignore `name`.
-- **The Resume ships twice.** `routes/resume/_resume.tsx` returns the whole of `resume.json` from its loader, so it is rendered into the HTML and repeated in the hydration payload. It is a build-time import; components could read it directly instead.
