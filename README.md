@@ -112,6 +112,8 @@ The filename is the Slug, and it never changes once published — it is the URL.
 | `pnpm run d1:seed:local` | Regenerate `seed.sql` and apply it locally                 |
 | `pnpm run kv:seed:local` | Regenerate KV payloads and upload them locally             |
 | `pnpm run verify:stores:local` | Read D1 and KV back and check they match the repo    |
+| `pnpm run check:fixtures` | Regenerate the fixtures and fail if anything changed       |
+| `pnpm run verify:schema:remote` | Check the deployed D1 still matches `schema.sql`     |
 
 The generated `worker-configuration.d.ts` and `.react-router/` are gitignored, so a fresh clone must install before it type-checks.
 
@@ -141,9 +143,11 @@ Every push to `main` or `dev`, and every pull request into `main`, runs a typech
 
 The tests and the cold start do not overlap. The cold start proves the Worker boots with nothing configured; the tests prove it answers correctly — a route returning 200 with the wrong content passes the first and fails the second. Both seed their stores from the fixtures committed under `seed/`, applied with `--local`, so neither needs credentials.
 
-On a push to `main`, and only once those checks pass, a second job seeds the **deployed** D1 and KV from the same committed fixtures and then reads both back to confirm they hold what the repo says. Both halves upsert rather than clear-and-rewrite, so running it repeatedly changes nothing and no request ever lands on a half-empty store. It reads `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` from the `production` environment, which only accepts `main`.
+Those checks also assert that the committed fixtures are what the generators produce today. Editing a Markdown file without regenerating used to republish the previous version in silence; now it fails the run instead.
 
-Deploying the Worker itself is not this workflow's job — Workers Builds does that on its own side.
+On a push to `main`, and only once all of that passes, a second job performs the whole Publication in one place: it confirms the deployed D1 still has the shape `seed/d1/schema.sql` describes, seeds the **deployed** D1 and KV from the committed fixtures, reads both back, builds and deploys the Worker, and finally asks the live site whether it answers. Both seed halves upsert rather than clear-and-rewrite, so running it repeatedly changes nothing and no request ever lands on a half-empty store. It reads `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` from the `production` environment, which only accepts `main`.
+
+The order is the point: the seed, the deploy and the check are one sequence with one owner, and any of them failing fails the run. It used to be two systems — this workflow and Cloudflare's Workers Builds — starting on the same push and never learning about each other. See [ADR 0003](docs/adr/0003-ci-owns-the-deploy-workers-builds-is-off.md).
 
 ## Documentation
 

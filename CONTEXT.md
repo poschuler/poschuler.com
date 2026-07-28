@@ -34,6 +34,10 @@ _Avoid_: category, keyword, topic
 The editorial date a Content Item is presented as belonging to — for a Bookmark, when Paul read it, not when the Source published it. It orders the Timeline. Distinct from when the row happened to be written to a store.
 _Avoid_: date, created, posted
 
+**Publication**:
+The act that puts a Content Item in front of readers. It is all or nothing: until it has happened completely, the Content Item is not published, however finished its Markdown is and however long it has been merged. Distinct from Published At, which is a date the Content Item carries, not an event.
+_Avoid_: release, deploy, ship, seed
+
 ### Identity and language
 
 **Slug**:

@@ -4,7 +4,7 @@ import { execSync } from "node:child_process";
 import fm from "front-matter";
 import { renderPostHtml } from "./markdown.ts";
 import { generateSitemap } from "../../app/lib/seo/sitemap.ts";
-import { buildSitemapRoutes, type SitemapContentItem } from "./sitemap-routes.ts";
+import { buildSitemapRoutes, RESUME_LASTMOD, type SitemapContentItem } from "./sitemap-routes.ts";
 
 /**
  * Renders every published Post body and the sitemap into `kv_payloads/`.
@@ -109,11 +109,17 @@ async function generateKvJsonFiles() {
         }
     }
 
-    const today = new Date().toISOString().split("T")[0];
+    // Not the clock. This file is committed and CI compares it against a fresh
+    // regeneration, so reading `new Date()` here would turn every change of
+    // calendar day into a failed build for content nobody touched. The newest
+    // Content Item is the honest answer anyway — a section with nothing in it
+    // cannot have changed more recently than the site did — and with no items
+    // at all the only date this repo holds is the Resume's.
+    const fallbackLastmod = allContentItems[0]?.publishedStringDate ?? RESUME_LASTMOD;
 
     const sitemap = generateSitemap({
         domain: PUBLIC_HOST,
-        routes: buildSitemapRoutes(allContentItems, today),
+        routes: buildSitemapRoutes(allContentItems, fallbackLastmod),
     });
 
     await fs.writeFile(

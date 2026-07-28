@@ -57,7 +57,7 @@ pnpm run kv:seed:local    # generate JSON payloads, then wrangler kv key put --l
 
 ### D1 — `POSCHULER_BD`
 
-SQLite at the edge, queried with hand-written SQL through a single thin helper in `app/db.server.ts` (`dbQuery`). No ORM, no query builder, no migration tool: `seed/d1/schema.sql` is applied by hand and `seed.sql` is regenerated wholesale. There is no write helper because no request writes — content reaches D1 through the seed pipeline. `dbQueryRow` and `dbExecute` existed, were never called, and were deleted; add them back the day a route needs one.
+SQLite at the edge, queried with hand-written SQL through a single thin helper in `app/db.server.ts` (`dbQuery`). No ORM, no query builder, no migration tool: `seed/d1/schema.sql` is applied by hand and `seed.sql` is regenerated wholesale. Applying it is still manual; forgetting to is not silent, because `seed/verify-schema.ts` blocks a publication when the deployed schema and this file disagree. There is no write helper because no request writes — content reaches D1 through the seed pipeline. `dbQueryRow` and `dbExecute` existed, were never called, and were deleted; add them back the day a route needs one.
 
 The `content` table holds every Content Item. `type` discriminates `'post'` from `'link'` — note that `'link'` is the persisted spelling of what the domain calls a **Bookmark**; `CONTEXT.md` is the authority on the name, the column is legacy spelling. Identity is enforced by two partial unique indexes:
 
@@ -155,7 +155,7 @@ Neither is required to boot. `SESSION_THEME_SECRET` throws only when the cookie 
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs on every push to `main` or `dev` and on every pull request into `main`: install, `pnpm typecheck`, `pnpm build`, then `scripts/smoke-test.sh`.
+`.github/workflows/ci.yml` runs on every push to `main` or `dev` and on every pull request into `main`: install, `pnpm typecheck`, `pnpm test`, `scripts/check-generated-fixtures.sh`, `pnpm build`, then `scripts/smoke-test.sh`. A push to `main` adds a second job, `publish`, which is the only thing that changes anything deployed — see Publishing below.
 
 **The smoke test is the part that earns its keep.** It serves the built Worker with no secrets and no `.dev.vars`, asserts that every public route answers 200 and actually carries content, then posts to `/set-theme` without the signing secret and checks the site is *still* serving. That is the outage, written down as a test: a module read `process.env` at evaluation time and threw on a missing value, taking every route down to protect a theme preference, and it survived review because the machine it was written on had a `.dev.vars` holding the value. Nothing about the code looked wrong; only the empty environment showed it. Reintroducing that bug turns every route red here.
 
@@ -182,7 +182,11 @@ Three conditions the script enforces on itself, each one learned by getting it w
 
 The last one is not a preference: `workers/app.ts` imports `virtual:react-router/server-build`, which only exists under the React Router Vite plugin, so the module cannot be imported from a test at all. The policy can.
 
-**The seed refactor was verified by regeneration, not by reading.** `seed.sql` and `kv_payloads/` are committed, so the check is exact: regenerate both and require an empty `git diff`. Any refactor of the generators should be held to the same bar.
+**The seed refactor was verified by regeneration, not by reading.** `seed.sql` and `kv_payloads/` are committed, so the check is exact: regenerate both and require nothing to have changed. That is now `scripts/check-generated-fixtures.sh`, run on every push — the bar any refactor of the generators is held to is enforced rather than remembered.
+
+Two things had to become deterministic before it could be: `getMarkdownFilePaths` now sorts, because `readdir` order is whatever the filesystem returns and the statement order in `seed.sql` follows it; and `generate-kv-json.ts` no longer reads the clock for the sitemap's fallback `lastmod`, which would have turned every change of calendar day into a failed build. The second one is the same mistake twice — `sitemap-routes.ts` takes that date as a parameter *precisely* so the output would be reproducible, and the caller handed it `new Date()`.
+
+The check uses `git status`, not `git diff`. A Post whose payload has never been generated produces an *untracked* file, which `git diff` does not see — and that is the one case the check exists for.
 
 **Not `@cloudflare/vitest-pool-workers`, and the reason is worth keeping.** The pool is Cloudflare's supported way to test a Worker, but it does not survive this stack: React Router in framework mode plus `@cloudflare/vite-plugin` fails with `The entry point "react" cannot be marked as external` ([workers-sdk#10170](https://github.com/cloudflare/workers-sdk/issues/10170), closed with "use plain Vitest" as the accepted workaround). So the bindings come from `getPlatformProxy()` in wrangler instead — the same Miniflare instances `wrangler --local` uses, reached from an ordinary Node test process. Nothing in the data layer is mocked.
 
@@ -202,9 +206,25 @@ Measured across all of `app/`, `seed/` and `workers/` instead it reads about 33%
 
 **Passing is not the same as protecting.** Every guarantee above was checked by breaking the code on purpose and confirming a named test went red — twelve mutations across the four areas: removing `mailto:` from the safe schemes; making `getColorScheme` rethrow instead of degrading; giving the cookie a `Domain` back; following the `Referer` blindly in `/set-theme`; letting `/blog` return Bookmarks; serving a failed upstream as a PDF; swallowing a D1 error; leading the seed file with its `DELETE`; degrading `INSERT OR REPLACE` to a plain `INSERT`; dropping the quote-doubling in `escapeSql`; applying the CSP in development; and mutating the response headers instead of rebuilding them. A test that does not fail when it should is worse than no test, because it reads like cover.
 
-### Seeding production
+### Publishing
 
-A second job, `seed`, runs only on a push to `main` and only after `verify` passes. It applies `seed/d1/seed.sql` and uploads `seed/kv/kv_payloads/` to the deployed stores, then reads both back with `seed/verify-stores.ts`. Its credentials, `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, are secrets of the `production` environment rather than of the repository, and that environment only accepts deployments from `main`. Repository secrets are readable by every workflow in the repo; environment secrets reach only a job that declares `environment: production`, and only from an allowed branch — so the restriction holds even if this file is edited badly. The token needs `D1:Edit` and `Workers KV Storage:Edit`, and nothing else.
+A second job, `publish`, runs only on a push to `main` and only after `verify` passes. It owns the whole Publication, in this order and in one workspace:
+
+1. **`seed/verify-schema.ts`** — the deployed D1 has the shape `seed/d1/schema.sql` describes, or the run stops before anything is written.
+2. **Seed D1, then KV** from the committed fixtures.
+3. **`seed/verify-stores.ts`** — read both stores back.
+4. **`pnpm run deploy`** — build, then `wrangler deploy`.
+5. **Ask the site.** Four routes over HTTPS, three attempts each.
+
+Its credentials, `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, are secrets of the `production` environment rather than of the repository, and that environment only accepts deployments from `main`. Repository secrets are readable by every workflow in the repo; environment secrets reach only a job that declares `environment: production`, and only from an allowed branch — so the restriction holds even if this file is edited badly. The token needs `D1:Edit`, `Workers KV Storage:Edit` and `Workers Scripts:Edit`, and nothing else.
+
+**One job, not three, and not by preference.** `wrangler deploy` locates the built Worker through `.wrangler/deploy/config.json`, a gitignored artefact `@cloudflare/vite-plugin` writes at build time. A separate deploy job would not have it, and wrangler would silently fall back to the root `wrangler.jsonc` — whose `main` is the unbuilt entry point and which declares no `assets`. That run is green and ships the wrong Worker with no static files. Passing `build/` between jobs does not fix it either; the redirect lives outside that directory.
+
+**Why the schema is checked and not applied.** There is no migration tool here on purpose (ADR 0002), so a commit that changes the table's shape can arrive with the deployed table still on the old one — the one failure that is a broken page rather than a degraded one. The check builds its expectation by applying `schema.sql` to a throwaway local database instead of parsing it, so there is no second description of the schema to drift from the first.
+
+Two things it had to learn the hard way. Comparing the stored DDL as text does not work: the same table comes back with its comments intact from the deployed database and stripped from a local one, because the two were created through different paths. So columns are compared through `pragma_table_info`, which reports shape rather than wording. Indexes stay as text, because a partial index's `WHERE` clause is not exposed by any pragma — and that clause is the entire reason `INSERT OR REPLACE` behaves as an upsert here. And `sqlite_sequence` and Cloudflare's `_cf_KV` are filtered out: they exist in every deployed D1 and in no local one, so leaving them in would fail every run forever.
+
+**A green deploy is not a working site.** Step 5 exists because this repo has twice shipped a deploy that succeeded over a site that did not work — the 1101 on every route, and `/robots.txt` answering 500 for weeks behind Cloudflare's managed copy. Everything upstream of a real request is blind to that.
 
 **`main` only, and never on a pull request.** There is one D1 and one KV — no per-environment resources — so a seed from any other branch would overwrite live content with a work in progress.
 
@@ -217,7 +237,13 @@ A second job, `seed`, runs only on a push to `main` and only after `verify` pass
 
 One sharp edge worth knowing: `wrangler kv key get` does not fail on a missing key. It prints `Value not found` and exits 0, so the verifier treats an unparseable read as a missing key rather than letting it surface as a crash.
 
-**Deploys are still not this workflow's job.** Workers Builds deploys on push to `main` on Cloudflare's side, which means the deploy and this seed run concurrently with no ordering between them. That is tolerable because both are idempotent and the Worker reads its content at request time: the worst case is a newly published Post 404ing for the seconds between the deploy going live and the seed finishing. What it does *not* tolerate is a failing seed going unnoticed — hence the verify step.
+**Deploys used to belong to nobody.** Workers Builds deployed on push to `main` on Cloudflare's side while this workflow seeded, with no ordering between them and nothing failing when only one succeeded. It is disconnected now, and this job owns both halves — see ADR 0003 for what that cost and what was weighed against it.
+
+**Runs on `main` queue; everywhere else they cancel.** `cancel-in-progress` is an expression, false only on `main`, because a cancellation landing between the seed and the deploy recreates the exact split the job exists to remove. A superseded run that is still *pending* is dropped instead, which is harmless: it has executed nothing, and `main` is linear, so whatever replaced it carries the same commits.
+
+The protection has edges. It covers concurrency-driven cancellation only — a manual cancel from the UI, or an expired `timeout-minutes`, still lands wherever it lands, with about ten seconds of grace and a hard kill at five minutes. Hence the job's generous timeout. And if the deploy fails after the stores have moved, there is no rollback: the run goes red and old code serves new content until someone merges a fix.
+
+**What the order does not buy.** Seeding first means old code serves new data for the length of the deploy. If a commit changes the *shape* of a KV payload, that page is broken for those seconds. Only splitting such a change across two merges avoids it, and nothing here enforces that.
 
 ## Known defects
 
@@ -226,7 +252,6 @@ One sharp edge worth knowing: `wrangler kv key get` does not fail on a missing k
 - **`generate-kv-json.ts` builds its D1 query with nested unescaped double quotes** inside a double-quoted `--command` string. It works only because SQL treats the collapsed quoting as bare identifiers.
 - **The sitemap's `/resume` `lastmod` is the hardcoded string `2025-12-21`.** The Resume has no Published At to derive one from. It is now the exported `RESUME_LASTMOD` in `seed/kv/sitemap-routes.ts` with a test pinning it, so the staleness is at least visible rather than buried in a template literal.
 - **`…setup-nodejs-express-typescript-project.en-old.md` is never published.** Its front matter says `type: post`, but `en-old` is not a Locale the generator recognises, so it is skipped with a warning nobody reads and no row or KV key exists for it. It is either a draft that should not be in `app/content/`, or a Translation that needs a real Locale.
-- **CI seeds production but never regenerates.** The `seed` job uploads the committed `seed.sql` and payloads as they are. Editing a Markdown file without re-running the generators leaves the stores holding the previous version, and nothing fails — the content pipeline is still a step someone has to remember.
 - **No test renders a component.** CSS and markup regressions are caught by eye only. jsdom does not compute animations, so a component test would not have found the sidebar's closing flash either — catching that class of defect needs a real browser, which is a third runtime nobody has signed up for yet.
 - **`/resume` has no test, and does not need one the way the others do.** It has no loader: its sections import `resume.json` directly, so there is no request-time behaviour to assert. What could still break — a section that stops rendering — needs a component test, which is the same gap as above.
 - **Cloudflare prepends a managed `robots.txt`.** The zone has AI Crawl Control's managed robots.txt on, which blocks the AI training crawlers and adds Content Signals. It merges with this Worker's response *only when the origin answers 200* — while `/robots.txt` was throwing on a missing `PUBLIC_HOST`, Cloudflare's block was served alone and the failure was invisible, `Sitemap:` line and all. If that line ever disappears again, request the route directly before suspecting the dashboard.
@@ -235,6 +260,8 @@ One sharp edge worth knowing: `wrangler kv key get` does not fail on a missing k
 ## Inherited code (removed)
 
 This repo was scaffolded from an earlier e-commerce project and carried roughly two thirds of its `app/` tree as unreachable baggage: an inherited design system, a second `ui-react-aria/` component set, product cards and sliders, ~25 storefront hooks (brand/category/department/geolocation), the unused two thirds of shadcn/ui, and two model files that no longer compiled (`feeds.server.ts` and `projects.server.ts` called `dbQuery` with the pre-D1 two-argument signature and used Postgres `TO_CHAR`). The `feeds` and `projects` tables backing them were created but never read or written.
+
+**The code went; the tables stayed.** That pass deleted the modules and left the two tables standing in the deployed database, where they sat unreferenced for months. Nothing could see them: no test touches the remote schema and no document recorded them, so this section read as if the cleanup had been complete. `seed/verify-schema.ts` found them the first time it ran, which is the argument for the check in one sentence — the deployed schema is not something you can reason about from the repository. They are dropped by hand, and the check now refuses any table `schema.sql` does not declare.
 
 All of it was deleted in one pass, verified by walking the import graph from the real entry points (`workers/app.ts`, `app/root.tsx`, and every module named in `app/routes.ts`). `app/` went from 178 source files to 40, with zero unreachable files remaining. The one live import into the inherited tree — `ModeToggle`'s icon button — was preserved by moving that component to `app/components/ui/icon-button.tsx` rather than rewriting the toggle, so the UI is unchanged.
 
