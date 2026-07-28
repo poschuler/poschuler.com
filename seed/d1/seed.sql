@@ -1,4 +1,3 @@
-DELETE FROM content;
 
 INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, tags, repository, updated_at)
 VALUES ('implementing-value-objects-in-nodejs', 'en', 'post', 'Implementing Value Objects in Node.js', 'A practical guide to implementing Value Objects in TypeScript and Node.js to create more robust and expressive domain models, inspired by Domain-Driven Design principles.', '2025-11-02', '["nodejs","typescript","ddd","architecture","value-object"]', 'https://github.com/poschuler/nodejs-ddd-value-objects', CURRENT_TIMESTAMP);
@@ -35,3 +34,5 @@ VALUES ('stop-lying-to-your-users', NULL, 'link', 'Stop Lying to Your Users', 'h
 
 INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, tags, updated_at)
 VALUES ('the-copenhagen-book', NULL, 'link', 'The Copenhagen Book', 'https://thecopenhagenbook.com/', 'pilcrow', '2024-07-30', '["auth","security","webdev"]', CURRENT_TIMESTAMP);
+
+DELETE FROM content WHERE slug || ':' || ifnull(lang, '') NOT IN ('implementing-value-objects-in-nodejs:en', 'pragmatic-nodejs-api-schema-validation-and-global-error-handling:en', 'pragmatic-nodejs-api-setup-nodejs-express-typescript-project:en', 'pragmatic-nodejs-api-vertical-slices-and-domain-logic:en', 'how-i-would-do-auth:', 'let-me-be:', 'making-sense-of-typescript-generics:', 'migrating-from-radix-to-react-aria-improving-accessibility-and-ux:', 'navigating-the-future-of-frontend:', 'oops-i-accidentally-made-our-website-faster-by-switching-to-remix:', 'stop-lying-to-your-users:', 'the-copenhagen-book:');
