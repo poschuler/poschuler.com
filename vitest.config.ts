@@ -39,7 +39,10 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: [
+        "seed/d1/seed-sql.ts",
+        "seed/kv/kv-keys.ts",
         "seed/kv/markdown.ts",
+        "seed/kv/sitemap-routes.ts",
         "app/color-scheme-cookie.ts",
         "app/db.server.ts",
         "app/lib/revalidation.ts",
@@ -50,6 +53,7 @@ export default defineConfig({
         "app/routes/robots.ts",
         "app/routes/set-theme.ts",
         "app/routes/sitemap.ts",
+        "workers/security-headers.ts",
       ],
     },
     projects: [

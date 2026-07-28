@@ -1,45 +1,24 @@
 import { createRequestHandler, RouterContextProvider } from "react-router";
 import { cloudflareContext, nonceContext, type AppEnv } from "../app/context";
+import { withSecurityHeaders } from "./security-headers";
 
 const requestHandler = createRequestHandler(
   () => import("virtual:react-router/server-build"),
   import.meta.env.MODE
 );
 
-/** Cheap to add, and none of them depend on the response body. */
-const SECURITY_HEADERS: Record<string, string> = {
-  "X-Content-Type-Options": "nosniff",
-  "Referrer-Policy": "strict-origin-when-cross-origin",
-  "X-Frame-Options": "DENY",
-  "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
-};
-
 /**
- * The allow-list mirrors what the site actually loads: Google Fonts, the GitHub
- * avatar, and the Cloudflare Insights beacon. Everything else falls back to
- * `'self'`.
- *
- * `style-src` keeps `'unsafe-inline'` because Base UI positions popups with
- * inline `style` attributes. Scripts do not need it — they carry the nonce.
+ * The only entry point. Builds the per-request context, runs the handler, and
+ * hands the response to `security-headers.ts` — which owns the policy and is
+ * tested there, because this module cannot be imported outside the Vite plugin
+ * that supplies `virtual:react-router/server-build`.
  */
-function contentSecurityPolicy(nonce: string): string {
-  return [
-    "default-src 'self'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "frame-ancestors 'none'",
-    "object-src 'none'",
-    "img-src 'self' data: https://avatars.githubusercontent.com",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
-    `script-src 'self' 'nonce-${nonce}' https://static.cloudflareinsights.com`,
-    "connect-src 'self' https://cloudflareinsights.com",
-  ].join("; ");
-}
-
 export default {
   async fetch(request, env, ctx) {
     const context = new RouterContextProvider();
+
+    // Per request, and handed to `<ServerRouter nonce>` in `entry.server.tsx`,
+    // which stamps it onto every inline script React Router emits.
     const nonce = crypto.randomUUID();
 
     context.set(cloudflareContext, { env, ctx });
@@ -47,31 +26,9 @@ export default {
 
     const response = await requestHandler(request, context);
 
-    // Rebuilt rather than mutated: a response proxied from `fetch` (the Resume
-    // PDF) carries immutable headers, and `.set` on those throws.
-    const headers = new Headers(response.headers);
-
-    for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
-      headers.set(name, value);
-    }
-
-    // Dev is exempt from CSP: Vite injects its own inline scripts, which carry
-    // no nonce and would be blocked.
-    if (import.meta.env.PROD) {
-      if (headers.get("Content-Type")?.includes("text/html")) {
-        headers.set("Content-Security-Policy", contentSecurityPolicy(nonce));
-      }
-
-      headers.set(
-        "Strict-Transport-Security",
-        "max-age=31536000; includeSubDomains"
-      );
-    }
-
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers,
+    return withSecurityHeaders(response, {
+      nonce,
+      isProduction: import.meta.env.PROD,
     });
   },
 } satisfies ExportedHandler<AppEnv>;

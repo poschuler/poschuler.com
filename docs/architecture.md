@@ -169,8 +169,20 @@ Three conditions the script enforces on itself, each one learned by getting it w
 
 `pnpm test` runs Vitest between `typecheck` and `build`. Two projects, split by what they need rather than by what they are called:
 
-- **`unit`** — no bindings. The Markdown sanitiser, the theme cookie, the sitemap and `robots.txt` renderers, `shouldRevalidate`.
+- **`unit`** — no bindings. The Markdown sanitiser, the theme cookie, the sitemap and `robots.txt` renderers, `shouldRevalidate`, the seed generators' logic, and the security headers.
 - **`integration`** — real D1 and KV, from Miniflare, seeded from the committed fixtures into `.wrangler/state-test`. The content queries and every loader that reads a store.
+
+**Three modules exist so that logic could be tested at all**, and the split is the same each time — the rules move out, the I/O stays put:
+
+| Pure module | Extracted from | What it owns |
+| ----------- | -------------- | ------------ |
+| `seed/d1/seed-sql.ts` | `generate-seed-sql.ts` | filename → row, SQL escaping, insert-before-prune |
+| `seed/kv/sitemap-routes.ts` | `generate-kv-json.ts` | which routes the sitemap advertises |
+| `workers/security-headers.ts` | `workers/app.ts` | the headers and the CSP |
+
+The last one is not a preference: `workers/app.ts` imports `virtual:react-router/server-build`, which only exists under the React Router Vite plugin, so the module cannot be imported from a test at all. The policy can.
+
+**The seed refactor was verified by regeneration, not by reading.** `seed.sql` and `kv_payloads/` are committed, so the check is exact: regenerate both and require an empty `git diff`. Any refactor of the generators should be held to the same bar.
 
 **Not `@cloudflare/vitest-pool-workers`, and the reason is worth keeping.** The pool is Cloudflare's supported way to test a Worker, but it does not survive this stack: React Router in framework mode plus `@cloudflare/vite-plugin` fails with `The entry point "react" cannot be marked as external` ([workers-sdk#10170](https://github.com/cloudflare/workers-sdk/issues/10170), closed with "use plain Vitest" as the accepted workaround). So the bindings come from `getPlatformProxy()` in wrangler instead — the same Miniflare instances `wrangler --local` uses, reached from an ordinary Node test process. Nothing in the data layer is mocked.
 
@@ -210,12 +222,10 @@ One sharp edge worth knowing: `wrangler kv key get` does not fail on a missing k
 - **The build copies `.dev.vars` into `build/server/`.** `@cloudflare/vite-plugin` does this so the built output can be previewed locally, but it means a build run on a machine with real local secrets leaves them in plaintext inside the build directory. `build/` is gitignored and `wrangler deploy` does not turn them into Worker vars (confirmed with `--dry-run`), so nothing leaks by default — but do not ship `build/` anywhere as an artifact. Behaviour predates Vite 8; verified identical on Vite 7.
 - **`/blog/:blogSlug` hardcodes `:en`.** The schema, the seed pipeline and the KV key layout are all Locale-aware; the route is not, and no URL carries a Locale. Serving a second Translation needs a routing decision first (`/es/blog/…` vs. a query param vs. content negotiation).
 - **`generate-kv-json.ts` builds its D1 query with nested unescaped double quotes** inside a double-quoted `--command` string. It works only because SQL treats the collapsed quoting as bare identifiers.
-- **The sitemap's `/resume` `lastmod` is the hardcoded string `2025-12-21`.**
-- **`generate-kv-json.ts` carries two near-identical fetchers**, `fetchSlugs` and `fetchAll`, differing only in a `where` clause. Only `fetchAll` is called.
-- **`seed/d1/d1-upsert.ts` is an empty file**, committed and imported by nothing.
+- **The sitemap's `/resume` `lastmod` is the hardcoded string `2025-12-21`.** The Resume has no Published At to derive one from. It is now the exported `RESUME_LASTMOD` in `seed/kv/sitemap-routes.ts` with a test pinning it, so the staleness is at least visible rather than buried in a template literal.
 - **`…setup-nodejs-express-typescript-project.en-old.md` is never published.** Its front matter says `type: post`, but `en-old` is not a Locale the generator recognises, so it is skipped with a warning nobody reads and no row or KV key exists for it. It is either a draft that should not be in `app/content/`, or a Translation that needs a real Locale.
 - **CI seeds production but never regenerates.** The `seed` job uploads the committed `seed.sql` and payloads as they are. Editing a Markdown file without re-running the generators leaves the stores holding the previous version, and nothing fails — the content pipeline is still a step someone has to remember.
-- **Three things the test suite still does not reach.** The seed generators (`generate-seed-sql.ts`, `generate-kv-json.ts`) run on import and export nothing, so there is no way to test them without splitting the logic from the effect — which leaves the defects listed above this line unguarded. `workers/app.ts` is untested: nothing asserts the security headers, that the CSP is production-only, or that the nonce differs per request. And no test renders a component, so CSS regressions are still caught by eye only — jsdom does not compute animations, so a component test would not have found the sidebar's closing flash either.
+- **No test renders a component.** CSS and markup regressions are caught by eye only. jsdom does not compute animations, so a component test would not have found the sidebar's closing flash either — catching that class of defect needs a real browser, which is a third runtime nobody has signed up for yet.
 - **`/resume` has no test, and does not need one the way the others do.** It has no loader: its sections import `resume.json` directly, so there is no request-time behaviour to assert. What could still break — a section that stops rendering — needs a component test, which is the same gap as above.
 - **Cloudflare prepends a managed `robots.txt`.** The zone has AI Crawl Control's managed robots.txt on, which blocks the AI training crawlers and adds Content Signals. It merges with this Worker's response *only when the origin answers 200* — while `/robots.txt` was throwing on a missing `PUBLIC_HOST`, Cloudflare's block was served alone and the failure was invisible, `Sitemap:` line and all. If that line ever disappears again, request the route directly before suspecting the dashboard.
 - **KV can still hold unsanitised HTML from before the pipeline sanitised it.** The Worker trusts whatever it reads, so the guarantee is only as old as the last seed run. Every currently published Post re-renders byte-for-byte identically, so nothing needed re-uploading — but a payload written by an older pipeline and never regenerated would keep whatever it holds.
