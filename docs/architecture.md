@@ -214,7 +214,7 @@ A second job, `publish`, runs only on a push to `main` and only after `verify` p
 2. **Seed D1, then KV** from the committed fixtures.
 3. **`seed/verify-stores.ts`** — read both stores back.
 4. **`pnpm run deploy`** — build, then `wrangler deploy`.
-5. **Ask the site.** Four routes over HTTPS, three attempts each.
+5. **`scripts/verify-deployment.sh`** — the version just uploaded is the one serving, at 100%.
 
 Its credentials, `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, are secrets of the `production` environment rather than of the repository, and that environment only accepts deployments from `main`. Repository secrets are readable by every workflow in the repo; environment secrets reach only a job that declares `environment: production`, and only from an allowed branch — so the restriction holds even if this file is edited badly. The token needs `D1:Edit`, `Workers KV Storage:Edit` and `Workers Scripts:Edit`, and nothing else.
 
@@ -224,7 +224,11 @@ Its credentials, `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, are secrets
 
 Two things it had to learn the hard way. Comparing the stored DDL as text does not work: the same table comes back with its comments intact from the deployed database and stripped from a local one, because the two were created through different paths. So columns are compared through `pragma_table_info`, which reports shape rather than wording. Indexes stay as text, because a partial index's `WHERE` clause is not exposed by any pragma — and that clause is the entire reason `INSERT OR REPLACE` behaves as an upsert here. And `sqlite_sequence` and Cloudflare's `_cf_KV` are filtered out: they exist in every deployed D1 and in no local one, so leaving them in would fail every run forever.
 
-**A green deploy is not a working site.** Step 5 exists because this repo has twice shipped a deploy that succeeded over a site that did not work — the 1101 on every route, and `/robots.txt` answering 500 for weeks behind Cloudflare's managed copy. Everything upstream of a real request is blind to that.
+**A successful upload is not a live deployment.** `wrangler deploy` exiting 0 means the version was accepted; it does not mean that version is serving. Step 5 reads that back and refuses anything that is not this run's version at 100%, which also catches a gradual rollout nobody meant to configure.
+
+**It started as a request to the site, and that failed on its first run — with a 403, from a healthy site.** The zone has Bot Fight Mode on, and a GitHub runner is a datacentre client, so Cloudflare issued a managed challenge that `curl` cannot solve. Cloudflare's documentation is explicit that there is no way around it: "You cannot bypass or skip Bot Fight Mode using WAF custom rules or Page Rules" — it runs outside the Ruleset Engine, so *Skip*, *Bypass* and *Allow* have no effect. Super Bot Fight Mode, which does support skip rules, is a paid plan.
+
+Detecting the challenge and continuing would have been worse than removing the step. The challenge is issued at the edge, before the Worker, so a genuinely broken origin returns the same thing as a healthy one: the check could never fail, while still reading like cover.
 
 **`main` only, and never on a pull request.** There is one D1 and one KV — no per-environment resources — so a seed from any other branch would overwrite live content with a work in progress.
 
@@ -246,6 +250,8 @@ The protection has edges. It covers concurrency-driven cancellation only — a m
 **What the order does not buy.** Seeding first means old code serves new data for the length of the deploy. If a commit changes the *shape* of a KV payload, that page is broken for those seconds. Only splitting such a change across two merges avoids it, and nothing here enforces that.
 
 ## Known defects
+
+- **Nothing checks that production actually serves.** The publication proves the stores hold the right content and that the uploaded version is live, and the cold start proves the built Worker boots with nothing configured — but no step makes a request to `poschuler.com`. A missing secret, or a binding pointing at the wrong resource, would pass everything here. Closing it needs a request from somewhere Bot Fight Mode does not challenge, which means continuous monitoring by a client on Cloudflare's verified-bot list rather than a step in the run. Worth remembering that the two incidents this would have caught, the 1101 and the `robots.txt` 500, both lasted far longer than a deploy.
 
 - **The build copies `.dev.vars` into `build/server/`.** `@cloudflare/vite-plugin` does this so the built output can be previewed locally, but it means a build run on a machine with real local secrets leaves them in plaintext inside the build directory. `build/` is gitignored and `wrangler deploy` does not turn them into Worker vars (confirmed with `--dry-run`), so nothing leaks by default — but do not ship `build/` anywhere as an artifact. Behaviour predates Vite 8; verified identical on Vite 7.
 - **`/blog/:blogSlug` hardcodes `:en`.** The schema, the seed pipeline and the KV key layout are all Locale-aware; the route is not, and no URL carries a Locale. Serving a second Translation needs a routing decision first (`/es/blog/…` vs. a query param vs. content negotiation).
