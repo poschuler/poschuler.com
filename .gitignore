@@ -8,6 +8,9 @@
 /.react-router/
 /build/
 
+# Vitest
+/coverage/
+
 # Cloudflare
 .mf
 .wrangler

@@ -31,6 +31,12 @@ jobs:
 
       - run: pnpm typecheck
 
+      # Before the build, because it is the cheaper of the two and fails on the
+      # things a build cannot see. The integration project seeds its own D1 and
+      # KV from the committed fixtures into `.wrangler/state-test`, `--local`,
+      # so this needs no credentials and touches nothing deployed.
+      - run: pnpm test
+
       - run: pnpm build
 
       # The runner has no `.dev.vars` and no secrets, which is the whole point:
