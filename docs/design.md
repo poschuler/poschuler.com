@@ -35,7 +35,7 @@ Long-form Post bodies render through `@tailwindcss/typography`, with the `prose`
 
 Theme is a **server-rendered, cookie-backed preference** with no client-side JavaScript at all:
 
-1. `root.tsx`'s loader reads the `poschuler__color-scheme` cookie through `app/color-scheme-cookie.ts` — signed with `SESSION_THEME_SECRET`, parsed by a Zod enum that falls back to `system` on anything unexpected.
+1. `root.tsx`'s loader reads the `__Host-poschuler-color-scheme` cookie through `app/color-scheme-cookie.ts` — signed with `SESSION_THEME_SECRET`, parsed by a Zod enum that falls back to `system` on anything unexpected.
 2. `Layout` puts the resolved value straight onto `<html className={colorScheme}>`. It is in the first byte of the response, so there is nothing to prevent a flash of — no inline script, no provider, no hydration gap.
 3. `ModeToggle` is a `<Form method="POST" action="/set-theme" navigate={false}>` holding one button that advances light → dark → system. The server owns the choice; the button only submits it.
 4. `/set-theme` writes the cookie and **redirects back to the referring page** (same-origin only — `Referer` is attacker-influenceable). Post/Redirect/Get is what makes the toggle survive without JavaScript: returning a body instead leaves a no-JS browser parked on a page reading `null`.
@@ -68,7 +68,7 @@ Two layers, both canonical since the inherited component sets were deleted:
 | Route-local components | Anything used by exactly one route — the first choice          |
 | `app/components/ui/`   | Shared primitives, each a thin Base UI wrapper                 |
 
-**Prefer a route-local component over a shared one.** A component used by exactly one route belongs beside that route, not in `app/components/`. `routes/resume/hero.tsx`, `experience.tsx` and `keyboard-manager.tsx` are the model: they read the parent route's loader data directly via `useLoaderData<typeof loader>()` with a type-only import of the parent's `loader`, so no props need threading. Promote to `app/components/` only on the second consumer.
+**Prefer a route-local component over a shared one.** A component used by exactly one route belongs beside that route, not in `app/components/`. `routes/resume/hero.tsx`, `experience.tsx` and `keyboard-manager.tsx` are the model: each imports the slice of `resume.json` it renders, so no props need threading. When a route does have a loader, the same shape applies with `useLoaderData<typeof loader>()` and a type-only import of the parent's `loader`. Promote to `app/components/` only on the second consumer.
 
 `ui/` holds only what is actually imported — `button`, `icon-button`, `dialog`, `sheet`, `command`, `brand-icons`. Add the one file you need, never a set.
 

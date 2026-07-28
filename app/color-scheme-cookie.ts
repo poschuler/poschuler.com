@@ -19,20 +19,41 @@ export type ColorScheme = z.infer<typeof schema>;
  * threw on *every* request, taking the whole site down to protect a theme
  * preference. Bindings are request-scoped here; read them that way.
  */
+/**
+ * The `__Host-` prefix is not decoration: browsers refuse a cookie carrying it
+ * unless it is `Secure`, has `Path=/` and has **no** `Domain`. That last one is
+ * the point.
+ *
+ * The predecessor, `poschuler__color-scheme`, was emitted host-only while
+ * `DEPLOYMENT_ENV` was unset in production and gained `Domain=poschuler.com`
+ * the day that var was finally deployed. A browser treats those as two separate
+ * cookies of the same name, sends both, and whoever parses reads whichever
+ * arrives first — so every returning visitor had their theme frozen at the old
+ * value while each click wrote the new one somewhere it would never be read.
+ *
+ * Quitting `domain` would have fixed that instance by relying on the browser
+ * ordering same-path cookies oldest-first. This forbids the whole class
+ * instead: nobody can reintroduce a second scope, because the browser would
+ * reject the cookie outright rather than quietly shadowing the first.
+ *
+ * Renaming also settles the existing duplicates — nothing holds this name yet —
+ * at the cost of resetting everyone's preference once. The other cost is that
+ * `Secure` is now unconditional: `localhost` counts as a secure origin, so dev
+ * and preview are fine, but reaching a dev server over plain http on a LAN
+ * address will not persist a theme.
+ */
 function colorSchemeCookie(env: AppEnv) {
   if (!env.SESSION_THEME_SECRET) {
     throw new Error("Missing env: SESSION_THEME_SECRET");
   }
 
-  const isProduction = env.DEPLOYMENT_ENV === "production";
-
-  const cookie = createCookie("poschuler__color-scheme", {
+  const cookie = createCookie("__Host-poschuler-color-scheme", {
     path: "/",
     sameSite: "lax",
     httpOnly: true,
+    secure: true,
     maxAge: 30 * 24 * 60 * 60,
     secrets: [env.SESSION_THEME_SECRET],
-    ...(isProduction ? { domain: "poschuler.com", secure: true } : {}),
   });
 
   return createTypedCookie({ cookie, schema });
