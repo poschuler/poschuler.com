@@ -76,6 +76,9 @@ Every primitive follows the same shape: a Base UI part, styled with `cva` varian
 
 - **Compose with `render`, not by nesting.** `<Button render={<Link to="/blog" />}>blog</Button>` — Base UI merges the props of both, so event handlers from each side run. That is what lets a `SheetClose` wrap a `Link` in `header.tsx` and both dismiss the sheet and navigate.
 - **Transitions key off `data-open` / `data-closed`**, not the `data-state` shadcn/ui uses. Copying a shadcn class list wholesale will silently animate nothing.
+- **An exit animation needs `data-[closed]:fill-mode-forwards`, and the backdrop needs the panel's duration.** `animate-out` defaults to `animation-fill-mode: none`, so when the exit animation ends the element snaps back to its base style — visible, on-screen — and stays there until Base UI unmounts it a frame or two later. Pair that with a backdrop left on the default 150ms against a panel closing in 300ms and the black comes back at full opacity halfway through the close. That is what the sheet and the dialog do now; anything new that animates on `data-closed` needs both.
+
+The second point is a class of bug no test here catches: jsdom does not compute animations, so only a real browser would see it. Check a closing transition by eye before shipping it.
 
 ## Route conventions
 
