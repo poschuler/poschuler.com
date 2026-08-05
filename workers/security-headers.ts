@@ -25,13 +25,12 @@ export const STRICT_TRANSPORT_SECURITY = "max-age=31536000; includeSubDomains";
  * `style-src` keeps `'unsafe-inline'` because Base UI positions popups with
  * inline `style` attributes. Scripts do not need it — they carry the nonce.
  *
- * The beacon itself is not rendered here: Web Analytics is on automatic
- * injection (Cloudflare dashboard), so the edge adds the `<script>` — with an
- * `integrity` attribute we could not set by hand — to the HTML on the way out.
- * `script-src` still needs the host it loads from. `connect-src` needs only
- * `'self'`, because automatic injection reports to this domain's own
- * `/cdn-cgi/rum`, not to `cloudflareinsights.com` the way a manually-embedded
- * snippet would.
+ * The Cloudflare Insights beacon is embedded by hand in `root.tsx`, not by
+ * Cloudflare's automatic injection: this Worker generates the response
+ * itself, with no origin fetch for the edge to rewrite, so automatic
+ * injection never sees the HTML to modify. A manually-embedded beacon reports
+ * to `cloudflareinsights.com`, not to this domain's own `/cdn-cgi/rum` the
+ * way an automatically-injected one would — hence that host in `connect-src`.
  */
 export function contentSecurityPolicy(nonce: string): string {
   return [
@@ -44,7 +43,7 @@ export function contentSecurityPolicy(nonce: string): string {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     `script-src 'self' 'nonce-${nonce}' https://static.cloudflareinsights.com`,
-    "connect-src 'self'",
+    "connect-src 'self' https://cloudflareinsights.com",
   ].join("; ");
 }
 
