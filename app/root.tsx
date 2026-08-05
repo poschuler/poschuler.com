@@ -78,6 +78,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {children}
         <ScrollRestoration />
         <Scripts />
+        {/* <!-- Cloudflare Web Analytics -->
+            Manual, not automatic: this Worker generates the response itself, with
+            no origin fetch for Cloudflare's edge to rewrite, so the dashboard's
+            automatic-injection option is a no-op here — verified against
+            production, where nothing appeared until this went back in. */}
+        <script
+          type="module"
+          src="https://static.cloudflareinsights.com/beacon.min.js"
+          data-cf-beacon='{"token": "502dbbed6f8448b4ac3841afa524b219"}'
+        />
+        {/* <!-- End Cloudflare Web Analytics --> */}
       </body>
     </html>
   );
