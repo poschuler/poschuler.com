@@ -42,4 +42,3 @@ export function IconButton({ className, variant, ...props }: IconButtonProps) {
   );
 }
 
-export { iconButtonVariants };

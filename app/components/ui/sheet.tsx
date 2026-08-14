@@ -1,10 +1,6 @@
-import * as React from "react";
 import {
   Dialog as BaseDialog,
-  type DialogBackdropProps,
-  type DialogDescriptionProps,
   type DialogPopupProps,
-  type DialogTitleProps,
 } from "@base-ui/react/dialog";
 import { X } from "lucide-react";
 
@@ -13,108 +9,72 @@ import { cn } from "~/lib/utils";
 const Sheet = BaseDialog.Root;
 const SheetTrigger = BaseDialog.Trigger;
 const SheetClose = BaseDialog.Close;
-const SheetPortal = BaseDialog.Portal;
 
-/** Base UI drives transitions off `data-open` / `data-closed`, not `data-state`. */
 type StyledProps<Props> = Omit<Props, "className"> & { className?: string };
 
-function SheetOverlay({
-  className,
-  ...props
-}: StyledProps<DialogBackdropProps>) {
-  return (
-    <BaseDialog.Backdrop
-      className={cn(
-        "fixed inset-0 z-50 bg-black/80 data-[open]:animate-sheet-backdrop-in data-[closed]:animate-sheet-backdrop-out",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-/* One side, because one side is what the site opens: the mobile navigation.
- * The other three cost four keyframe pairs each to animate and are three
- * layouts nothing has asked for. */
-const SHEET_PANEL =
-  "fixed inset-y-0 right-0 z-50 h-full w-3/4 gap-4 bg-subtle p-6 shadow-lg data-[open]:animate-sheet-in data-[closed]:animate-sheet-out sm:max-w-sm";
-
+/**
+ * A panel that slides in from the right over the page, dismissed by the scrim,
+ * the X or Escape.
+ *
+ * Motion is a **transition**, not a keyframe animation, and the difference is
+ * what happens to a reader who closes the panel while it is still opening: a
+ * transition is interruptible, so it slides back from wherever it actually is,
+ * where an animation would restart from the far edge and jump. It also removes
+ * the `animation-fill-mode` trap entirely — a transition's end state is the
+ * element's own style, so there is nothing to hold after it finishes.
+ *
+ * Base UI marks the two ends with `data-starting-style` and
+ * `data-ending-style`; the base class list carries the resting state, and those
+ * two variants carry the off-screen one.
+ *
+ * One side, because one side is what the site opens: the mobile navigation.
+ * The panel arrives from the right, where its trigger sits.
+ */
 function SheetContent({
+  title,
   className,
   children,
   ...props
-}: StyledProps<DialogPopupProps>) {
+}: StyledProps<DialogPopupProps> & {
+  /**
+   * Required rather than optional: a dialog with no accessible name is one a
+   * screen reader announces as nothing. Rendered as the `Dialog.Title` and
+   * visually hidden, because the panel's content is a labelled nav and a
+   * visible heading above it would only repeat what the links already say.
+   */
+  title: string;
+}) {
   return (
-    <SheetPortal>
-      <SheetOverlay />
-      <BaseDialog.Popup className={cn(SHEET_PANEL, className)} {...props}>
+    <BaseDialog.Portal>
+      <BaseDialog.Backdrop
+        className={cn(
+          "fixed inset-0 z-50 bg-overlay",
+          "transition-opacity duration-panel ease-panel",
+          "data-ending-style:duration-panel-out data-ending-style:ease-in",
+          "data-starting-style:opacity-0 data-ending-style:opacity-0",
+          "motion-reduce:transition-none",
+        )}
+      />
+      <BaseDialog.Popup
+        className={cn(
+          "fixed inset-y-0 right-0 z-50 flex h-full w-3/4 flex-col gap-4 border-default border-l bg-subtle p-6 shadow-lg focus:outline-none sm:max-w-sm",
+          "transition-transform duration-panel ease-panel",
+          "data-ending-style:duration-panel-out data-ending-style:ease-in",
+          "data-starting-style:translate-x-full data-ending-style:translate-x-full",
+          "motion-reduce:transition-none",
+          className,
+        )}
+        {...props}
+      >
+        <BaseDialog.Title className="sr-only">{title}</BaseDialog.Title>
         {children}
-        <BaseDialog.Close className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-default disabled:pointer-events-none">
+        <BaseDialog.Close className="absolute top-4 right-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-default">
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </BaseDialog.Close>
       </BaseDialog.Popup>
-    </SheetPortal>
+    </BaseDialog.Portal>
   );
 }
 
-function SheetHeader({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn("flex flex-col space-y-2 text-center sm:text-left", className)}
-      {...props}
-    />
-  );
-}
-
-function SheetFooter({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn(
-        "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-function SheetTitle({ className, ...props }: StyledProps<DialogTitleProps>) {
-  return (
-    <BaseDialog.Title
-      className={cn("text-lg font-semibold text-default", className)}
-      {...props}
-    />
-  );
-}
-
-function SheetDescription({
-  className,
-  ...props
-}: StyledProps<DialogDescriptionProps>) {
-  return (
-    <BaseDialog.Description
-      className={cn("text-sm text-low", className)}
-      {...props}
-    />
-  );
-}
-
-export {
-  Sheet,
-  SheetPortal,
-  SheetOverlay,
-  SheetTrigger,
-  SheetClose,
-  SheetContent,
-  SheetHeader,
-  SheetFooter,
-  SheetTitle,
-  SheetDescription,
-};
+export { Sheet, SheetTrigger, SheetClose, SheetContent };

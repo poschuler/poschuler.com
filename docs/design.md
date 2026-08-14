@@ -47,7 +47,7 @@ Every class in the tree resolves to a token that exists. It was not always so: t
 
 The lesson generalises past shadcn: **a Tailwind class naming a token that does not exist fails silently.** Nothing in the type system, the linter or the test suite catches it — the class is simply dropped from the output. When adding a token-bearing class, confirm the token is in `@theme`, or grep the built CSS in `build/client/assets/root-*.css` for it.
 
-Each family expands into the same step vocabulary — `app`, `subtle`, `ui`, `hover`, `active`, `border`, `solid`, `solid-hover`, `solid-active` for backgrounds; `default` / `low` for text; `default` / `ui` / `hover` / `active` for borders and rings.
+The step vocabulary is `app`, `subtle`, `ui`, `hover`, `active` and `overlay` for backgrounds; `default` / `low` for text; `default` / `hover` for borders; `default` for rings. **A token exists because a scenario exists.** The scales run twelve steps and every namespace could be filled out to match, but a token nothing selects is a decision nobody made, and it reads to the next person as an intention the site has already committed to. Adding the step you need is one line.
 
 **Write `bg-ui`, `text-low`, `border-default` — not `bg-gray-100`, `text-gray-500`, `border-gray-200`.** The token is the contract; the scale behind it can change. `text-default` is body text, `text-low` is anything secondary (dates, metadata, muted prose).
 
@@ -79,6 +79,8 @@ Three states, not two. `system` means "follow the OS", and it is a real class on
 
 Radix ships its dark values scoped to `.dark, .dark-theme`, which a `.system` root does not match. `app/styles/radix-system-dark.css` re-declares them under `.system` inside the prefers-dark query. It is **generated and committed** — run `node scripts/generate-system-dark-css.mjs` after bumping `@radix-ui/colors` or changing which scales are imported.
 
+The same three classes also carry `color-scheme` in `@layer base`: `light`, `dark`, and `light dark` for `system`. That is the one part of a dark page a stylesheet cannot repaint — scrollbars, native form controls, and the canvas the browser paints outside the document — so without it the palette flips and the scrollbar stays white.
+
 ## Typography
 
 - **Inter Variable** for the interface, **Intel One Mono Variable** for everything monospaced. Both are self-hosted from `@fontsource-variable/*`, with the `@font-face` rules written out in `app/styles/fonts.css` rather than imported from the packages — see that file for which subsets ship and why. `root.tsx` preloads the two latin faces; without it the browser cannot discover a font until the stylesheet has parsed.
@@ -98,21 +100,40 @@ Two layers, both canonical since the inherited component sets were deleted:
 
 `ui/` holds only what is actually imported — `button`, `icon-button`, `dialog`, `sheet`, `command`, `brand-icons`. Add the one file you need, never a set.
 
-Every primitive follows the same shape: a Base UI part, styled with `cva` variants, `className` merged through `cn()`, and props typed as `Omit<Part.Props, "className"> & { className?: string }`.
+Every primitive follows the same shape: a Base UI part, `className` merged through `cn()`, and props typed as `Omit<Part.Props, "className"> & { className?: string }`.
 
-**Only the variants the site actually renders carry styles.** `button` keeps `outline` and `secondary`, `icon-button` keeps `contained` and `outline`, and both stop there. A variant nobody asks for is a set of class names no browser ever evaluates, which is exactly where a dead token hides indefinitely — the removed `danger` and `success` variants had been reaching for `ring-danger` and `ring-success`, neither of which exists. Adding one back is three lines when a second consumer appears.
+**Only the variants the site actually renders carry styles**, and only the parts it renders are exported. `button` keeps `outline` and `secondary`, `icon-button` keeps `contained` and `outline`, `sheet` opens from one edge, and `dialog` exports the root, the content and the title. A variant nobody asks for is a set of class names no browser ever evaluates, which is exactly where a dead token hides indefinitely — the removed `danger` and `success` variants had been reaching for `ring-danger` and `ring-success`, neither of which exists. Adding one back is three lines when a second consumer appears.
+
+**A dialog is given a name it cannot omit.** `SheetContent` takes `title` as a required prop and renders it as the `Dialog.Title`, visually hidden. A modal with no accessible name is announced as nothing, and an optional prop is one a caller forgets — the mobile navigation had, for as long as it existed.
 
 Two Base UI conventions matter when extending them:
 
 - **Compose with `render`, not by nesting.** `<Button render={<Link to="/blog" />}>blog</Button>` — Base UI merges the props of both, so event handlers from each side run. That is what lets a `SheetClose` wrap a `Link` in `header.tsx` and both dismiss the sheet and navigate.
-- **Transitions key off `data-open` / `data-closed`**, not the `data-state` shadcn/ui uses. Copying a shadcn class list wholesale will silently animate nothing.
-- **A transition is one named animation, declared in `@theme`, not a stack of utilities.** `--animate-dialog-in`, `--animate-sheet-out` and their backdrops each carry their own keyframes, duration, easing and fill mode, and the component reads one class per state: `data-[open]:animate-sheet-in data-[closed]:animate-sheet-out`. This replaced `tw-animate-css`, whose composable `animate-out fade-out-0 zoom-out-95 slide-out-to-top-[48%] duration-200` spread one transition across five classes that had to agree.
+- **Enter and exit key off `data-starting-style` and `data-ending-style`**, not the `data-state` shadcn/ui uses. The base class list carries the resting state; those two variants carry the state outside it. Copying a shadcn class list wholesale will silently animate nothing.
 
-  Two things the shorthand now carries that were separate utilities before, and that a new animation still needs. **`forwards`**: the default `animation-fill-mode: none` snaps an element back to its base style — visible, on-screen — when the exit animation ends, and Base UI unmounts it only a frame or two later. **The panel's clock on the backdrop**: a backdrop left on a shorter duration finishes fading half a close early and then holds, fully transparent, while the panel is still moving.
+## Motion
 
-- **A keyframe that animates `transform` replaces any transform utility on the element.** The dialog is centred by `translate-x-[-50%] translate-y-[-50%]`, so `dialog-in` and `dialog-out` carry that translate in every keyframe. Drop it and the popup animates from the middle of the viewport to its bottom-right quadrant.
+Almost none, on purpose. `transition-colors` on hover states, and nothing else. No skeleton shimmer, no scroll-triggered reveal, no entrance on a page. A site whose whole argument is that its author is careful should feel still.
 
-The second point is a class of bug no test here catches: jsdom does not compute animations, so only a real browser would see it. Check a closing transition by eye before shipping it.
+**The one exception is a panel entering from an edge of the screen** — today the mobile navigation in `ui/sheet.tsx`. It earns the movement because the movement carries information: a panel sliding in from the right says the page is still there, to the right, waiting, where a panel that appears in a frame reads as a new page. **Nothing that merely appears in place gets an entrance.** That is why the command palette does not move: it arrives in the middle of the viewport, from no edge, so a slide would say nothing and a zoom would be decoration — and it autofocuses an input, where an entrance is only delay competing with the first keystroke. Its scrim still fades, because the dimming is the part that carries meaning.
+
+The rules, all of them:
+
+| | |
+| :-- | :-- |
+| **Enter** | `duration-panel ease-panel` — 250ms |
+| **Exit** | `data-ending-style:duration-panel-out data-ending-style:ease-in` — 150ms, always faster than the enter |
+| **Properties** | `transform` and `opacity` only. Never `width`, `height` or `inset` |
+| **Scrim** | fades on the panel's clock, never instant beside a sliding panel |
+| **Reduced motion** | `motion-reduce:transition-none` on every animated element |
+
+All three numbers are tokens in `app.css` — `--ease-panel`, `--transition-duration-panel`, `--transition-duration-panel-out` — never literals in a class list. Tailwind resolves a bare `duration-250` to milliseconds by itself, so the names are not a workaround; they exist so the site's entire motion budget is three lines in one file.
+
+Exits are shorter than entrances because the two moments are not symmetrical: arriving has to be understood, leaving has already been decided.
+
+**Transitions, never keyframe animations.** A transition can be interrupted, so a panel closed halfway through opening slides back from where it actually is instead of restarting from the far edge. It also removes the `animation-fill-mode` trap: an animation's end state evaporates when it finishes, and Base UI unmounts a frame or two later, so an exit built on keyframes flashes the element back on screen unless every one of them carries `forwards`. A transition's end state is the element's own style, so there is nothing to hold.
+
+Two footnotes worth keeping. In Tailwind v4 `translate-x-full` sets the `translate` property rather than `transform`, and `transition-transform` covers `transform, translate, scale, rotate` — which is the only reason the pair works. And none of this is covered by a test: jsdom computes no transitions, so a closing panel has to be checked by eye in a browser before it ships.
 
 ## Route conventions
 

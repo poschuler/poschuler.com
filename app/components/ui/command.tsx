@@ -127,18 +127,6 @@ function CommandItem({ className, ...props }: StyledProps<AutocompleteItemProps>
   );
 }
 
-function CommandSeparator({
-  className,
-  ...props
-}: StyledProps<React.ComponentProps<typeof Autocomplete.Separator>>) {
-  return (
-    <Autocomplete.Separator
-      className={cn("-mx-1 h-px bg-border", className)}
-      {...props}
-    />
-  );
-}
-
 function CommandShortcut({
   className,
   ...props
@@ -164,5 +152,4 @@ export {
   CommandGroup,
   CommandItem,
   CommandShortcut,
-  CommandSeparator,
 };

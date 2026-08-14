@@ -40,15 +40,20 @@
   --font-mono: "Intel One Mono Variable", ui-monospace, SFMono-Regular, Menlo,
     Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
+  /* A token exists because a scenario exists. The Radix scales run twelve steps
+   * and the vocabulary could be expanded to all of them for every namespace,
+   * but a token nothing selects is a decision nobody made — and it reads, to
+   * the next person, as an intention the site has already committed to. */
   --background-color-app: var(--mauve-1);
   --background-color-subtle: var(--mauve-2);
   --background-color-ui: var(--mauve-3);
   --background-color-hover: var(--mauve-4);
   --background-color-active: var(--mauve-5);
-  --background-color-border: var(--mauve-6);
-  --background-color-solid: var(--mauve-9);
-  --background-color-solid-hover: var(--mauve-10);
-  --background-color-solid-active: var(--mauve-11);
+
+  /* The scrim behind a modal panel. Black in both themes, and deliberately not
+   * a mauve step: a dimmer is what makes a panel read as *on top of* the page
+   * rather than *instead of* it, and a tinted one reads as a surface. */
+  --background-color-overlay: rgb(0 0 0 / 0.7);
 
   --background-color-primary-app: var(--indigo-1);
   --background-color-primary-subtle: var(--indigo-2);
@@ -66,8 +71,6 @@
   --text-color-primary-low: var(--indigo-11);
 
   --ring-color-default: var(--mauve-6);
-  --ring-color-hover: var(--mauve-8);
-  --ring-color-active: var(--mauve-9);
   --ring-color-primary-default: var(--indigo-6);
   --ring-color-primary-ui: var(--indigo-7);
   --ring-color-primary-hover: var(--indigo-8);
@@ -76,93 +79,48 @@
 
   --border-color-default: var(--mauve-6);
   --border-color-hover: var(--mauve-8);
-  --border-color-active: var(--mauve-9);
 
   --border-color-primary-default: var(--indigo-6);
   --border-color-primary-ui: var(--indigo-7);
   --border-color-primary-hover: var(--indigo-8);
   --border-color-primary-active: var(--indigo-9);
 
-  /* One named animation per transition, rather than a stack of utilities each
-   * contributing a fragment of one. `forwards` is part of the shorthand for
-   * every exit: Base UI unmounts a frame or two after the animation ends, and
-   * on the default `animation-fill-mode: none` the element snaps back to its
-   * base style — visible, on screen — for that gap. */
-  --animate-dialog-in: dialog-in 200ms ease-out forwards;
-  --animate-dialog-out: dialog-out 200ms ease-in forwards;
-  --animate-dialog-backdrop-in: fade-in 200ms ease-out forwards;
-  --animate-dialog-backdrop-out: fade-out 200ms ease-in forwards;
-
-  /* A backdrop has to run on its panel's clock. Left on a shorter one it
-   * finishes fading half a close early and then holds, fully transparent,
-   * while the panel is still sliding. */
-  --animate-sheet-in: sheet-in 500ms ease-in-out forwards;
-  --animate-sheet-out: sheet-out 300ms ease-in-out forwards;
-  --animate-sheet-backdrop-in: fade-in 500ms ease-out forwards;
-  --animate-sheet-backdrop-out: fade-out 300ms ease-in forwards;
-
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
-  @keyframes fade-out {
-    from {
-      opacity: 1;
-    }
-    to {
-      opacity: 0;
-    }
-  }
-
-  /* The popup is centred by a -50%/-50% translate, so its keyframes have to
-   * carry that translate too — an animation on `transform` replaces it. */
-  @keyframes dialog-in {
-    from {
-      opacity: 0;
-      transform: translate(-50%, -48%) scale(0.95);
-    }
-    to {
-      opacity: 1;
-      transform: translate(-50%, -50%) scale(1);
-    }
-  }
-
-  @keyframes dialog-out {
-    from {
-      opacity: 1;
-      transform: translate(-50%, -50%) scale(1);
-    }
-    to {
-      opacity: 0;
-      transform: translate(-50%, -48%) scale(0.95);
-    }
-  }
-
-  @keyframes sheet-in {
-    from {
-      transform: translateX(100%);
-    }
-    to {
-      transform: translateX(0);
-    }
-  }
-
-  @keyframes sheet-out {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(100%);
-    }
-  }
+  /* Motion — all three numbers of it. They exist for one thing: a panel
+   * entering from an edge of the screen (`ui/sheet.tsx`). Named rather than
+   * written into a class list, so the site's whole motion budget is legible
+   * here and retuning it is one edit rather than a grep.
+   *
+   * `--transition-duration-*` is a real Tailwind v4 namespace that ships EMPTY:
+   * the framework resolves a bare `duration-250` to milliseconds on its own, so
+   * filling the namespace is what buys the names. Same for `--ease-*`.
+   *
+   * The curve leaves fast and settles slowly, so the panel reads as arriving
+   * rather than as being pushed — which is the point, since the edge it comes
+   * from is what says the page is still there behind it.
+   *
+   * Out is faster than in, and that asymmetry is deliberate: arriving has to be
+   * understood, leaving has already been decided. */
+  --ease-panel: cubic-bezier(0.32, 0.72, 0, 1);
+  --transition-duration-panel: 250ms;
+  --transition-duration-panel-out: 150ms;
 }
 
 @layer base {
+  /* Native form controls, scrollbars and the canvas behind the page follow the
+   * active scheme. Without this the palette flips and the scrollbar does not,
+   * which is the one part of a dark page a stylesheet cannot repaint.
+   * `.system` yields `light dark` so the OS decides, matching what the class
+   * means everywhere else. */
+  .light {
+    color-scheme: light;
+  }
+  .dark {
+    color-scheme: dark;
+  }
+  .system {
+    color-scheme: light dark;
+  }
+
   html,
   body {
     font-family: var(--font-sans);
