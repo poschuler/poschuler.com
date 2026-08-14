@@ -25,7 +25,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "..");
 
 // Every scale `app/app.css` imports, in the same order. Keep the two in sync.
-const SCALES = ["mauve", "indigo"];
+const SCALES = ["mauve"];
 
 function darkFileFor(scale) {
   // Resolve through the package so pnpm's nested layout is handled for us.

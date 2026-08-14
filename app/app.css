@@ -1,13 +1,11 @@
 @import "tailwindcss" source(".");
 
-/* Only the families the `@theme` block below maps onto tokens. Every scale
- * imported here ships ~2.2 kB of custom properties whether or not anything
- * reads it, so an unused import is dead weight in render-blocking CSS.
+/* One family, because the site paints with one. Every scale imported here ships
+ * ~2.2 kB of custom properties whether or not anything reads it, so an unused
+ * import is dead weight in render-blocking CSS.
  * Keep this list in sync with SCALES in scripts/generate-system-dark-css.mjs. */
 @import "@radix-ui/colors/mauve";
 @import "@radix-ui/colors/mauve-dark";
-@import "@radix-ui/colors/indigo";
-@import "@radix-ui/colors/indigo-dark";
 
 /* `.system` (= "follow the OS") under prefers-color-scheme: dark.
  * Generated — see scripts/generate-system-dark-css.mjs. Must come last so it
@@ -199,38 +197,16 @@
    * rather than *instead of* it, and a tinted one reads as a surface. */
   --background-color-overlay: rgb(0 0 0 / 0.7);
 
-  --background-color-primary-app: var(--indigo-1);
-  --background-color-primary-subtle: var(--indigo-2);
-  --background-color-primary-ui: var(--indigo-3);
-  --background-color-primary-hover: var(--indigo-4);
-  --background-color-primary-active: var(--indigo-5);
-  --background-color-primary-solid: var(--indigo-9);
-  --background-color-primary-solid-hover: var(--indigo-10);
-  --background-color-primary-solid-active: var(--indigo-11);
-
   /* Text -> text-* */
   --text-color-default: var(--mauve-12);
   --text-color-low: var(--mauve-11);
 
-  --text-color-primary-default: var(--indigo-12);
-  --text-color-primary-low: var(--indigo-11);
-
   /* Focus ring -> ring-* */
   --ring-color-default: var(--mauve-6);
-  --ring-color-primary-default: var(--indigo-6);
-  --ring-color-primary-ui: var(--indigo-7);
-  --ring-color-primary-hover: var(--indigo-8);
-  --ring-color-primary-active: var(--indigo-9);
-  --ring-color-primary-highlight: var(--indigo-12);
 
   /* Borders -> border-* */
   --border-color-default: var(--mauve-6);
   --border-color-hover: var(--mauve-8);
-
-  --border-color-primary-default: var(--indigo-6);
-  --border-color-primary-ui: var(--indigo-7);
-  --border-color-primary-hover: var(--indigo-8);
-  --border-color-primary-active: var(--indigo-9);
 }
 
 @layer base {
