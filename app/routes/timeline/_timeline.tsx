@@ -1,6 +1,6 @@
-import { BookmarkCheck, PenLine } from "lucide-react";
-import { Link, useLoaderData, type MetaFunction } from "react-router";
-import { findAll, type ContentRowType } from "~/models/content.server";
+import { useLoaderData, type MetaFunction } from "react-router";
+import { ContentItem } from "~/components/content-item";
+import { findAll } from "~/models/content.server";
 import type { Route } from "./+types/_timeline";
 import { cloudflareContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
@@ -53,46 +53,14 @@ export default function Timeline() {
         </div>
       </section>
 
+      {/* `showKind` only here: this is the one list that interleaves the two,
+        * so a row has to say which it is. Blog and Bookmarks have said it in
+        * their heading already. */}
       <section className="mx-auto w-full max-w-measure">
-        {contentItems &&
-          contentItems.map((item) => {
-            return <ContentItem key={item.idContent} item={item} />;
-          })}
+        {contentItems.map((item) => (
+          <ContentItem key={item.idContent} item={item} showKind />
+        ))}
       </section>
     </main>
-  );
-}
-
-type ContentItemProps = {
-  item: ContentRowType;
-};
-
-function ContentItem({ item }: ContentItemProps) {
-  return (
-    <div className="my-4 p-4 border-default border-l-2">
-      <small className="text-base font-medium leading-none">
-        {item.publishedStringDate}
-      </small>
-
-      <div className="flex gap-2 mt-2 text-low">
-        {item.type === "link" &&
-          <>
-            <BookmarkCheck className="h-6 w-6" />
-            <a className="text-low" href={item.externalUrl} target="_blank" rel="noreferrer">
-              I read, "{item.title}" by {item.source}
-            </a>
-          </>
-        }
-
-        {item.type === "post" &&
-          <>
-            <PenLine className="h-6 w-6" />
-            <Link className="text-low" to={`/blog/${item.slug}`}>
-              I wrote, {item.title}
-            </Link>
-          </>
-        }
-      </div>
-    </div>
   );
 }

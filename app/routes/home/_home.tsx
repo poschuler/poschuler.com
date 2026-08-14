@@ -2,7 +2,7 @@ import { Link, useLoaderData, type MetaFunction } from "react-router";
 import { findAllPosts } from "~/models/content.server";
 import { findAllProjects } from "~/models/project.server";
 import { LiveLink } from "~/components/live-link";
-import { PostItem } from "~/components/post-item";
+import { ContentItem } from "~/components/content-item";
 import type { Route } from "./+types/_home";
 import { cloudflareContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
@@ -206,7 +206,7 @@ export default function Home() {
         <h2 className="text-lg font-semibold tracking-tight">Recent writing</h2>
 
         {recentPosts.map((post) => (
-          <PostItem key={post.idContent} post={post} headingLevel="h3" />
+          <ContentItem key={post.idContent} item={post} headingLevel="h3" />
         ))}
 
         <Link

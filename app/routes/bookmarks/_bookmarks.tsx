@@ -1,14 +1,9 @@
-import { BookmarkCheck } from "lucide-react";
 import { useLoaderData, type MetaFunction } from "react-router";
-import { findAllBookmarks, type BookmarkRowType } from "~/models/content.server";
+import { ContentItem } from "~/components/content-item";
+import { findAllBookmarks } from "~/models/content.server";
 import type { Route } from "./+types/_bookmarks";
 import { cloudflareContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
-
-
-// type LoaderData = {
-//   feeds: Array<FeedRowType>;
-// };
 
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
@@ -55,35 +50,12 @@ export default function Bookmarks() {
           </blockquote>
         </div>
       </section>
-      {/* <Separator className="mx-auto w-28" /> */}
 
       <section className="mx-auto w-full max-w-measure">
-        {bookmarks &&
-          bookmarks.map((bookmark) => {
-            return <Bookmark key={bookmark.idContent} bookmark={bookmark} />;
-          })}
+        {bookmarks.map((bookmark) => (
+          <ContentItem key={bookmark.idContent} item={bookmark} />
+        ))}
       </section>
     </main>
-  );
-}
-
-type BookmarkProps = {
-  bookmark: BookmarkRowType;
-};
-
-function Bookmark({ bookmark }: BookmarkProps) {
-  return (
-    <div className="my-4 py-4 px-4 border-default border-l-2">
-      <small className="text-base font-medium leading-none">
-        {bookmark.publishedStringDate}
-      </small>
-
-      <div className="flex gap-2 mt-2 text-low">
-        <BookmarkCheck className="h-6 w-6" />
-        <a className="text-low" href={bookmark.externalUrl} target="_blank" rel="noreferrer">
-          "{bookmark.title}" by {bookmark.source}
-        </a>
-      </div>
-    </div>
   );
 }

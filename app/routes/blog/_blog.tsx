@@ -1,6 +1,6 @@
 import { useLoaderData, type MetaFunction } from "react-router";
 import { findAllPosts } from "~/models/content.server";
-import { PostItem } from "~/components/post-item";
+import { ContentItem } from "~/components/content-item";
 import type { Route } from "./+types/_blog";
 import { cloudflareContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
@@ -53,7 +53,7 @@ export default function Blog() {
       <section className="mx-auto w-full max-w-measure">
         {posts &&
           posts.map((post) => {
-            return <PostItem key={post.idContent} post={post} />;
+            return <ContentItem key={post.idContent} item={post} />;
           })}
       </section>
     </main>
