@@ -93,7 +93,7 @@ A **Project** is a folder plus a locale-suffixed file, `app/content/projects/<sl
 ```yaml
 ---
 type: 'project'
-title: 'Chékalo'
+title: 'Chekalo'
 summary: 'One or two sentences, outcome first. This is what the index shows.'
 description: 'The SEO meta description.'
 tier: 'flagship'          # flagship | supporting | experiment

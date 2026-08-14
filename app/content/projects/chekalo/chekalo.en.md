@@ -1,8 +1,8 @@
 ---
 type: 'project'
-title: 'Chékalo'
+title: 'Chekalo'
 summary: 'A price intelligence platform for Peruvian retail: it ingests nine major retailers daily, resolves the same product across all of them into one canonical identity, and serves search and comparison from OpenSearch.'
-description: 'Chékalo ingests nine Peruvian retailers daily and resolves their listings into a single canonical catalog. How it is built, and the matching decision that was reversed.'
+description: 'Chekalo ingests nine Peruvian retailers daily and resolves their listings into a single canonical catalog. How it is built, and the matching decision that was reversed.'
 tier: 'flagship'
 status: 'active'
 stack: ['TypeScript', 'Node.js', 'PostgreSQL', 'OpenSearch', 'Redis', 'BullMQ', 'React Router']
@@ -17,7 +17,7 @@ Retailers do not agree on what a product is called.
 
 The same washing machine is a `Samsung WA13CG5745BV` in one catalogue, a *Lavadora Samsung 13kg Carga Superior Negro* in another, and something else again in a third. None of them share an identifier. There is no registry to look it up in. And a price comparison is worthless unless you are certain the two prices belong to the same thing — showing a customer two different products side by side is not a small error, it is the whole product being wrong.
 
-That problem is what Chékalo is. Everything else is logistics.
+That problem is what Chekalo is. Everything else is logistics.
 
 ## The shape of it
 

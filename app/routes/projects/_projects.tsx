@@ -9,7 +9,7 @@ const SITE = "https://poschuler.com";
 
 const PROJECTS_TITLE = "Projects | Paul Osorio Schuler";
 const PROJECTS_DESCRIPTION =
-  "Software Paul Osorio Schuler has built and operates: Chékalo, a price intelligence platform for Peruvian retail, and the systems behind this site.";
+  "Software Paul Osorio Schuler has built and operates: Chekalo, a price intelligence platform for Peruvian retail, and the systems behind this site.";
 
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);

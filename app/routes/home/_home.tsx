@@ -170,7 +170,7 @@ export default function Home() {
         </ul>
       </section>
 
-      {/* The hero asserts Chékalo in its first paragraph and asks to be
+      {/* The hero asserts Chekalo in its first paragraph and asks to be
         * believed; this is where the assertion becomes something a reader can
         * check. Directly below it, for that reason. */}
       {flagship && (

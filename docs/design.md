@@ -22,7 +22,7 @@ Between the hero and that excerpt sits **one Project, the flagship, and never mo
 
 ### Projects
 
-`/projects` renders by Tier, and the Tier is the whole layout rule: the flagship alone in its row, at `text-2xl` with its summary, stack and live link; supporting projects in a two-column grid at `text-lg`. Chékalo never competes with anything because nothing else is in its row.
+`/projects` renders by Tier, and the Tier is the whole layout rule: the flagship alone in its row, at `text-2xl` with its summary, stack and live link; supporting projects in a two-column grid at `text-lg`. Chekalo never competes with anything because nothing else is in its row.
 
 An archived Project says so — a small `bg-subtle` badge beside the title on the index, and a line under the heading on its own page. A finished project is a complete story and costs nothing; one still written in the present tense after it has stopped is what costs.
 

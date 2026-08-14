@@ -15,7 +15,7 @@ import {
 
 const project = (overrides: Partial<ProjectFrontMatter> = {}): ProjectFrontMatter => ({
   type: "project",
-  title: "Chékalo",
+  title: "Chekalo",
   summary: "Price intelligence across nine Peruvian retailers.",
   description: "A price intelligence platform.",
   tier: "flagship",
