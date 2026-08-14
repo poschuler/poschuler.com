@@ -209,6 +209,23 @@
   --border-color-hover: var(--mauve-8);
 }
 
+/* ---------------------------------------------------------------------------
+ * Base layer — two rules, and the bar for a third is that no utility can say
+ * it. Both below are properties of the document itself rather than of an
+ * element a component renders.
+ *
+ * What used to sit here, and why it does not: `button, [role="button"] {
+ * cursor: default }` and a `strong` weight, both inherited from the shadcn
+ * scaffold and both inert. Tailwind's preflight declares no cursor for
+ * buttons, the browser's own default is already the arrow, and nothing in
+ * this tree carries a `role="button"` — Base UI only stamps one when
+ * `nativeButton` is false, which no call site sets. Every `<strong>` here
+ * comes from Markdown, and every Markdown body renders inside `prose`, whose
+ * rule wins from the utilities layer regardless.
+ *
+ * A base rule that restates a default reads to the next person as a decision
+ * that was made. That is the cost worth avoiding, not the bytes.
+ * ------------------------------------------------------------------------- */
 @layer base {
   /* Native form controls, scrollbars and the canvas behind the page follow the
    * active scheme. Without this the palette flips and the scrollbar does not,
@@ -238,17 +255,6 @@
     height: 100%;
   }
 
-  /* A button is a control, not a link. The pointer means "this navigates", and
-   * a site whose interface is mostly links is exactly where the distinction is
-   * worth keeping. */
-  button,
-  [role="button"] {
-    cursor: default;
-  }
-
-  strong {
-    @apply font-semibold;
-  }
 }
 
 /* Long-form bodies: the HTML `marked` produces from a Markdown file, rendered
