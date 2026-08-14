@@ -4,7 +4,8 @@ import { execSync } from "node:child_process";
 import fm from "front-matter";
 import { renderPostHtml } from "./markdown.ts";
 import { generateSitemap } from "../../app/lib/seo/sitemap.ts";
-import { buildSitemapRoutes, RESUME_LASTMOD, type SitemapContentItem } from "./sitemap-routes.ts";
+import { buildSitemapRoutes, type SitemapContentItem } from "./sitemap-routes.ts";
+import resume from "../../app/routes/resume/resume.json" with { type: "json" };
 
 /**
  * Renders every published Post body and the sitemap into `kv_payloads/`.
@@ -115,11 +116,14 @@ async function generateKvJsonFiles() {
     // Content Item is the honest answer anyway — a section with nothing in it
     // cannot have changed more recently than the site did — and with no items
     // at all the only date this repo holds is the Resume's.
-    const fallbackLastmod = allContentItems[0]?.publishedStringDate ?? RESUME_LASTMOD;
+    const fallbackLastmod = allContentItems[0]?.publishedStringDate ?? resume.meta.lastModified;
 
     const sitemap = generateSitemap({
         domain: PUBLIC_HOST,
-        routes: buildSitemapRoutes(allContentItems, fallbackLastmod),
+        routes: buildSitemapRoutes(allContentItems, {
+            fallbackLastmod,
+            resumeLastmod: resume.meta.lastModified,
+        }),
     });
 
     await fs.writeFile(

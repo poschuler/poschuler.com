@@ -17,13 +17,6 @@ export type SitemapContentItem = {
 };
 
 /**
- * Hardcoded: the Resume is revised in place and has no Published At to derive
- * this from. It is stale the moment `resume.json` changes and nothing notices —
- * a known defect, pinned here rather than buried in a template literal.
- */
-export const RESUME_LASTMOD = "2025-12-21";
-
-/**
  * `items` must arrive newest first: each section's `lastmod` is taken from the
  * head of its list rather than by scanning for a maximum. That is how the D1
  * query orders them (`order by published_at desc`), and this depends on it.
@@ -33,10 +26,30 @@ export const RESUME_LASTMOD = "2025-12-21";
  * which is the whole reason this parameter exists rather than being read
  * inside — and it is now checked, because CI compares the regenerated payloads
  * against the committed ones byte for byte.
+ *
+ * `resumeLastmod` is the Resume's own `meta.lastModified`. The Resume is
+ * revised in place and has no Published At, so there is nothing to derive it
+ * from; it arrives as a parameter so the date can live inside `resume.json`,
+ * three lines from the content it describes, rather than as a constant in this
+ * module — which whoever edits the Resume has no reason to open.
+ *
+ * Deriving it from git instead does not work: CI checks out with
+ * `fetch-depth: 1`, so the only commit present is the checkout's own and the
+ * date would describe the build rather than the document.
+ *
+ * The two dates arrive in an object rather than as adjacent positional
+ * parameters. Both are `YYYY-MM-DD` strings, so transposing them would
+ * type-check silently and publish a sitemap that dates every section wrongly —
+ * the one mistake this signature can make, designed out rather than tested for.
  */
+export type SitemapDates = {
+  fallbackLastmod: string;
+  resumeLastmod: string;
+};
+
 export function buildSitemapRoutes(
   items: SitemapContentItem[],
-  fallbackLastmod: string,
+  { fallbackLastmod, resumeLastmod }: SitemapDates,
 ): SitemapRoute[] {
   const posts = items.filter((item) => item.type === "post");
   const bookmarks = items.filter((item) => item.type === "link");
@@ -46,7 +59,7 @@ export function buildSitemapRoutes(
 
   return [
     { url: "/", lastmod: lastModOf(items), changefreq: "monthly", priority: 1.0 },
-    { url: "/resume", lastmod: RESUME_LASTMOD, changefreq: "monthly", priority: 0.8 },
+    { url: "/resume", lastmod: resumeLastmod, changefreq: "monthly", priority: 0.8 },
     { url: "/blog", lastmod: lastModOf(posts), changefreq: "monthly", priority: 0.6 },
     { url: "/bookmarks", lastmod: lastModOf(bookmarks), changefreq: "monthly", priority: 0.5 },
     // Dated from everything, because it is everything: the Timeline is the one

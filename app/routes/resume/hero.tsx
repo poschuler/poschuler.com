@@ -8,7 +8,7 @@ export function Hero() {
     name,
     label,
     image,
-    location: { city, region, url, countryCode },
+    location: { city, region, timezone },
     profiles,
     email,
   } = basics;
@@ -20,23 +20,20 @@ export function Hero() {
         <p className="max-w-md text-pretty font-mono text-sm text-muted-foreground">
           {label}
         </p>
+        {/* Plain text, not a link: the timezone is the part a distributed team
+          * screens on, and a map of the city answers a question nobody asked. */}
         <p className="max-w-md items-center text-pretty font-mono text-xs text-muted-foreground">
-          <a
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex gap-x-1.5 align-baseline leading-none hover:underline"
-          >
+          <span className="inline-flex gap-x-1.5 align-baseline leading-none">
             <Globe className="size-3" />
-            {city}, {region}, {countryCode}
-          </a>
+            {city}, {region} · {timezone}
+          </span>
         </p>
         <div className="mt-auto flex text-pretty font-mono text-sm text-muted-foreground">
           <div className="mt-1 flex flex-wrap gap-1">
             {languages.map((item) => (
               <div
                 key={item.row}
-                className="inline-flex items-center text-nowrap rounded-md border border-transparent bg-subtle px-1 py-0 font-mono text-[10px] font-semibold text-secondary-foreground transition-colors hover:bg-secondary/60 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                className="inline-flex items-center rounded-md border border-transparent bg-subtle px-1 py-0 font-mono text-[10px] font-semibold text-low"
               >
                 {`${item.language} - ${item.fluency}`}
               </div>

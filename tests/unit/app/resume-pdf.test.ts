@@ -38,6 +38,24 @@ describe("/resume.pdf", () => {
     );
   });
 
+  /**
+   * The PDF is for a visitor who is already on `/resume`; it has nothing to
+   * gain from ranking on its own, and every reason not to — a PDF result
+   * competes with `/resume` for the same queries and lands the reader on a
+   * document with no navigation out of it.
+   *
+   * `noindex` rather than a `Disallow` in `robots.txt`: a disallowed URL is
+   * never fetched, so the crawler never sees this header, and the URL can end
+   * up listed anyway with no content behind it. The two cancel out.
+   */
+  it("keeps the PDF out of the index", async () => {
+    stubUpstream(new Response("%PDF-1.7", { status: 200 }));
+
+    const response = await resumePdfLoader();
+
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex");
+  });
+
   it("caches for a day — the file changes only when the CDN copy does", async () => {
     stubUpstream(new Response("%PDF-1.7", { status: 200 }));
 
