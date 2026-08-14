@@ -128,6 +128,14 @@
   }
 }
 
+/* ---------------------------------------------------------------------------
+ * Design tokens — everything that is not a colour.
+ *
+ * These stay in a plain `@theme` rather than `@theme inline` below, because
+ * `--font-sans` is read by a rule in `@layer base`: an inline token is
+ * substituted into the utilities that use it and never emitted as a custom
+ * property, so `var(--font-sans)` would resolve to nothing.
+ * ------------------------------------------------------------------------- */
 @theme {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
@@ -138,51 +146,6 @@
    * ship — a different page on every machine. */
   --font-mono: "Intel One Mono Variable", ui-monospace, SFMono-Regular, Menlo,
     Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-
-  /* A token exists because a scenario exists. The Radix scales run twelve steps
-   * and the vocabulary could be expanded to all of them for every namespace,
-   * but a token nothing selects is a decision nobody made — and it reads, to
-   * the next person, as an intention the site has already committed to. */
-  --background-color-app: var(--mauve-1);
-  --background-color-subtle: var(--mauve-2);
-  --background-color-ui: var(--mauve-3);
-  --background-color-hover: var(--mauve-4);
-  --background-color-active: var(--mauve-5);
-
-  /* The scrim behind a modal panel. Black in both themes, and deliberately not
-   * a mauve step: a dimmer is what makes a panel read as *on top of* the page
-   * rather than *instead of* it, and a tinted one reads as a surface. */
-  --background-color-overlay: rgb(0 0 0 / 0.7);
-
-  --background-color-primary-app: var(--indigo-1);
-  --background-color-primary-subtle: var(--indigo-2);
-  --background-color-primary-ui: var(--indigo-3);
-  --background-color-primary-hover: var(--indigo-4);
-  --background-color-primary-active: var(--indigo-5);
-  --background-color-primary-solid: var(--indigo-9);
-  --background-color-primary-solid-hover: var(--indigo-10);
-  --background-color-primary-solid-active: var(--indigo-11);
-
-  --text-color-default: var(--mauve-12);
-  --text-color-low: var(--mauve-11);
-
-  --text-color-primary-default: var(--indigo-12);
-  --text-color-primary-low: var(--indigo-11);
-
-  --ring-color-default: var(--mauve-6);
-  --ring-color-primary-default: var(--indigo-6);
-  --ring-color-primary-ui: var(--indigo-7);
-  --ring-color-primary-hover: var(--indigo-8);
-  --ring-color-primary-active: var(--indigo-9);
-  --ring-color-primary-highlight: var(--indigo-12);
-
-  --border-color-default: var(--mauve-6);
-  --border-color-hover: var(--mauve-8);
-
-  --border-color-primary-default: var(--indigo-6);
-  --border-color-primary-ui: var(--indigo-7);
-  --border-color-primary-hover: var(--indigo-8);
-  --border-color-primary-active: var(--indigo-9);
 
   /* Motion — all three numbers of it. They exist for one thing: a panel
    * entering from an edge of the screen (`ui/sheet.tsx`). Named rather than
@@ -204,6 +167,72 @@
   --transition-duration-panel-out: 150ms;
 }
 
+/* ---------------------------------------------------------------------------
+ * Semantic role tokens — the ONLY colour API.
+ *
+ * `inline` so a utility substitutes the Radix variable directly rather than
+ * pointing at a second custom property that points at it. The palette still
+ * flips with the theme, because the Radix variable is what the `.dark` and
+ * `.system` rules redefine — and forty custom properties stop being emitted
+ * into `:root` for no reader to ever see.
+ *
+ * Namespaces are SCOPED: Tailwind maps `--background-color-*` to `bg-*`,
+ * `--text-color-*` to `text-*`, and so on. That is what makes `text-app` and
+ * `bg-default` simply not exist, and what lets the same suffix mean the right
+ * Radix step in each scenario.
+ *
+ * A token exists because a scenario exists. The scales run twelve steps and
+ * every namespace could be filled out to match, but a token nothing selects is
+ * a decision nobody made — and it reads, to the next person, as an intention
+ * the site has already committed to.
+ * ------------------------------------------------------------------------- */
+@theme inline {
+  /* Backgrounds -> bg-* */
+  --background-color-app: var(--mauve-1);
+  --background-color-subtle: var(--mauve-2);
+  --background-color-ui: var(--mauve-3);
+  --background-color-hover: var(--mauve-4);
+  --background-color-active: var(--mauve-5);
+
+  /* The scrim behind a modal panel. Black in both themes, and deliberately not
+   * a mauve step: a dimmer is what makes a panel read as *on top of* the page
+   * rather than *instead of* it, and a tinted one reads as a surface. */
+  --background-color-overlay: rgb(0 0 0 / 0.7);
+
+  --background-color-primary-app: var(--indigo-1);
+  --background-color-primary-subtle: var(--indigo-2);
+  --background-color-primary-ui: var(--indigo-3);
+  --background-color-primary-hover: var(--indigo-4);
+  --background-color-primary-active: var(--indigo-5);
+  --background-color-primary-solid: var(--indigo-9);
+  --background-color-primary-solid-hover: var(--indigo-10);
+  --background-color-primary-solid-active: var(--indigo-11);
+
+  /* Text -> text-* */
+  --text-color-default: var(--mauve-12);
+  --text-color-low: var(--mauve-11);
+
+  --text-color-primary-default: var(--indigo-12);
+  --text-color-primary-low: var(--indigo-11);
+
+  /* Focus ring -> ring-* */
+  --ring-color-default: var(--mauve-6);
+  --ring-color-primary-default: var(--indigo-6);
+  --ring-color-primary-ui: var(--indigo-7);
+  --ring-color-primary-hover: var(--indigo-8);
+  --ring-color-primary-active: var(--indigo-9);
+  --ring-color-primary-highlight: var(--indigo-12);
+
+  /* Borders -> border-* */
+  --border-color-default: var(--mauve-6);
+  --border-color-hover: var(--mauve-8);
+
+  --border-color-primary-default: var(--indigo-6);
+  --border-color-primary-ui: var(--indigo-7);
+  --border-color-primary-hover: var(--indigo-8);
+  --border-color-primary-active: var(--indigo-9);
+}
+
 @layer base {
   /* Native form controls, scrollbars and the canvas behind the page follow the
    * active scheme. Without this the palette flips and the scrollbar does not,
@@ -220,15 +249,22 @@
     color-scheme: light dark;
   }
 
+  /* `@apply` rather than a bare custom property: the colour tokens are declared
+   * `inline` above, so they are substituted into utilities and never emitted
+   * for a rule like this one to read.
+   *
+   * Do not name one in a comment either. Tailwind decides which theme variables
+   * to keep by scanning the stylesheet text for references, and it does not
+   * strip comments first — spelling a token out here is enough to emit it. */
   html,
   body {
-    font-family: var(--font-sans);
-    background-color: var(--background-color-app);
-    color: var(--text-color-default);
+    @apply bg-app font-sans text-default antialiased;
     height: 100%;
-    -webkit-font-smoothing: antialiased;
   }
 
+  /* A button is a control, not a link. The pointer means "this navigates", and
+   * a site whose interface is mostly links is exactly where the distinction is
+   * worth keeping. */
   button,
   [role="button"] {
     cursor: default;

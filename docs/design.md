@@ -32,7 +32,11 @@ A Project page carries its revision line under the summary rather than a publish
 
 Color comes from **Radix Colors** scales, never from Tailwind's default palette. Radix's 12-step scales are semantic by position — step 1 is app background, 6 is a subtle border, 9 is a solid fill, 12 is high-contrast text — and each has a matched dark variant, so a single token name works in both themes with no `dark:` variant needed.
 
-`app/app.css` maps those scales onto named tokens in a Tailwind v4 `@theme` block. **Two families are imported, and two have tokens** — an imported scale ships ~2.2 kB of custom properties into render-blocking CSS whether or not a token reads it, so adding an `@import` without a matching token is a regression:
+`app/app.css` maps those scales onto named tokens, split across two blocks. Everything that is not a colour — the two font stacks and the three motion numbers — sits in a plain `@theme`, because `--font-sans` is read by a rule in `@layer base`. **The colour role tokens sit in `@theme inline`**, which substitutes the Radix variable straight into each utility rather than emitting a second custom property that points at it: `bg-app` compiles to `background-color: var(--mauve-1)`. The palette still flips with the theme, because `--mauve-1` is what the `.dark` and `.system` rules redefine, and forty custom properties stop being emitted into `:root` for no reader to ever see.
+
+One consequence, and it is not obvious: **a rule inside `@layer base` cannot read an inline token.** `html, body` uses `@apply bg-app text-default` rather than naming the property. Nor can a *comment* mention one — Tailwind decides which theme variables to keep by scanning the stylesheet text for `var(--…)` references and does not strip comments first, so spelling a token out in prose is enough to emit it. That is a real byte that was shipping until it was caught in the build output.
+
+**Two families are imported, and two have tokens** — an imported scale ships ~2.2 kB of custom properties into render-blocking CSS whether or not a token reads it, so adding an `@import` without a matching token is a regression:
 
 | Family     | Scale     | Used for                       |
 | ---------- | --------- | ------------------------------ |
@@ -91,18 +95,21 @@ The same three classes also carry `color-scheme` in `@layer base`: `light`, `dar
 
 Two layers, both canonical since the inherited component sets were deleted:
 
-| Layer                  | Use it for                                                    |
-| ---------------------- | ------------------------------------------------------------- |
-| Route-local components | Anything used by exactly one route — the first choice          |
-| `app/components/ui/`   | Shared primitives, each a thin Base UI wrapper                 |
+| Layer                  | Use it for                                                     |
+| ---------------------- | -------------------------------------------------------------- |
+| Route-local components | Anything used by exactly one route — the first choice           |
+| `app/components/`      | Anything composing content, used by two or more routes          |
+| `app/components/ui/`   | Reusable, **variant-driven** primitives with no domain knowledge |
 
-**Prefer a route-local component over a shared one.** A component used by exactly one route belongs beside that route, not in `app/components/`. `routes/resume/hero.tsx`, `experience.tsx` and `keyboard-manager.tsx` are the model: each imports the slice of `resume.json` it renders, so no props need threading. When a route does have a loader, the same shape applies with `useLoaderData<typeof loader>()` and a type-only import of the parent's `loader`. Promote to `app/components/` only on the second consumer.
+**Prefer a route-local component over a shared one.** A component used by exactly one route belongs beside that route. `routes/resume/hero.tsx`, `experience.tsx`, `section.tsx` and `command-palette.tsx` are the model: each imports the slice of `resume.json` it renders, so no props need threading. When a route does have a loader, the same shape applies with `useLoaderData<typeof loader>()` and a type-only import of the parent's `loader`. Promote to `app/components/` only on the second consumer, and to `ui/` only when the second consumer wants a *different variant* of it.
 
-`ui/` holds only what is actually imported — `button`, `icon-button`, `dialog`, `sheet`, `command`, `brand-icons`. Add the one file you need, never a set.
+`ui/` holds three files — `button`, `sheet`, `brand-icons` — and the bar for a fourth is high. It held six: a second button component, and a `dialog` and a `command` that between them were nine exported wrappers, each a single `className` around a Base UI part, each with exactly one caller. **A wrapper that names nothing the part does not already name is indirection with no reader.** They were folded back into the one route that used them, `routes/resume/command-palette.tsx`.
 
-Every primitive follows the same shape: a Base UI part, `className` merged through `cn()`, and props typed as `Omit<Part.Props, "className"> & { className?: string }`.
+**Only the variants the site actually renders carry styles.** `button` keeps `outline`, `soft` and `ghost` because the site renders three kinds of button, and two sizes because it renders two. `sheet` opens from one edge. A variant nobody asks for is a set of class names no browser ever evaluates, which is exactly where a dead token hides indefinitely — the removed `danger` and `success` variants had been reaching for `ring-danger` and `ring-success`, neither of which exists. Adding one back is three lines when a second consumer appears.
 
-**Only the variants the site actually renders carry styles**, and only the parts it renders are exported. `button` keeps `outline` and `secondary`, `icon-button` keeps `contained` and `outline`, `sheet` opens from one edge, and `dialog` exports the root, the content and the title. A variant nobody asks for is a set of class names no browser ever evaluates, which is exactly where a dead token hides indefinitely — the removed `danger` and `success` variants had been reaching for `ring-danger` and `ring-success`, neither of which exists. Adding one back is three lines when a second consumer appears.
+**Variants are named after what the thing IS, not after the classes it sets.** `outline` / `soft` / `ghost` say how loudly a button speaks; a `bordered` / `filled` pair would be Tailwind classes wearing a component's clothes, and would do nothing to stop the next page inventing a fourth. The site had two button components whose variant names *overlapped and disagreed* — `outline` was bordered in one file and borderless in the other — which is what naming after classes buys.
+
+A `ui/` primitive is a Base UI part, a `cva` for its variants, `className` merged through `cn()`, and props typed as `Omit<Part.Props, "className"> & VariantProps<typeof …> & { className?: string }`. The `Omit` is not ceremony: Base UI also accepts a *function* of the part's state for `className`, which `cn` cannot merge, so the prop is narrowed to a string.
 
 **A dialog is given a name it cannot omit.** `SheetContent` takes `title` as a required prop and renders it as the `Dialog.Title`, visually hidden. A modal with no accessible name is announced as nothing, and an optional prop is one a caller forgets — the mobile navigation had, for as long as it existed.
 

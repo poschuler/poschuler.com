@@ -1,4 +1,4 @@
-import { Section } from "~/components/section";
+import { Section } from "./section";
 import { certificates } from "./resume.json";
 
 export function Certificates() {

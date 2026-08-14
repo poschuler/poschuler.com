@@ -3,29 +3,53 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "~/lib/utils";
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-default disabled:pointer-events-none disabled:opacity-50",
+/**
+ * The site's one button.
+ *
+ * It was two — a `Button` and an `IconButton` — with overlapping variant names
+ * that meant different things in each: `outline` was a bordered button in one
+ * file and a borderless one in the other. Three call sites do not need two
+ * components, and the pair guaranteed that a change to how a button focuses
+ * would be made in one of them.
+ *
+ * Variants are named after what the button IS on the page, not after the
+ * classes it sets, and there are three because the site renders three:
+ *
+ *  - `outline` — a bordered control that reads as pressable at rest. The
+ *    mobile navigation trigger, which has to be findable in a header.
+ *  - `soft`    — a filled, quiet control. The Resume's ⌘J affordance, which
+ *    should be noticed once and then ignored.
+ *  - `ghost`   — nothing at rest, a border on hover. The theme toggle, which
+ *    sits inside a row of links and should not outweigh them.
+ */
+const button = cva(
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md border font-medium text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-default disabled:pointer-events-none disabled:opacity-50",
   {
-    /* Only the variants and sizes the site actually renders carry styles. */
     variants: {
       variant: {
-        outline: "border border-default bg-app shadow-sm hover:bg-hover",
-        secondary: "bg-ui text-low shadow-sm hover:bg-hover hover:text-default",
+        outline: "border-default bg-app shadow-sm hover:bg-hover",
+        soft: "border-transparent bg-ui text-low shadow-sm hover:bg-hover hover:text-default",
+        ghost:
+          "border-transparent text-low hover:border-hover active:bg-active active:text-default aria-pressed:bg-active aria-pressed:text-default",
       },
       size: {
-        default: "h-9 px-4 py-2",
-        icon: "h-9 w-9",
+        sm: "h-8 px-3",
+        icon: "size-9",
       },
     },
     defaultVariants: {
-      variant: "secondary",
-      size: "default",
+      variant: "soft",
+      size: "sm",
     },
   },
 );
 
 export type ButtonProps = Omit<BaseButton.Props, "className"> &
-  VariantProps<typeof buttonVariants> & {
+  VariantProps<typeof button> & {
+    /**
+     * Narrowed to a string: Base UI also accepts a function of the button's
+     * state here, which `cn` cannot merge.
+     */
     className?: string;
   };
 
@@ -37,9 +61,8 @@ export type ButtonProps = Omit<BaseButton.Props, "className"> &
 export function Button({ className, variant, size, ...props }: ButtonProps) {
   return (
     <BaseButton
-      className={cn(buttonVariants({ variant, size }), className)}
+      className={cn(button({ variant, size }), className)}
       {...props}
     />
   );
 }
-

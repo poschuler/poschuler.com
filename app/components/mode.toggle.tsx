@@ -1,6 +1,6 @@
 import { Monitor, Moon, Sun } from "lucide-react";
 import { Form, useRouteLoaderData } from "react-router";
-import { IconButton } from "~/components/ui/icon-button";
+import { Button } from "~/components/ui/button";
 import type { ColorScheme } from "~/color-scheme-cookie";
 
 type RootData = { colorScheme?: ColorScheme };
@@ -32,18 +32,19 @@ export function ModeToggle() {
 
   return (
     <Form navigate={false} method="POST" action="/set-theme" className="shrink-0">
-      <IconButton
+      <Button
         type="submit"
-        variant="outline"
+        variant="ghost"
+        size="icon"
         name="color-scheme"
         value={next.value}
         title={`Theme: ${current.value} — switch to ${next.value}`}
       >
-        <Icon className="h-[1.2rem] w-[1.2rem]" />
+        <Icon className="size-5" />
         <span className="sr-only">
           Theme: {current.value}. Switch to {next.value}
         </span>
-      </IconButton>
+      </Button>
     </Form>
   );
 }
