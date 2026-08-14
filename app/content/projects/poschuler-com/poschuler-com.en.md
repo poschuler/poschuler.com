@@ -9,7 +9,7 @@ stack: ['TypeScript', 'React Router', 'Cloudflare Workers', 'D1', 'KV', 'Vitest'
 repoUrl: 'https://github.com/poschuler/poschuler.com'
 sortOrder: 2
 updates:
-  - date: '2026-08-20'
+  - date: '2026-08-14'
     note: 'First published.'
 ---
 

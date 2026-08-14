@@ -109,13 +109,9 @@ export default function BlogSlug() {
                     </p>
                 )}
 
-                {revisions.length > 0 ? (
-                    <div className="not-prose my-4">
-                        <RevisionLine publishedAt={publishedAt} revisions={revisions} />
-                    </div>
-                ) : (
-                    <p>Published on: {publishedAt}</p>
-                )}
+                <div className="not-prose my-4">
+                    <RevisionLine publishedAt={publishedAt} revisions={revisions} />
+                </div>
 
                 <hr className="mt-7 mb-7" />
                 <div dangerouslySetInnerHTML={{ __html: html }} />

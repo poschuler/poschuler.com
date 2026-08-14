@@ -9,7 +9,7 @@ stack: ['TypeScript', 'Node.js', 'Express']
 repoUrl: 'https://github.com/poschuler/pragmatic-nodejs-api'
 sortOrder: 3
 updates:
-  - date: '2026-08-20'
+  - date: '2026-08-14'
     note: 'First published.'
 ---
 

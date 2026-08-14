@@ -38,8 +38,6 @@ interface PostAttributes {
 
 type ProjectRowType = SitemapProject & {
     lang: string;
-    tier: string;
-    sortOrder: number;
 };
 
 type ContentRowType = SitemapContentItem & {
@@ -80,7 +78,7 @@ function fetchAll(): ContentRowType[] {
     // by accident. Fixing it means single-quoting the aliases, not adding
     // backslashes.
     const rows = queryD1<ContentRowType>(
-        `select id_content as "idContent", slug as "slug", lang as "lang", type as "type", title as "title", published_at as "publishedAt", strftime('%Y-%m-%d', published_at) AS "publishedStringDate", description as "description", external_url as "externalUrl", source as "source", tags as "tags" from content order by published_at desc`,
+        `select id_content as "idContent", slug as "slug", lang as "lang", type as "type", title as "title", published_at as "publishedAt", strftime('%Y-%m-%d', published_at) AS "publishedStringDate", description as "description", external_url as "externalUrl", source as "source", tags as "tags", updates as "updates" from content order by published_at desc`,
     );
 
     if (!rows.length) {
@@ -98,7 +96,7 @@ function fetchAll(): ContentRowType[] {
  */
 function fetchAllProjects(): ProjectRowType[] {
     return queryD1<ProjectRowType>(
-        `select slug as "slug", lang as "lang", tier as "tier", sort_order as "sortOrder", updates as "updates" from project order by sort_order asc, slug asc`,
+        `select slug as "slug", lang as "lang", updates as "updates" from project order by sort_order asc, slug asc`,
     );
 }
 

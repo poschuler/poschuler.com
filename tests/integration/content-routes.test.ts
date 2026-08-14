@@ -4,7 +4,7 @@ import { loader as blogSlugLoader } from "~/routes/blog-slug/_$blog-slug";
 import { loader as blogLoader } from "~/routes/blog/_blog";
 import { loader as bookmarksLoader } from "~/routes/bookmarks/_bookmarks";
 import { loader as homeLoader } from "~/routes/home/_home";
-import { loader as projectLoader } from "~/routes/projects/_$project";
+import { loader as projectLoader } from "~/routes/project-slug/_$project-slug";
 import { loader as projectsLoader } from "~/routes/projects/_projects";
 import { loader as timelineLoader } from "~/routes/timeline/_timeline";
 
@@ -183,7 +183,7 @@ describe("/projects — the index", () => {
 
 describe("/projects/:project", () => {
   const args = (slug: string, on: Pick<TestPlatform, "env" | "ctx"> = platform) =>
-    routeArgs<ArgsOf<typeof projectLoader>>(on, get(`/projects/${slug}`), { project: slug });
+    routeArgs<ArgsOf<typeof projectLoader>>(on, get(`/projects/${slug}`), { projectSlug: slug });
 
   it("returns the row and the body together", async () => {
     const payload = await projectLoader(args("chekalo"));

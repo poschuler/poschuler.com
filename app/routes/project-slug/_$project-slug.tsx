@@ -1,12 +1,11 @@
-import { Link, useLoaderData } from "react-router";
-import { ArrowUpRight } from "lucide-react";
+import { useLoaderData } from "react-router";
+import { LiveLink } from "~/components/live-link";
 import { GitHubIcon } from "~/components/ui/brand-icons";
 import { RevisionHistory, RevisionLine } from "~/components/revisions";
 import { cloudflareContext } from "~/context";
-import { parseRevisions } from "~/lib/revisions";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { findProjectBySlug } from "~/models/project.server";
-import type { Route } from "./+types/_$project";
+import type { Route } from "./+types/_$project-slug";
 
 const SITE = "https://poschuler.com";
 
@@ -22,7 +21,7 @@ interface ProjectBodyPayload {
  */
 export async function loader({ params, context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
-  const project = await findProjectBySlug(env.POSCHULER_BD, params.project);
+  const project = await findProjectBySlug(env.POSCHULER_BD, params.projectSlug);
 
   if (!project) {
     throw new Response("Not Found", { status: 404 });
@@ -50,7 +49,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     status: project.status,
     liveUrl: project.liveUrl,
     repoUrl: project.repoUrl,
-    revisions: parseRevisions(project.updates),
+    revisions: project.revisions,
     html: body.html,
   };
 }
@@ -97,28 +96,18 @@ export default function Project() {
         <p className="lead text-pretty">{summary}</p>
 
         <div className="not-prose flex flex-wrap items-center gap-4">
-          {liveUrl && (
-            <a
-              href={liveUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-low transition-colors duration-200 hover:text-default"
-            >
-              {liveUrl.replace(/^https?:\/\//, "")}
-              <ArrowUpRight className="h-4 w-4" />
-            </a>
-          )}
+          {liveUrl && <LiveLink href={liveUrl} className="text-low" />}
 
           {repoUrl && (
-            <Link
-              to={repoUrl}
+            <a
+              href={repoUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-low no-underline transition-colors duration-200 hover:text-default"
             >
               <GitHubIcon className="size-5" />
               Repository
-            </Link>
+            </a>
           )}
         </div>
 

@@ -1,4 +1,4 @@
-import type { Revision } from "~/lib/revisions";
+import { latestRevision, type Revision } from "~/lib/revisions";
 
 /**
  * What a returning reader needs to know, in one line.
@@ -19,7 +19,7 @@ export function RevisionLine({
   publishedAt?: string;
   revisions: Revision[];
 }) {
-  const latest = revisions[0];
+  const latest = latestRevision(revisions);
 
   if (!publishedAt && !latest) {
     return null;

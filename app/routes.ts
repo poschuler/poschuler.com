@@ -14,7 +14,7 @@ export default [
         route("/resume", "routes/resume/_resume.tsx"),
         route("/blog/:blogSlug", "routes/blog-slug/_$blog-slug.tsx"),
         route("/projects", "routes/projects/_projects.tsx"),
-        route("/projects/:project", "routes/projects/_$project.tsx"),
+        route("/projects/:projectSlug", "routes/project-slug/_$project-slug.tsx"),
 
         // Inside the layout on purpose: a visitor who lands here still gets the
         // header, and a way out.

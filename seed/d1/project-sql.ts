@@ -8,7 +8,7 @@
  */
 
 import { validateRevisions } from "../../app/lib/revisions.ts";
-import { treeOf } from "./content-tree.ts";
+import { basenameOf, treeOf } from "./content-tree.ts";
 import {
   escapeSql,
   parseContentFilename,
@@ -54,8 +54,7 @@ export function projectRowFor(
     return { error: `${relativePath} is not in the projects tree` };
   }
 
-  const segments = relativePath.split(/[\\/]/);
-  const parsed = parseContentFilename(segments[segments.length - 1]);
+  const parsed = parseContentFilename(basenameOf(relativePath));
 
   if (!parsed) {
     return { error: `could not parse slug and lang from ${relativePath}` };
@@ -114,9 +113,9 @@ VALUES (${escapeSql(slug)}, ${escapeSql(lang)}, ${escapeSql(attributes.title)}, 
  *
  * That last part is where this differs from `buildSeedSql`. An empty `content`
  * means the walker found no Markdown, which the caller treats as a reason to
- * stop; an empty `project` is an ordinary state — Phase 1a ships the table
- * before the first Project is written — and a prune built from an empty list
- * would delete every row on the strength of finding nothing.
+ * stop; an empty `project` is an ordinary state — the table exists before the
+ * first Project is written — and a prune built from an empty list would delete
+ * every row on the strength of finding nothing.
  */
 export function buildProjectSeedSql(rows: SeededRow[]): string {
   if (rows.length === 0) {

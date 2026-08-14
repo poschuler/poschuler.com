@@ -1,6 +1,7 @@
 import { Link, useLoaderData, type MetaFunction } from "react-router";
 import { findAllPosts } from "~/models/content.server";
 import { findAllProjects } from "~/models/project.server";
+import { LiveLink } from "~/components/live-link";
 import { PostItem } from "~/components/post-item";
 import type { Route } from "./+types/_home";
 import { cloudflareContext } from "~/context";
@@ -183,14 +184,7 @@ export default function Home() {
               </Link>
 
               {flagship.liveUrl && (
-                <a
-                  className="text-sm font-normal text-low transition-colors duration-200 hover:text-default"
-                  href={flagship.liveUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {flagship.liveUrl.replace(/^https?:\/\//, "")}
-                </a>
+                <LiveLink href={flagship.liveUrl} className="text-sm font-normal text-low" />
               )}
             </h3>
 

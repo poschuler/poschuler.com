@@ -9,19 +9,7 @@
  */
 
 import { validateRevisions } from "../../app/lib/revisions.ts";
-import { declaredTypeMatchesTree, treeOf } from "./content-tree.ts";
-
-/**
- * The last segment of a path, on either separator.
- *
- * Not `node:path.basename`, which resolves against the platform the generator
- * happens to run on — the same content must produce the same `seed.sql`
- * everywhere, because CI compares it against the committed file byte for byte.
- */
-function basenameOf(relativePath: string): string {
-  const segments = relativePath.split(/[\\/]/);
-  return segments[segments.length - 1];
-}
+import { basenameOf, declaredTypeMatchesTree, treeOf } from "./content-tree.ts";
 
 export interface FrontMatterAttributes {
   type: "post" | "link";

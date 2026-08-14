@@ -10,7 +10,8 @@
  *
  * Pure, and shared by both generators: a classification with two
  * implementations has two chances to drift, which is the shape of the defect
- * this replaces.
+ * this replaces. It is also what a nested container would be read from, since a
+ * file's parent directory is already in the path this receives.
  */
 
 /** The top-level directories under `app/content`, and what each one holds. */
@@ -23,18 +24,35 @@ export const CONTENT_TREES = {
 export type ContentTree = keyof typeof CONTENT_TREES;
 
 /**
+ * A path split on either separator, so nothing here depends on the platform the
+ * generator happens to run on — the same content must produce the same
+ * `seed.sql` everywhere, because CI compares it against the committed file byte
+ * for byte.
+ *
+ * Exported because every reader of a content path needs the same split, and
+ * four copies of one regular expression is four chances to normalise
+ * differently.
+ */
+export function pathSegments(relativePath: string): string[] {
+  return relativePath.split(/[\\/]/);
+}
+
+/** The filename at the end of a path — where a Slug comes from. */
+export function basenameOf(relativePath: string): string {
+  const segments = pathSegments(relativePath);
+  return segments[segments.length - 1];
+}
+
+/**
  * The tree a path belongs to, or `null` when its top-level directory is not one
  * this repository claims.
  *
  * `null` is not "skip me". A file nothing claims is invisible rather than
  * misfiled — it produces no row, no body and no warning — so the callers turn
  * this into a failed build.
- *
- * Split on either separator so the rule does not depend on the platform the
- * generator happens to run on.
  */
 export function treeOf(relativePath: string): ContentTree | null {
-  const [first, ...rest] = relativePath.split(/[\\/]/);
+  const [first, ...rest] = pathSegments(relativePath);
 
   if (rest.length === 0) {
     return null;

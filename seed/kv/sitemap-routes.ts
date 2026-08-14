@@ -15,6 +15,11 @@ export type SitemapContentItem = {
   slug: string;
   type: string;
   publishedStringDate: string;
+  /**
+   * The stored revisions, as the JSON string the column holds. Optional
+   * because a Bookmark has none and never can — its body lives at the Source.
+   */
+  updates?: string;
 };
 
 /**
@@ -71,14 +76,22 @@ export function buildSitemapRoutes(
   const lastModOf = (list: SitemapContentItem[]) =>
     list.length > 0 ? list[0].publishedStringDate : fallbackLastmod;
 
-  const revisedAt = (project: SitemapProject) =>
-    latestRevision(parseRevisions(project.updates))?.date ?? fallbackLastmod;
+  /**
+   * The most recent revision, or the date the document carries when it has
+   * none. This is the whole point of recording revisions for a crawler: a Post
+   * rewritten for a new major version is not the document it was when it was
+   * published, and dating it by its publication says the opposite.
+   */
+  const revisedAt = (document: { updates?: string }, fallback: string) =>
+    latestRevision(parseRevisions(document.updates ?? "[]"))?.date ?? fallback;
+
+  const newest = (dates: string[]) => dates.reduce((a, b) => (a > b ? a : b));
 
   // Dated by the most recently revised project, not by a clock and not by the
   // index page's own existence.
   const projectsLastmod =
     projects.length > 0
-      ? projects.map(revisedAt).sort().reverse()[0]
+      ? newest(projects.map((project) => revisedAt(project, fallbackLastmod)))
       : fallbackLastmod;
 
   const projectRoutes: SitemapRoute[] =
@@ -87,7 +100,7 @@ export function buildSitemapRoutes(
           { url: "/projects", lastmod: projectsLastmod, changefreq: "monthly", priority: 0.7 },
           ...projects.map((project) => ({
             url: `/projects/${project.slug}`,
-            lastmod: revisedAt(project),
+            lastmod: revisedAt(project, fallbackLastmod),
             changefreq: "monthly" as const,
             priority: 0.7,
           })),
@@ -105,7 +118,7 @@ export function buildSitemapRoutes(
     ...projectRoutes,
     ...posts.map((post) => ({
       url: `/blog/${post.slug}`,
-      lastmod: post.publishedStringDate,
+      lastmod: revisedAt(post, post.publishedStringDate),
       changefreq: "monthly" as const,
       priority: 0.7,
     })),

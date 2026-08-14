@@ -1,4 +1,5 @@
 import { dbQuery } from "~/db.server";
+import { parseRevisions, type Revision } from "~/lib/revisions";
 
 /**
  * The columns every Project query returns, aliased snake_case → camelCase in
@@ -25,7 +26,8 @@ const PROJECT_COLUMNS = `
 /** Weight, never route shape — see ADR 0004's sibling decision in the schema. */
 export type ProjectTier = "flagship" | "supporting" | "experiment";
 
-export type ProjectRowType = {
+/** A row as the column layout stores it: `stack` and `updates` unparsed JSON. */
+type StoredProjectRow = {
   idProject: number;
   slug: string;
   lang: string;
@@ -35,13 +37,38 @@ export type ProjectRowType = {
   description: string | null;
   tier: ProjectTier;
   status: "active" | "archived";
-  /** A JSON array as stored, parsed by the route that renders it. */
   stack: string;
   liveUrl: string | null;
   repoUrl: string | null;
-  /** A JSON array as stored — `parseRevisions` in `app/lib/revisions.ts`. */
   updates: string;
 };
+
+/**
+ * A Project as the routes receive it, with the JSON columns already read.
+ *
+ * Parsed here rather than in a component: `docs/design.md` puts that mapping in
+ * the model, next to the query that knows the column is JSON in the first place.
+ */
+export type ProjectRowType = Omit<StoredProjectRow, "stack" | "updates"> & {
+  stack: string[];
+  revisions: Revision[];
+};
+
+/** A stored JSON array, or an empty one — a column is not worth a 500. */
+function parseStack(stored: string): string[] {
+  try {
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function hydrate(row: StoredProjectRow): ProjectRowType {
+  const { stack, updates, ...rest } = row;
+
+  return { ...rest, stack: parseStack(stack), revisions: parseRevisions(updates) };
+}
 
 /**
  * Every Project, heaviest first.
@@ -51,14 +78,16 @@ export type ProjectRowType = {
  * not in the ordering — it groups the rendering, and mixing the two would make
  * a tier change silently reorder the page.
  */
-export function findAllProjects(db: D1Database) {
-  return dbQuery<ProjectRowType>(
+export async function findAllProjects(db: D1Database) {
+  const rows = await dbQuery<StoredProjectRow>(
     db,
     `select ${PROJECT_COLUMNS}
       from project
       order by sort_order asc, slug asc
     `,
   );
+
+  return rows.map(hydrate);
 }
 
 /**
@@ -68,7 +97,7 @@ export function findAllProjects(db: D1Database) {
  * route decides on, not a database error.
  */
 export async function findProjectBySlug(db: D1Database, slug: string, lang = "en") {
-  const rows = await dbQuery<ProjectRowType>(
+  const rows = await dbQuery<StoredProjectRow>(
     db,
     `select ${PROJECT_COLUMNS}
       from project
@@ -78,5 +107,5 @@ export async function findProjectBySlug(db: D1Database, slug: string, lang = "en
     [slug, lang],
   );
 
-  return rows[0] ?? null;
+  return rows[0] ? hydrate(rows[0]) : null;
 }

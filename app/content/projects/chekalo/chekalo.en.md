@@ -9,7 +9,7 @@ stack: ['TypeScript', 'Node.js', 'PostgreSQL', 'OpenSearch', 'Redis', 'BullMQ', 
 liveUrl: 'https://chekalo.pe'
 sortOrder: 1
 updates:
-  - date: '2026-08-20'
+  - date: '2026-08-14'
     note: 'First published.'
 ---
 

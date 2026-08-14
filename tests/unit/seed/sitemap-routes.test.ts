@@ -115,6 +115,27 @@ describe("buildSitemapRoutes", () => {
   });
 
   /**
+   * The point of recording revisions for a crawler: a Post rewritten for a new
+   * major version is not the document it was when it was published, and dating
+   * it by its publication tells Google the opposite.
+   */
+  it("dates a revised Post by its latest revision, not by its publication", () => {
+    const revised: SitemapContentItem = {
+      ...item("newest-post", "post", "2026-05-01"),
+      updates: JSON.stringify([{ date: "2027-02-10", note: "Updated for Node 24." }]),
+    };
+    const routes = routesFor([revised]);
+
+    expect(routes.find((route) => route.url === "/blog/newest-post")?.lastmod).toBe("2027-02-10");
+  });
+
+  it("dates an unrevised Post by its publication, as before", () => {
+    const routes = routesFor(items);
+
+    expect(routes.find((route) => route.url === "/blog/newest-post")?.lastmod).toBe("2026-05-01");
+  });
+
+  /**
    * A Project has no Published At — it is revised in place — so the only date
    * it can be listed by is its most recent revision.
    */

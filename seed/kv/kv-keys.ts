@@ -10,11 +10,13 @@
  * the same rule the content trees follow (ADR 0004), for the same reason: a
  * name alone cannot be checked, a location can.
  *
- * The prefix says what kind of payload it is, **not** which URL serves it. A
- * Field Note is a Post served under `/projects/`, and its body belongs in
- * `blog:` like every other Post body; a route that reads a body must not have
- * to guess which key space to try.
+ * The prefix says what kind of payload it is, **not** which URL serves it. If a
+ * Post is ever served under a prefix other than `/blog/`, its body still
+ * belongs in `blog:` like every other Post body — a route reading a body must
+ * not have to guess which key space to try.
  */
+
+import { pathSegments } from "../d1/content-tree.ts";
 
 /** Payload directory → key prefix. */
 const PREFIXES: Record<string, string> = {
@@ -30,7 +32,7 @@ const PREFIXES: Record<string, string> = {
  * Takes the path relative to `kv_payloads/`, on either separator.
  */
 export function kvKeyFor(relativePath: string): string | null {
-  const segments = relativePath.split(/[\\/]/);
+  const segments = pathSegments(relativePath);
 
   if (segments.length === 1 && segments[0] === "sitemap.json") {
     return "sitemap";

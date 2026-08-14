@@ -1,5 +1,5 @@
 import { Link, useLoaderData, type MetaFunction } from "react-router";
-import { ArrowUpRight } from "lucide-react";
+import { LiveLink } from "~/components/live-link";
 import { cloudflareContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { findAllProjects, type ProjectRowType } from "~/models/project.server";
@@ -36,16 +36,6 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-/** The stored JSON array, or nothing if a Project declared no stack. */
-function stackOf(project: ProjectRowType): string[] {
-  try {
-    const parsed = JSON.parse(project.stack);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
 function ArchivedBadge({ project }: { project: ProjectRowType }) {
   if (project.status !== "archived") {
     return null;
@@ -64,7 +54,7 @@ function ArchivedBadge({ project }: { project: ProjectRowType }) {
  * lowers the strongest.
  */
 function Flagship({ project }: { project: ProjectRowType }) {
-  const stack = stackOf(project);
+  const { stack } = project;
 
   return (
     <article className="border-default border-l-2 py-4 pl-4">
@@ -76,15 +66,7 @@ function Flagship({ project }: { project: ProjectRowType }) {
         </h2>
         <ArchivedBadge project={project} />
         {project.liveUrl && (
-          <a
-            href={project.liveUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 font-mono text-sm text-low transition-colors duration-200 hover:text-default"
-          >
-            {project.liveUrl.replace(/^https?:\/\//, "")}
-            <ArrowUpRight className="h-3 w-3" />
-          </a>
+          <LiveLink href={project.liveUrl} className="font-mono text-sm text-low" />
         )}
       </div>
 
@@ -105,7 +87,7 @@ function Flagship({ project }: { project: ProjectRowType }) {
 }
 
 function Supporting({ project }: { project: ProjectRowType }) {
-  const stack = stackOf(project);
+  const { stack } = project;
 
   return (
     <article className="border-default border-l-2 py-3 pl-4">
@@ -129,27 +111,36 @@ export default function Projects() {
   const { projects } = useLoaderData<typeof loader>();
 
   const flagship = projects.filter((project) => project.tier === "flagship");
-  const supporting = projects.filter((project) => project.tier === "supporting");
+  // Everything that is not the flagship, rather than `tier === 'supporting'`.
+  // The schema accepts a third tier that nothing uses yet, and a filter naming
+  // only the tiers it knows would make the first one that appears render
+  // nowhere while its page still served — visible only to whoever went looking.
+  const rest = projects.filter((project) => project.tier !== "flagship");
 
   return (
     <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-ui p-4 font-mono md:gap-8 md:p-10">
-      <section className="mx-auto w-full max-w-2xl space-y-8">
-        <div>
-          <h1 className="scroll-m-20 text-3xl font-semibold tracking-tight lg:text-4xl">
+      <section className="w-full">
+        <div className="text-center">
+          <h1 className="scroll-m-20 text-3xl font-semibold tracking-tight lg:text-4xl mt-8">
             Projects
           </h1>
-          <p className="mt-2 max-w-[65ch] text-pretty text-low">
-            Things I have built and run, rather than things I have used.
-          </p>
         </div>
 
+        <div className="max-w-[450px] mx-auto">
+          <blockquote className="text-center mt-2 italic text-muted-foreground text-lg">
+            Things I have built and run, rather than things I have used
+          </blockquote>
+        </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-2xl space-y-8">
         {flagship.map((project) => (
           <Flagship key={project.idProject} project={project} />
         ))}
 
-        {supporting.length > 0 && (
+        {rest.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-2">
-            {supporting.map((project) => (
+            {rest.map((project) => (
               <Supporting key={project.idProject} project={project} />
             ))}
           </div>
