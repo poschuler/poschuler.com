@@ -2,6 +2,8 @@ import { Link, useLoaderData } from "react-router";
 import type { Route } from "./+types/_$blog-slug";
 import { cloudflareContext } from "~/context";
 import { GitHubIcon } from "~/components/ui/brand-icons";
+import { RevisionHistory, RevisionLine } from "~/components/revisions";
+import { validateRevisions } from "~/lib/revisions";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 
 
@@ -11,6 +13,13 @@ interface PostAttributes {
     tags: string[];
     publishedAt: string;
     repository?: string;
+    /**
+     * `unknown` because this is front matter that travelled through KV as
+     * written. `validateRevisions` is what turns it into a list — and it is the
+     * same function the seed uses, so a payload the build accepted renders and
+     * one it did not never reaches here.
+     */
+    updates?: unknown;
 }
 
 interface BlogContentPayload {
@@ -38,6 +47,8 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 
     const { attributes, html } = contentPayload;
 
+    const revisions = validateRevisions(attributes.updates);
+
     // Deliberately not returning `attributes.tags`: nothing renders them, and a
     // loader's return value ships twice — once in the HTML, once in hydration.
     return {
@@ -47,6 +58,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
         html,
         slug: blogSlug,
         repository: attributes.repository,
+        // A malformed list is caught at build time; a page is better off
+        // without its revision line than not rendering at all.
+        revisions: "revisions" in revisions ? revisions.revisions : [],
     };
 }
 
@@ -72,7 +86,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function BlogSlug() {
-    const { html, publishedAt, title, repository } = useLoaderData<typeof loader>();
+    const { html, publishedAt, title, repository, revisions } = useLoaderData<typeof loader>();
 
     return (
         <main className="min-h-[calc(100vh_-_theme(spacing.16))] flex-1 gap-4 p-4 md:gap-8 md:p-10 font-mono bg-ui">
@@ -95,9 +109,20 @@ export default function BlogSlug() {
                     </p>
                 )}
 
-                <p>Published on: {publishedAt}</p>
+                {revisions.length > 0 ? (
+                    <div className="not-prose my-4">
+                        <RevisionLine publishedAt={publishedAt} revisions={revisions} />
+                    </div>
+                ) : (
+                    <p>Published on: {publishedAt}</p>
+                )}
+
                 <hr className="mt-7 mb-7" />
                 <div dangerouslySetInnerHTML={{ __html: html }} />
+
+                <div className="not-prose">
+                    <RevisionHistory revisions={revisions} />
+                </div>
             </article>
         </main>
     )

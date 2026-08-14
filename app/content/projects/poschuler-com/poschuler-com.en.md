@@ -1,0 +1,46 @@
+---
+type: 'project'
+title: 'poschuler.com'
+summary: 'This site. Markdown in git, derived into D1 and KV at build time, served from a Cloudflare Worker — with the decisions written down as ADRs rather than remembered.'
+description: 'How poschuler.com is built: a build-time pipeline from Markdown into D1 and KV, hand-written SQL, and the architecture decisions recorded as ADRs.'
+tier: 'supporting'
+status: 'active'
+stack: ['TypeScript', 'React Router', 'Cloudflare Workers', 'D1', 'KV', 'Vitest']
+repoUrl: 'https://github.com/poschuler/poschuler.com'
+sortOrder: 2
+updates:
+  - date: '2026-08-20'
+    note: 'First published.'
+---
+
+You are reading it, which makes this the one project on the site you can check while you read about it.
+
+It is a personal site, and personal sites are the most common project there is. What makes this one worth a page is not the site — it is that the decisions behind it are written down, in the repository, as ADRs. Three of them predate this page. Here are the ones worth arguing about.
+
+## Markdown is the source; the stores are derived
+
+Content is authored as Markdown files and versioned in git. The Worker never reads or parses them. A build-time pipeline splits each file in two: the front matter becomes a row in D1, and the body is rendered to HTML and stored in KV under an exact key.
+
+Serving a post is therefore one KV read, and listing everything is one indexed query. No Markdown parsing on the request path — which is why `front-matter` and `marked` are dependencies that appear in no runtime import.
+
+The obvious alternative was to read the Markdown at request time; the files are already in the bundle. It puts a parse on every request, and it makes *"everything published, newest first"* a question you can only answer by opening every file.
+
+## No ORM, and no migration tool
+
+Data access is hand-written SQL through a helper thin enough to read in one sitting. One table that matters, four read queries, no joins.
+
+An ORM's value is relationship mapping, migrations and query composition — and there is nothing here for any of the three to work on, while the costs are real: bundle size inside a Worker, and a schema definition that duplicates the one in `schema.sql` and is free to disagree with it.
+
+The price of that choice is honest and worth stating: schema changes are applied by hand, there is no migration history, and there is no rollback. What makes it survivable is that forgetting the remote half is no longer silent — a check compares the deployed schema against the file as the first step of every publication and refuses to seed when they differ. It blocks; it does not migrate. The applying is still mine.
+
+## The publication is one ordered operation
+
+A push to `main` used to start two things that never learned about each other: a CI job that wrote the deployed stores, and Cloudflare's own build system deploying the Worker on its own schedule. Nothing ordered them, and nothing failed when only one succeeded.
+
+Now one job does the whole thing in sequence — verify the deployed schema, seed both stores, read them back, build, deploy, then confirm that the version now serving is the one just uploaded. Any step failing fails the run.
+
+Seeding happens before deploying, and that order is a chosen failure mode rather than an accident: old code serving new content is almost always harmless, while new code over old content 404s a post that was just published.
+
+## What it is not
+
+There is no CMS, no admin interface, no comments and no newsletter. The Markdown pipeline works, and the absence of the rest is the point rather than a backlog.

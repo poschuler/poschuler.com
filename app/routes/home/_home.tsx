@@ -1,5 +1,6 @@
 import { Link, useLoaderData, type MetaFunction } from "react-router";
 import { findAllPosts } from "~/models/content.server";
+import { findAllProjects } from "~/models/project.server";
 import { PostItem } from "~/components/post-item";
 import type { Route } from "./+types/_home";
 import { cloudflareContext } from "~/context";
@@ -14,9 +15,25 @@ const RECENT_POST_COUNT = 3;
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
   // Newest first, straight from the query's `order by published_at desc`.
-  const posts = await findAllPosts(env.POSCHULER_BD);
+  const [posts, projects] = await Promise.all([
+    findAllPosts(env.POSCHULER_BD),
+    findAllProjects(env.POSCHULER_BD),
+  ]);
 
-  return { recentPosts: posts.slice(0, RECENT_POST_COUNT) };
+  // Only the flagship. Three blocks would invite the visitor to compare a
+  // product with users against the site they are already looking at — which
+  // lifts neither and lowers the one that carries the weight.
+  const flagship = projects.find((project) => project.tier === "flagship") ?? null;
+
+  return {
+    recentPosts: posts.slice(0, RECENT_POST_COUNT),
+    flagship: flagship && {
+      slug: flagship.slug,
+      title: flagship.title,
+      summary: flagship.summary,
+      liveUrl: flagship.liveUrl,
+    },
+  };
 }
 
 export const shouldRevalidate = skipRevalidationOnThemeChange;
@@ -82,7 +99,7 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Home() {
-  const { recentPosts } = useLoaderData<typeof loader>();
+  const { recentPosts, flagship } = useLoaderData<typeof loader>();
 
   return (
     <main className="flex flex-col min-h-[calc(100vh_-_theme(spacing.16))] flex-1 gap-4 p-4 md:gap-8 md:p-10 font-mono bg-ui">
@@ -151,6 +168,43 @@ export default function Home() {
           ))}
         </ul>
       </section>
+
+      {/* The hero asserts Chékalo in its first paragraph and asks to be
+        * believed; this is where the assertion becomes something a reader can
+        * check. Directly below it, for that reason. */}
+      {flagship && (
+        <section className="w-full max-w-[650px] mx-auto">
+          <h2 className="text-lg font-semibold tracking-tight">What I build</h2>
+
+          <article className="my-4 border-default border-l-2 py-4 px-4">
+            <h3 className="flex flex-wrap items-baseline gap-x-3 text-base font-semibold">
+              <Link to={`/projects/${flagship.slug}`} className="hover:text-default">
+                {flagship.title}
+              </Link>
+
+              {flagship.liveUrl && (
+                <a
+                  className="text-sm font-normal text-low transition-colors duration-200 hover:text-default"
+                  href={flagship.liveUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {flagship.liveUrl.replace(/^https?:\/\//, "")}
+                </a>
+              )}
+            </h3>
+
+            <p className="mt-2 text-pretty text-sm text-low">{flagship.summary}</p>
+          </article>
+
+          <Link
+            className="text-sm text-low transition-colors duration-200 hover:text-default"
+            to="/projects"
+          >
+            All projects →
+          </Link>
+        </section>
+      )}
 
       {/* The same column as the hero, so the page reads as one narrow strip
         * rather than a landing page with a wider index bolted underneath. */}

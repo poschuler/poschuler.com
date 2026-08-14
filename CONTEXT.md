@@ -34,6 +34,10 @@ _Avoid_: category, keyword, topic
 The editorial date a Content Item is presented as belonging to — for a Bookmark, when Paul read it, not when the Source published it. It orders the Timeline. Distinct from when the row happened to be written to a store.
 _Avoid_: date, created, posted
 
+**Revision**:
+A change to a document Paul has already published, stated in his own words: a date and one line about what a returning reader should know. Revisions are curated, not a record of every edit — only what changes what a reader takes away. They never reorder the Timeline, which Published At alone governs.
+_Avoid_: update, changelog, edit, version
+
 **Publication**:
 The act that puts a Content Item in front of readers. It is all or nothing: until it has happened completely, the Content Item is not published, however finished its Markdown is and however long it has been merged. Distinct from Published At, which is a date the Content Item carries, not an event.
 _Avoid_: release, deploy, ship, seed
@@ -53,6 +57,14 @@ A Post rendered in one specific Locale. Translations of the same Post share a Sl
 _Avoid_: version, variant, localization
 
 ### Professional profile
+
+**Project**:
+Software Paul built and can be judged by, presented as a case study. Like the Resume, it is not a Content Item — no Published At, no place in the Timeline — and it is revised in place rather than published, so its most recent Revision is the only date it carries.
+_Avoid_: work, portfolio item, case, demo
+
+**Project Tier**:
+How much weight a Project carries — whether it is the one that earns the interview, one that confirms without deciding, or one that merely exists. It governs how a Project renders and whether it has a page of its own. It is **never** part of a URL: a Project promoted from one Tier to another keeps the address it was published at.
+_Avoid_: level, rank, importance, featured
 
 **Resume**:
 Paul's structured professional history — roles, education, skills, certificates. It is not a Content Item: it has no Slug, no Published At, and no place in the Timeline. It is revised in place rather than published.

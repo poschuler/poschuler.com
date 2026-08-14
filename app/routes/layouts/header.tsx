@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { BookMarked, Clock, FileCode2, HomeIcon, Menu, NotebookPen, Terminal } from "lucide-react";
+import { BookMarked, Clock, FileCode2, Hammer, HomeIcon, Menu, NotebookPen, Terminal } from "lucide-react";
 import { ModeToggle } from "~/components/mode.toggle";
 import { Button } from "~/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from "~/components/ui/sheet";
@@ -7,6 +7,7 @@ import { Sheet, SheetClose, SheetContent, SheetTrigger } from "~/components/ui/s
 /** One list, rendered twice — desktop nav and mobile sheet. */
 const NAV_ITEMS = [
   { to: "/", label: "home", Icon: HomeIcon },
+  { to: "/projects", label: "projects", Icon: Hammer },
   { to: "/blog", label: "blog", Icon: NotebookPen },
   { to: "/bookmarks", label: "bookmarks", Icon: BookMarked },
   { to: "/timeline", label: "timeline", Icon: Clock },

@@ -30,15 +30,23 @@ Two rules came out of it. **Read bindings inside the request, never at module sc
 The single most important decision in this codebase: **Markdown files are the source of truth, and the Worker never parses Markdown.**
 
 ```
-app/content/**/*.md                       ← source of truth, versioned in git
+app/content/<tree>/**/*.md                ← source of truth, versioned in git
+   │                                        the tree decides what a file is — ADR 0004
    │
    ├─ front matter ──▶ seed/d1/generate-seed-sql.ts ──▶ seed/d1/seed.sql ──▶ D1 `content`
-   │                     (front-matter)                   (committed)          metadata only
+   │                     (front-matter)                   (committed)          `project`
    │
-   └─ body ──────────▶ seed/kv/generate-kv-json.ts ──▶ seed/kv/kv_payloads/*.json ──▶ KV
+   └─ body ──────────▶ seed/kv/generate-kv-json.ts ──▶ seed/kv/kv_payloads/<kind>/*.json ──▶ KV
                          (seed/kv/markdown.ts)                              `blog:<slug>:<locale>`
-                         (app/lib/seo/sitemap.ts)                           `sitemap`
+                         (app/lib/seo/sitemap.ts)                           `project:<slug>:<locale>`
+                                                                            `sitemap`
 ```
+
+The trees are `blog/`, `bookmarks/` and `projects/`. Each generator walks only
+its own, and the `type` in the front matter is checked against the tree rather
+than believed — a mismatch, or a top-level directory no generator walks, fails
+the build. Payload directories follow the same rule: the directory a payload
+sits in decides its key prefix.
 
 Both generators are Node scripts run from the developer's machine, never in the Worker. That is why `front-matter` and `marked` appear in `dependencies` yet are absent from every runtime import. Sitemap and `robots.txt` rendering is hand-rolled in `app/lib/seo/`, with no third-party SEO dependency.
 
@@ -51,7 +59,7 @@ pnpm run d1:seed:local    # generate seed.sql, then wrangler d1 execute --local
 pnpm run kv:seed:local    # generate JSON payloads, then wrangler kv key put --local
 ```
 
-`:remote` variants do the same against the deployed resources. `kv-bulk-upload.ts` uploads every payload first and only then removes `blog:` keys with nothing behind them, so the result is a full replacement without a moment where a published Post is missing.
+`:remote` variants do the same against the deployed resources. `kv-bulk-upload.ts` uploads every payload first and only then removes keys with nothing behind them, across every prefix this repository writes, so the result is a full replacement without a moment where a published Post is missing.
 
 ## Data stores
 
@@ -78,8 +86,9 @@ Read-only at runtime, written only by the seed pipeline.
 
 | Key                     | Value                                                      |
 | ----------------------- | ---------------------------------------------------------- |
-| `blog:<slug>:<locale>`  | `{ attributes, html }` — front matter plus rendered Post HTML |
-| `sitemap`               | `{ sitemap }` — the full sitemap XML as a string             |
+| `blog:<slug>:<locale>`    | `{ attributes, html }` — front matter plus rendered Post HTML |
+| `project:<slug>:<locale>` | `{ attributes, html }` — the same shape, for a Project body   |
+| `sitemap`                 | `{ sitemap }` — the full sitemap XML as a string              |
 
 A Post body is one KV read. Missing key → 404, which is also how an unpublished or misspelled slug behaves.
 
@@ -89,11 +98,13 @@ Routes are declared explicitly in `app/routes.ts` (config-based, not file-system
 
 | Route            | Store  | Cache-Control  | Notes                                       |
 | ---------------- | ------ | -------------- | ------------------------------------------- |
-| `/`              | D1     | none           | landing page — `findAllPosts`, sliced to the three newest |
+| `/`              | D1     | none           | landing page — three newest Posts, plus the flagship Project |
 | `/blog`          | D1     | none           | `findAllPosts`                              |
 | `/bookmarks`     | D1     | none           | `findAllBookmarks`                          |
 | `/timeline`      | D1     | none           | Timeline — `findAll`, Posts and Bookmarks interleaved |
 | `/blog/:blogSlug`| KV     | none           | Locale hardcoded to `en`; body injected via `dangerouslySetInnerHTML` |
+| `/projects`      | D1     | none           | `findAllProjects` — flagship first, supporting in a grid |
+| `/projects/:project` | D1 + KV | none      | row frames the page, KV carries the body; Locale hardcoded to `en` |
 | `/resume`        | none   | none           | no loader — sections import `resume.json` directly      |
 | `/resume.pdf`    | fetch  | 1 day          | proxies `cdn.poschuler.dev`, forces `Content-Disposition: attachment` |
 | `/sitemap.xml`   | KV     | 1 hour         | serves the pre-generated XML verbatim       |
@@ -236,7 +247,7 @@ Detecting the challenge and continuing would have been worse than removing the s
 **Both halves are idempotent, and neither empties anything first.** That property is load-bearing now that this runs unattended:
 
 - **D1** upserts and then prunes. The partial unique indexes on `(slug, lang)` and `(slug)` make `INSERT OR REPLACE` a genuine upsert, so `generate-seed-sql.ts` emits the inserts first and closes with a `DELETE … WHERE slug || ':' || ifnull(lang,'') NOT IN (…)` that removes only rows no Markdown file backs any more. It used to open with `DELETE FROM content`, which on the remote database empties the live table and serves an empty Timeline until the inserts land.
-- **KV** writes before it deletes. `kv-bulk-upload.ts` uploads every payload in one `kv bulk put` — a `put` over an existing key is a replacement — and only then removes `blog:` keys with no payload behind them. It used to clear every key first and upload them back one at a time, so every published Post 404'd for the length of the upload.
+- **KV** writes before it deletes. `kv-bulk-upload.ts` uploads every payload in one `kv bulk put` — a `put` over an existing key is a replacement — and only then removes keys with no payload behind them. It used to clear every key first and upload them back one at a time, so every published Post 404'd for the length of the upload.
 
 **The verifier is separate from the seed on purpose.** The seed scripts report what they *sent*; `verify-stores.ts` reports what is *there*. It derives its expectations from the Markdown files rather than from the generated SQL — a generator that silently dropped a file would otherwise produce a seed and a check that agree with each other and with nothing else — and it compares each KV value against its payload as parsed JSON. Run it by hand with `pnpm run verify:stores:local` or `:remote`.
 

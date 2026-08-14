@@ -18,6 +18,16 @@ Each page is one column, centred, capped at `lg:max-w-4xl` for lists and prose. 
 
 The Timeline it used to render lives at `/timeline`. The home keeps a short, Post-only excerpt of the three newest, and an integration test asserts it stays Post-only: a Bookmark reaching the landing page means the Timeline has leaked back in.
 
+Between the hero and that excerpt sits **one Project, the flagship, and never more**. Three blocks would invite the visitor to compare a product with users against the site they are already looking at — which lifts neither and lowers the one carrying the weight. The hero's first paragraph asserts it; the block directly below is where the assertion becomes checkable. `/projects` holds the rest.
+
+### Projects
+
+`/projects` renders by Tier, and the Tier is the whole layout rule: the flagship alone in its row, at `text-2xl` with its summary, stack and live link; supporting projects in a two-column grid at `text-lg`. Chékalo never competes with anything because nothing else is in its row.
+
+An archived Project says so — a small `bg-subtle` badge beside the title on the index, and a line under the heading on its own page. A finished project is a complete story and costs nothing; one still written in the present tense after it has stopped is what costs.
+
+A Project page carries its revision line under the summary rather than a published date, because a Project is revised in place and has never been published in the sense a Post has. Earlier revisions go at the foot, below the body, and render only from the second one onward — with one, they would repeat the line under the title.
+
 ## Color
 
 Color comes from **Radix Colors** scales, never from Tailwind's default palette. Radix's 12-step scales are semantic by position — step 1 is app background, 6 is a subtle border, 9 is a solid fill, 12 is high-contrast text — and each has a matched dark variant, so a single token name works in both themes with no `dark:` variant needed.
@@ -130,6 +140,8 @@ Rules that hold across `content.server.ts`:
 - **Values are bound, never interpolated.** `dbQuery(db, sql, values)` goes through `.bind()`. The only strings interpolated into SQL are fixed fragments this module owns — `CONTENT_COLUMNS` and the `where` clauses — never anything reaching it from a request.
 
 **Row types mirror the domain, not the table.** `ContentRowType` is the union `PostRowType | BookmarkRowType`, discriminated on `type`, because `CONTEXT.md` says a Bookmark has no Locale and a Post has no Source — and the table stores `NULL` for exactly those. Narrow on `item.type` and you get the columns that kind carries; a component that only ever renders one kind should take that kind's type. `tags` is typed `string` because it is stored as unparsed JSON — parse it in the model, not in a component, when something finally reads it.
+
+**A Project has its own model, `app/models/project.server.ts`, not a third branch of the content one.** It is not a Content Item — no Published At, no Timeline — so it shares almost none of the rules above beyond their shape. `findAllProjects` orders by `sort_order` and deliberately **not** by `tier`: tier groups the rendering, and folding it into the ordering would make a tier change silently reorder the page. `stack` and `updates` are typed `string` for the same reason `tags` is.
 
 ## SEO
 
