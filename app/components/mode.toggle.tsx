@@ -5,9 +5,12 @@ import type { ColorScheme } from "~/color-scheme-cookie";
 
 type RootData = { colorScheme?: ColorScheme };
 
-const LIGHT = { value: "light", Icon: Sun, label: "claro" } as const;
-const DARK = { value: "dark", Icon: Moon, label: "oscuro" } as const;
-const SYSTEM = { value: "system", Icon: Monitor, label: "automático" } as const;
+// The `value` doubles as the visible word: `light`, `dark` and `system` are
+// what the button says and what the form posts, so there is no second name to
+// keep in step with the first.
+const LIGHT = { value: "light", Icon: Sun } as const;
+const DARK = { value: "dark", Icon: Moon } as const;
+const SYSTEM = { value: "system", Icon: Monitor } as const;
 
 const BY_VALUE = { light: LIGHT, dark: DARK, system: SYSTEM };
 /** Cycle order — light → dark → system → light. */
@@ -34,11 +37,11 @@ export function ModeToggle() {
         variant="outline"
         name="color-scheme"
         value={next.value}
-        title={`Tema ${current.label} — cambiar a ${next.label}`}
+        title={`Theme: ${current.value} — switch to ${next.value}`}
       >
         <Icon className="h-[1.2rem] w-[1.2rem]" />
         <span className="sr-only">
-          Tema {current.label}. Cambiar a tema {next.label}
+          Theme: {current.value}. Switch to {next.value}
         </span>
       </IconButton>
     </Form>
