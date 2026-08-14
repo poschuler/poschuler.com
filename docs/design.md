@@ -197,6 +197,15 @@ Internal links are `<Link>`. Not `<a href>`, and not `reloadDocument` — both t
 
 One consequence to remember inside the mobile sheet: client-side navigation leaves the panel mounted, so a link in there has to dismiss it as well. `<SheetClose render={<Link to="…" />}>` does both.
 
+**The header is one row that reflows**, not a desktop header and a mobile header hidden past each other. `NAV_ITEMS` is declared once and rendered twice — as the row above `md`, as the panel below it — and everything else in the header appears exactly once. It was two full `<nav>`s at one point, each with its own wordmark and theme toggle, with the panel trigger outside both; the wordmark rendered three times, and the only navigation landmark on a phone was one that did not contain the navigation.
+
+Two rules hold that shape together:
+
+- **The trigger sits on the same edge the panel arrives from.** Both are on the right. The edge a slide-over comes from is what says the page is still there behind it, so a trigger on one side and a panel from the other reads as arbitrary. Moving the navigation to the left means moving both, and it is three edits — the order in the header, and the two `translate-x-full` in `ui/sheet.tsx`.
+- **The theme toggle is not navigation.** Above `md` it sits in the row; below it, inside the panel, under its own label. Two adjacent targets in a phone's top-right corner, where only one of them matters, is how a preference gets tapped instead of the menu.
+
+Touch targets in the header are `size-11` (44px) below `md` and `size-9` above it — 44 is the smaller of the two platform minimums, and a pointer needs neither.
+
 ## Keyboard shortcuts
 
 `routes/resume/keyboard-manager.tsx` owns the only global key handler on the site. Two rules it follows, and any new shortcut must too:

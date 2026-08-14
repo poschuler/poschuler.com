@@ -1,6 +1,7 @@
 import { Monitor, Moon, Sun } from "lucide-react";
 import { Form, useRouteLoaderData } from "react-router";
 import { Button } from "~/components/ui/button";
+import { cn } from "~/lib/utils";
 import type { ColorScheme } from "~/color-scheme-cookie";
 
 type RootData = { colorScheme?: ColorScheme };
@@ -23,7 +24,7 @@ const NEXT = { light: DARK, dark: SYSTEM, system: LIGHT };
  * choice, so there is no client JS, no provider and no flash of the wrong
  * theme to prevent — the class is already on `<html>` in the first byte.
  */
-export function ModeToggle() {
+export function ModeToggle({ className }: { className?: string }) {
   const root = useRouteLoaderData("root") as RootData | undefined;
   const active = root?.colorScheme ?? "system";
   const current = BY_VALUE[active] ?? SYSTEM;
@@ -31,7 +32,12 @@ export function ModeToggle() {
   const { Icon } = current;
 
   return (
-    <Form navigate={false} method="POST" action="/set-theme" className="shrink-0">
+    <Form
+      navigate={false}
+      method="POST"
+      action="/set-theme"
+      className={cn("shrink-0", className)}
+    >
       <Button
         type="submit"
         variant="ghost"

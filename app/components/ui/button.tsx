@@ -34,7 +34,11 @@ const button = cva(
       },
       size: {
         sm: "h-8 px-3",
-        icon: "size-9",
+        /* 44px on a phone, 36px from `md` up. 44 is the smaller of the two
+         * touch-target minimums (iOS 44pt, Android 48dp); a pointer needs
+         * neither, and at 44 the header's controls start to look like buttons
+         * on a toolbar rather than words in a row. */
+        icon: "size-11 md:size-9",
       },
     },
     defaultVariants: {
