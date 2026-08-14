@@ -11,8 +11,12 @@ export function Education() {
               <h3 className="inline-flex items-center justify-center gap-x-1 font-semibold leading-none">
                 {item.institution}
               </h3>
+              {/* The year it was finished, not the span — a degree is dated by
+                * its completion, and the span invites arithmetic about how long
+                * it took. `startDate` stays in `resume.json` because it is true
+                * and the schema carries it; it is simply not what this reads. */}
               <div className="text-sm tabular-nums text-muted-foreground">
-                {`${item.startDate} - ${item.endDate}`}
+                {item.endDate}
               </div>
             </div>
           </div>
