@@ -63,7 +63,7 @@ export function Header() {
           <Menu className="h-5 w-5" />
           <span className="sr-only">Toggle navigation menu</span>
         </SheetTrigger>
-        <SheetContent side="right">
+        <SheetContent>
           {/* Every link is a `SheetClose`: client-side navigation leaves the
             * sheet mounted, so the panel has to dismiss itself on the way out. */}
           <nav className="grid gap-6 text-lg font-medium">

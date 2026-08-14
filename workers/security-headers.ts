@@ -18,12 +18,18 @@ export const SECURITY_HEADERS: Record<string, string> = {
 export const STRICT_TRANSPORT_SECURITY = "max-age=31536000; includeSubDomains";
 
 /**
- * The allow-list mirrors what the site actually loads: Google Fonts and the
- * Cloudflare Insights beacon. Everything else falls back to `'self'`.
+ * The allow-list mirrors what the site actually loads: the Cloudflare Insights
+ * beacon, and nothing else off-origin. Everything else falls back to `'self'`.
  *
  * `img-src` no longer names `avatars.githubusercontent.com`: the portrait and
  * the Open Graph card are both served from this origin now, so the only thing
  * that host could still authorise is an image nobody asked for.
+ *
+ * `style-src` and `font-src` no longer name `fonts.googleapis.com` and
+ * `fonts.gstatic.com`. Inter and Intel One Mono are self-hosted from
+ * `app/styles/fonts.css`, so a third party can no longer inject a stylesheet or
+ * a font into this document, and the render path no longer depends on a host
+ * this site does not control.
  *
  * `style-src` keeps `'unsafe-inline'` because Base UI positions popups with
  * inline `style` attributes. Scripts do not need it — they carry the nonce.
@@ -43,8 +49,8 @@ export function contentSecurityPolicy(nonce: string): string {
     "frame-ancestors 'none'",
     "object-src 'none'",
     "img-src 'self' data:",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self'",
     `script-src 'self' 'nonce-${nonce}' https://static.cloudflareinsights.com`,
     "connect-src 'self' https://cloudflareinsights.com",
   ].join("; ");

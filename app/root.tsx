@@ -13,17 +13,24 @@ import "./app.css";
 import { getColorScheme } from "./color-scheme-cookie";
 import { cloudflareContext } from "./context";
 
+// Imported for their hashed build URLs. The `@font-face` rules live in
+// `app/styles/fonts.css`; these two are the latin faces every page needs — the
+// interface is `font-sans` and every content page is `font-mono` — and without
+// a preload the browser cannot discover either until the stylesheet has parsed.
+import interLatin from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
+import monoLatin from "@fontsource-variable/intel-one-mono/files/intel-one-mono-latin-wght-normal.woff2?url";
+
+const preloadFont = (href: string) => ({
+  rel: "preload",
+  as: "font",
+  type: "font/woff2",
+  crossOrigin: "anonymous" as const,
+  href,
+});
+
 export const links: Route.LinksFunction = () => [
-  { rel: "preconnect", href: "https://fonts.googleapis.com" },
-  {
-    rel: "preconnect",
-    href: "https://fonts.gstatic.com",
-    crossOrigin: "anonymous",
-  },
-  {
-    rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
-  },
+  preloadFont(interLatin),
+  preloadFont(monoLatin),
 ];
 
 // No `meta` here on purpose: a route that forgets its own `meta` should render

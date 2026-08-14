@@ -6,7 +6,6 @@ import {
   type DialogPopupProps,
   type DialogTitleProps,
 } from "@base-ui/react/dialog";
-import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
 
 import { cn } from "~/lib/utils";
@@ -26,11 +25,7 @@ function SheetOverlay({
   return (
     <BaseDialog.Backdrop
       className={cn(
-        // The backdrop has to run on the panel's clock: left on the 150ms
-        // default it finished fading half a close early and — with the default
-        // `animation-fill-mode: none` — snapped back to full black until the
-        // panel's own animation ended and Base UI unmounted the pair.
-        "fixed inset-0 z-50 bg-black/80 data-[open]:animate-in data-[open]:fade-in-0 data-[open]:duration-500 data-[closed]:animate-out data-[closed]:fade-out-0 data-[closed]:duration-300 data-[closed]:fill-mode-forwards",
+        "fixed inset-0 z-50 bg-black/80 data-[open]:animate-sheet-backdrop-in data-[closed]:animate-sheet-backdrop-out",
         className,
       )}
       {...props}
@@ -38,44 +33,21 @@ function SheetOverlay({
   );
 }
 
-const sheetVariants = cva(
-  // `fill-mode-forwards` holds the off-screen end state: Base UI unmounts a
-  // frame or two after the animation finishes, and without it the panel snaps
-  // back into view for that gap.
-  "fixed z-50 gap-4 bg-subtle p-6 shadow-lg transition ease-in-out data-[open]:animate-in data-[closed]:animate-out data-[closed]:duration-300 data-[open]:duration-500 data-[closed]:fill-mode-forwards",
-  {
-    variants: {
-      side: {
-        top: "inset-x-0 top-0 border-b data-[closed]:slide-out-to-top data-[open]:slide-in-from-top",
-        bottom:
-          "inset-x-0 bottom-0 border-t data-[closed]:slide-out-to-bottom data-[open]:slide-in-from-bottom",
-        left: "inset-y-0 left-0 h-full w-3/4 border-r data-[closed]:slide-out-to-left data-[open]:slide-in-from-left sm:max-w-sm",
-        right:
-          "inset-y-0 right-0 h-full w-3/4 data-[closed]:slide-out-to-right data-[open]:slide-in-from-right sm:max-w-sm",
-      },
-    },
-    defaultVariants: {
-      side: "right",
-    },
-  },
-);
-
-type SheetContentProps = StyledProps<DialogPopupProps> &
-  VariantProps<typeof sheetVariants>;
+/* One side, because one side is what the site opens: the mobile navigation.
+ * The other three cost four keyframe pairs each to animate and are three
+ * layouts nothing has asked for. */
+const SHEET_PANEL =
+  "fixed inset-y-0 right-0 z-50 h-full w-3/4 gap-4 bg-subtle p-6 shadow-lg data-[open]:animate-sheet-in data-[closed]:animate-sheet-out sm:max-w-sm";
 
 function SheetContent({
-  side = "right",
   className,
   children,
   ...props
-}: SheetContentProps) {
+}: StyledProps<DialogPopupProps>) {
   return (
     <SheetPortal>
       <SheetOverlay />
-      <BaseDialog.Popup
-        className={cn(sheetVariants({ side }), className)}
-        {...props}
-      >
+      <BaseDialog.Popup className={cn(SHEET_PANEL, className)} {...props}>
         {children}
         <BaseDialog.Close className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-default disabled:pointer-events-none">
           <X className="h-4 w-4" />

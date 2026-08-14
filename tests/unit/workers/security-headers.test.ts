@@ -155,12 +155,25 @@ describe("the Content Security Policy", () => {
   });
 
   /** The allow-list mirrors what the site actually loads, and nothing else. */
-  it.each([
-    ["Google Fonts stylesheets", "https://fonts.googleapis.com"],
-    ["Google Fonts files", "https://fonts.gstatic.com"],
-    ["the Cloudflare Insights beacon", "https://static.cloudflareinsights.com"],
-  ])("allows %s", (_name, origin) => {
-    expect(contentSecurityPolicy("n0nce")).toContain(origin);
+  it("allows the Cloudflare Insights beacon", () => {
+    expect(contentSecurityPolicy("n0nce")).toContain(
+      "https://static.cloudflareinsights.com",
+    );
+  });
+
+  /**
+   * Inter and Intel One Mono are self-hosted from `app/styles/fonts.css`. Both
+   * Google Fonts hosts were authorised while the stylesheet came from
+   * `fonts.googleapis.com`; naming them now would authorise a third party to
+   * inject a stylesheet or a font into this document for no gain at all.
+   */
+  it("authorises no third-party style or font host", () => {
+    const csp = contentSecurityPolicy("n0nce");
+
+    expect(csp).toContain("style-src 'self' 'unsafe-inline'");
+    expect(csp).toContain("font-src 'self'");
+    expect(csp).not.toContain("fonts.googleapis.com");
+    expect(csp).not.toContain("fonts.gstatic.com");
   });
 
   /**

@@ -51,7 +51,11 @@ Each family expands into the same step vocabulary — `app`, `subtle`, `ui`, `ho
 
 **Write `bg-ui`, `text-low`, `border-default` — not `bg-gray-100`, `text-gray-500`, `border-gray-200`.** The token is the contract; the scale behind it can change. `text-default` is body text, `text-low` is anything secondary (dates, metadata, muted prose).
 
-Long-form Post bodies render through `@tailwindcss/typography`, with the `prose` utility overridden at the bottom of `app.css` so `--tw-prose-*` variables point back at the mauve scale. Prose therefore themes automatically alongside the rest of the site.
+Long-form Post and Project bodies render through the `prose` utility at the bottom of `app.css`, written out by hand and reading the mauve scale directly, so prose themes alongside the rest of the site with no separate dark variant. It replaced `@tailwindcss/typography`, which styled every element a Markdown document could contain at five size variants and an inverted colour scheme, none of which the site selects.
+
+Two properties are load-bearing and easy to lose when editing it. Every selector is wrapped in `:where()`, so the whole utility sits at **zero specificity** and a class on the element still wins. And every selector excludes `:where(.not-prose, .not-prose *)` — that is what lets a route drop a composed block, a revision list or a stack row, into the middle of a rendered body without prose reaching into it. The body arrives from `marked` as `dangerouslySetInnerHTML`, so there is nowhere else to put a class.
+
+It covers what the corpus contains: headings, paragraphs, lists, links, inline code, fenced blocks, quotes, images and rules. **An element that appears for the first time — a table, a footnote — will render unstyled**, which is the intended failure: it asks for a decision here rather than inheriting a default nobody chose.
 
 ## Theming
 
@@ -77,8 +81,8 @@ Radix ships its dark values scoped to `.dark, .dark-theme`, which a `.system` ro
 
 ## Typography
 
-- **Inter** for the interface, loaded from Google Fonts with `preconnect` hints in `root.tsx`'s `links`.
-- **`font-mono`** for content pages (`/`, `/blog`, `/bookmarks`, `/timeline`, `/blog/:slug`) and for the Resume's secondary text. This is deliberate character, not an oversight.
+- **Inter Variable** for the interface, **Intel One Mono Variable** for everything monospaced. Both are self-hosted from `@fontsource-variable/*`, with the `@font-face` rules written out in `app/styles/fonts.css` rather than imported from the packages — see that file for which subsets ship and why. `root.tsx` preloads the two latin faces; without it the browser cannot discover a font until the stylesheet has parsed.
+- **`font-mono`** for content pages (`/`, `/blog`, `/bookmarks`, `/projects`, `/timeline`, and the Post and Project bodies) and for the Resume's secondary text. This is deliberate character, not an oversight — and it makes the monospace family the site's dominant typeface, which is why it is named rather than left to Tailwind's default stack. On that default it resolved to whatever the visitor's OS shipped, so the site read differently on every machine.
 - Page headings are `text-3xl lg:text-4xl font-semibold tracking-tight`, followed by an italic `blockquote` subtitle in `text-low`. Blog, bookmarks, projects and timeline all share this header shape — match it. The home page does not; see "The home page is the exception".
 
 ## Component layers
@@ -102,7 +106,11 @@ Two Base UI conventions matter when extending them:
 
 - **Compose with `render`, not by nesting.** `<Button render={<Link to="/blog" />}>blog</Button>` — Base UI merges the props of both, so event handlers from each side run. That is what lets a `SheetClose` wrap a `Link` in `header.tsx` and both dismiss the sheet and navigate.
 - **Transitions key off `data-open` / `data-closed`**, not the `data-state` shadcn/ui uses. Copying a shadcn class list wholesale will silently animate nothing.
-- **An exit animation needs `data-[closed]:fill-mode-forwards`, and the backdrop needs the panel's duration.** `animate-out` defaults to `animation-fill-mode: none`, so when the exit animation ends the element snaps back to its base style — visible, on-screen — and stays there until Base UI unmounts it a frame or two later. Pair that with a backdrop left on the default 150ms against a panel closing in 300ms and the black comes back at full opacity halfway through the close. That is what the sheet and the dialog do now; anything new that animates on `data-closed` needs both.
+- **A transition is one named animation, declared in `@theme`, not a stack of utilities.** `--animate-dialog-in`, `--animate-sheet-out` and their backdrops each carry their own keyframes, duration, easing and fill mode, and the component reads one class per state: `data-[open]:animate-sheet-in data-[closed]:animate-sheet-out`. This replaced `tw-animate-css`, whose composable `animate-out fade-out-0 zoom-out-95 slide-out-to-top-[48%] duration-200` spread one transition across five classes that had to agree.
+
+  Two things the shorthand now carries that were separate utilities before, and that a new animation still needs. **`forwards`**: the default `animation-fill-mode: none` snaps an element back to its base style — visible, on-screen — when the exit animation ends, and Base UI unmounts it only a frame or two later. **The panel's clock on the backdrop**: a backdrop left on a shorter duration finishes fading half a close early and then holds, fully transparent, while the panel is still moving.
+
+- **A keyframe that animates `transform` replaces any transform utility on the element.** The dialog is centred by `translate-x-[-50%] translate-y-[-50%]`, so `dialog-in` and `dialog-out` carry that translate in every keyframe. Drop it and the popup animates from the middle of the viewport to its bottom-right quadrant.
 
 The second point is a class of bug no test here catches: jsdom does not compute animations, so only a real browser would see it. Check a closing transition by eye before shipping it.
 
