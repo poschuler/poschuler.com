@@ -112,6 +112,8 @@ A `ui/` primitive is a Base UI part, a `cva` for its variants, `className` merge
 
 **The panel is full width on a phone and a drawer from `sm` up**, and that follows from the same slot. At three quarters the bar was a wide empty strip beside a close button, and the one thing that belonged in it — the wordmark — would have been the site's own wordmark repeated forty pixels from where it already sat, because the header stayed visible in the strip left over. Full width replaces the header rather than competing with it, and the bar is `h-16` so it lands exactly where the header was. The slide still arrives from the right, which is what says where it came from.
 
+Between `sm` and `lg` — a tablet — the drawer form does put the panel's wordmark on screen beside the page's own, and that is accepted rather than overlooked: at that width they are some three hundred pixels apart with the scrim between them, which reads as one site with a panel over it. Forty pixels apart read as a mistake.
+
 Two Base UI conventions matter when extending them:
 
 - **Compose with `render`, not by nesting.** `<Button render={<Link to="/blog" />}>blog</Button>` — Base UI merges the props of both, so event handlers from each side run. That is what lets a `SheetClose` wrap a `Link` in `header.tsx` and both dismiss the sheet and navigate.
@@ -201,7 +203,9 @@ Internal links are `<Link>`. Not `<a href>`, and not `reloadDocument` — both t
 
 One consequence to remember inside the mobile sheet: client-side navigation leaves the panel mounted, so a link in there has to dismiss it as well. `<SheetClose render={<Link to="…" />}>` does both.
 
-**The header is one row that reflows**, not a desktop header and a mobile header hidden past each other. `NAV_ITEMS` is declared once and rendered twice — as the row above `md`, as the panel below it — and everything else in the header appears exactly once. It was two full `<nav>`s at one point, each with its own wordmark and theme toggle, with the panel trigger outside both; the wordmark rendered three times, and the only navigation landmark on a phone was one that did not contain the navigation.
+**The header is one row that reflows**, not a desktop header and a mobile header hidden past each other. `NAV_ITEMS` is declared once and rendered twice — as the row above `lg`, as the panel below it — and everything else in the header appears exactly once. It was two full `<nav>`s at one point, each with its own wordmark and theme toggle, with the panel trigger outside both; the wordmark rendered three times, and the only navigation landmark on a phone was one that did not contain the navigation.
+
+**The row appears at `lg`, and it carries no icons.** Six top-level destinations is a lot for a horizontal nav and the namespace is closed at eight, so this does not get easier later. With an icon and a gap against each label the row needed roughly 1000px; switching to it at `md` meant that from 768px up it overflowed and pushed the theme toggle off the right edge. Either fix alone is marginal — together the row has room to spare at the width it appears. The icons stay in the panel, where a vertical list is scanned down a column of glyphs; six of them strung along one line is texture rather than help.
 
 Two rules hold that shape together:
 

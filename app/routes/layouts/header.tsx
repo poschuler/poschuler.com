@@ -20,7 +20,10 @@ import {
 } from "~/components/ui/sheet";
 import { cn } from "~/lib/utils";
 
-/** One list, rendered twice — the row above `md`, the panel below it. */
+/**
+ * One list, rendered twice — the row above `lg`, the panel below it. The icon
+ * is read only by the panel; see the note on `Header`.
+ */
 const NAV_ITEMS = [
   { to: "/", label: "home", Icon: HomeIcon },
   { to: "/projects", label: "projects", Icon: Hammer },
@@ -40,7 +43,7 @@ function Wordmark({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "flex items-center gap-2 font-semibold text-default text-lg md:text-base",
+        "flex items-center gap-2 whitespace-nowrap font-semibold text-default text-lg lg:text-base",
         className,
       )}
     >
@@ -61,7 +64,19 @@ function Wordmark({ className }: { className?: string }) {
  *
  * The two `<nav>`s that remain — the row and the panel — carry the same label
  * and never coexist: `hidden` takes the row out of the accessibility tree
- * below `md`, and the trigger that reveals the panel is itself `md:hidden`.
+ * below `lg`, and the trigger that reveals the panel is itself `lg:hidden`.
+ *
+ * **The row appears at `lg`, not at `md`, and it carries no icons.** Six
+ * top-level destinations is a lot for a horizontal nav, and the namespace is
+ * closed at eight — this does not get better later. With an icon and a gap
+ * against each label the row needed about 1000px, so between `md` and that it
+ * overflowed and pushed the theme toggle off the right edge. Either fix alone
+ * is marginal; together the row has room to spare at the width it appears.
+ *
+ * The icons stay in the panel, where they earn their place: a vertical list is
+ * scanned down a column of glyphs. Six of them strung along one line is
+ * texture rather than help, and half of them — blog, timeline, bookmarks — are
+ * shapes a reader has to translate back into the word printed beside them.
  *
  * The trigger stays on the right because the panel arrives from the right.
  * Moving one without the other is what makes a slide-over read as arbitrary:
@@ -70,32 +85,31 @@ function Wordmark({ className }: { className?: string }) {
  */
 export function Header() {
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-default border-b bg-subtle px-4 md:gap-6 md:px-6">
-      <Link to="/" className="mr-auto">
+    <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-default border-b bg-subtle px-4 lg:gap-6 lg:px-6">
+      <Link to="/" className="mr-auto shrink-0">
         <Wordmark />
       </Link>
 
       <nav
         aria-label="Main"
-        className="hidden items-center gap-6 font-semibold text-low text-sm md:flex"
+        className="hidden items-center gap-6 font-semibold text-low text-sm lg:flex"
       >
-        {NAV_ITEMS.map(({ to, label, Icon }) => (
+        {NAV_ITEMS.map(({ to, label }) => (
           <Link
             key={to}
             to={to}
-            className="flex items-center gap-2 transition-colors duration-200 hover:text-default"
+            className="whitespace-nowrap transition-colors duration-200 hover:text-default"
           >
-            <Icon className="size-4" />
-            <span>{label}</span>
+            {label}
           </Link>
         ))}
       </nav>
 
-      {/* Above `md` the toggle sits in the row; below it, inside the panel.
+      {/* Above `lg` the toggle sits in the row; below it, inside the panel.
         * It is a preference, and a preference does not belong shoulder to
         * shoulder with the one control that opens the navigation — on a phone
         * that is two adjacent targets where only one of them matters. */}
-      <ModeToggle className="hidden md:block" />
+      <ModeToggle className="hidden shrink-0 lg:block" />
 
       <Sheet>
         <SheetTrigger
@@ -103,7 +117,7 @@ export function Header() {
             <Button
               variant="outline"
               size="icon"
-              className="shrink-0 md:hidden"
+              className="shrink-0 lg:hidden"
             />
           }
         >
