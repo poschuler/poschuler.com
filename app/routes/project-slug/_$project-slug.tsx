@@ -81,7 +81,7 @@ export default function Project() {
 
   return (
     <main className="min-h-[calc(100vh_-_theme(spacing.16))] flex-1 gap-4 bg-ui p-4 font-mono md:gap-8 md:p-10">
-      <article className="prose mx-auto py-8 lg:max-w-4xl">
+      <article className="prose mx-auto py-8">
         <h1 className="mb-2">{title}</h1>
 
         {/* An archived project is a finished story, and saying so costs

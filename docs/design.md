@@ -56,6 +56,10 @@ Two properties are load-bearing and easy to lose when editing it. Every selector
 
 It covers what the corpus contains: headings, paragraphs, lists, links, inline code, fenced blocks, quotes, images and rules. **An element that appears for the first time — a table, a footnote — will render unstyled**, which is the intended failure: it asks for a decision here rather than inheriting a default nobody chose.
 
+**`prose` owns the measure, and no route overrides it.** `max-width: 72ch` — in a monospace body `1ch` is exactly one character, so that reads as what it is. It is one measure serving prose and code both, which works here only because the code is narrow: across the seed corpus half the lines in a fenced block are under 18 characters and 95% are under 66. At this width a block holds about 78, and the rest scroll inside their own box. The two article routes used to widen themselves to `lg:max-w-4xl`, which bought the last 2% of code lines at the price of 93-character paragraphs on every large screen.
+
+**A loose list is the case to get right.** Markdown makes a list loose — `<li><p>…</p></li>` — as soon as one item contains a blank line, and 42 of the 47 list items in the corpus are loose. The block-margin rule reaches those inner paragraphs, so without a reset every item is spaced like a paragraph and the list stops reading as a list. `:where(li, blockquote) > :first-child / :last-child` zeroes the outer margins and leaves the space between two paragraphs in one item intact. A blockquote always wraps its text the same way, which is why it is in the same rule.
+
 ## Theming
 
 Theme is a **server-rendered, cookie-backed preference** with no client-side JavaScript at all:

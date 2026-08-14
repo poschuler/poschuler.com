@@ -7,6 +7,14 @@
 @import "@radix-ui/colors/mauve";
 @import "@radix-ui/colors/mauve-dark";
 
+/* The scrim, and the only non-Slate primitive here. A dimmer is BLACK in both
+ * themes — that is what makes a panel read as "on top of" rather than "instead
+ * of" — so it has no dark counterpart to import and none of the four solid
+ * scales can supply it. Added when the site got its first slide-over panel
+ * (`site-drawer.tsx`); the full-screen search surface is opaque and uses none of
+ * this. */
+@import "@radix-ui/colors/black-alpha.css";
+
 /* `.system` (= "follow the OS") under prefers-color-scheme: dark.
  * Generated — see scripts/generate-system-dark-css.mjs. Must come last so it
  * overrides the `:root` light values for a `.system` root when the OS is dark. */
@@ -44,9 +52,10 @@
   font-weight: 100 900;
   src: url("@fontsource-variable/inter/files/inter-latin-wght-normal.woff2")
     format("woff2-variations");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
-    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
-    U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
 }
 
 /* Inter Variable — latin-ext */
@@ -57,9 +66,10 @@
   font-weight: 100 900;
   src: url("@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2")
     format("woff2-variations");
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
-    U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF,
-    U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 /* Intel One Mono Variable — latin */
@@ -70,9 +80,10 @@
   font-weight: 300 700;
   src: url("@fontsource-variable/intel-one-mono/files/intel-one-mono-latin-wght-normal.woff2")
     format("woff2-variations");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
-    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
-    U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
 }
 
 /* Intel One Mono Variable — latin-ext */
@@ -83,9 +94,10 @@
   font-weight: 300 700;
   src: url("@fontsource-variable/intel-one-mono/files/intel-one-mono-latin-ext-wght-normal.woff2")
     format("woff2-variations");
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
-    U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF,
-    U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 /* Intel One Mono Variable — latin, italic */
@@ -96,9 +108,10 @@
   font-weight: 300 700;
   src: url("@fontsource-variable/intel-one-mono/files/intel-one-mono-latin-wght-italic.woff2")
     format("woff2-variations");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
-    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
-    U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
 }
 
 /* Intel One Mono Variable — latin-ext, italic */
@@ -109,9 +122,10 @@
   font-weight: 300 700;
   src: url("@fontsource-variable/intel-one-mono/files/intel-one-mono-latin-ext-wght-italic.woff2")
     format("woff2-variations");
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
-    U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF,
-    U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 /* Handles both an explicit `.dark` root and `.system` under an OS dark pref. */
@@ -135,15 +149,17 @@
  * property, so `var(--font-sans)` would resolve to nothing.
  * ------------------------------------------------------------------------- */
 @theme {
-  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-sans:
+    "Inter Variable", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
   /* The dominant typeface on the site: every content page and the whole Resume
    * set `font-mono`. Named explicitly rather than left to Tailwind's default
    * stack, which resolved to whatever monospace the visitor's OS happened to
    * ship — a different page on every machine. */
-  --font-mono: "Intel One Mono Variable", ui-monospace, SFMono-Regular, Menlo,
-    Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-mono:
+    "Intel One Mono Variable", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, "Liberation Mono", "Courier New", monospace;
 
   /* Motion — all three numbers of it. They exist for one thing: a panel
    * entering from an edge of the screen (`ui/sheet.tsx`). Named rather than
@@ -255,6 +271,21 @@
     height: 100%;
   }
 
+  /* A fixed bottom bar has to be paid for in bottom padding, or the last thing
+   * on the page sits under it forever — and only the page that mounts one should
+   * pay. A page that floats a bar below `md` declares it with `data-bottom-bar`
+   * (today only the product page's buy bar), and the shell reserves the space
+   * only when one is present.
+   *
+   * A CSS fact about the DOM rather than a route test in React: a route test
+   * would have to be re-derived on the server and on the client, and the layout
+   * would shift on hydration. Scoped to the widths where the bars exist — above
+   * `md` neither renders and the padding would be dead space. */
+  @media (width < 48rem) {
+    body:has([data-bottom-bar]) [data-app-shell] {
+      padding-bottom: calc(var(--spacing) * 20);
+    }
+  }
 }
 
 /* Long-form bodies: the HTML `marked` produces from a Markdown file, rendered
@@ -273,11 +304,42 @@
  * use for the blocks they compose themselves. */
 @utility prose {
   color: var(--mauve-11);
-  max-width: 65ch;
   line-height: 1.75;
 
-  & :where(p, ul, ol, blockquote, pre, img):not(:where(.not-prose, .not-prose *)) {
+  /* One measure for prose and code, which is a compromise both can live with
+   * here because the code is narrow: across the seed corpus, half the lines in
+   * a fenced block are under 18 characters and 95% are under 66. At this width
+   * a block holds about 78 characters — 98% of them — and the rest scroll
+   * inside their own box. Widening the article to fit the last 2% would cost
+   * every paragraph on the page a line length no one wants to read.
+   *
+   * In a monospace body `1ch` is exactly one character, so this reads as what
+   * it is: 72 characters. */
+  max-width: 72ch;
+
+  /* A 60-character URL or an inline `code` run longer than the measure has no
+   * space to break in. Fenced blocks are exempt on their own: `white-space:
+   * pre` disables this, and they scroll instead. */
+  overflow-wrap: break-word;
+
+  &
+    :where(p, ul, ol, blockquote, pre, img):not(
+      :where(.not-prose, .not-prose *)
+    ) {
     margin-block: 1.25em;
+  }
+
+  /* Markdown makes a list "loose" — `<li><p>…</p></li>` — as soon as one item
+   * has a blank line in it, and 42 of the 47 items in the corpus are loose.
+   * Without this the paragraph inside each item carries the full block margin,
+   * so every list item is spaced like a paragraph and the list stops reading
+   * as a list. Same for the paragraph a blockquote always wraps its text in. */
+  & :where(li, blockquote) > :where(:first-child):not(:where(.not-prose, .not-prose *)) {
+    margin-block-start: 0;
+  }
+
+  & :where(li, blockquote) > :where(:last-child):not(:where(.not-prose, .not-prose *)) {
+    margin-block-end: 0;
   }
 
   & :where(h1, h2, h3, h4):not(:where(.not-prose, .not-prose *)) {
