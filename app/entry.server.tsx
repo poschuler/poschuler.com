@@ -15,7 +15,11 @@ export default async function handleRequest(
   const userAgent = request.headers.get("user-agent");
   // Set in `workers/app.ts`, together with the CSP that names it. React Router
   // passes it down to `<Links>`, `<Scripts>` and `<ScrollRestoration>`.
-  const nonce = loadContext.get(nonceContext);
+  //
+  // Empty collapses to `undefined` on purpose: React renders `nonce=""` for the
+  // empty string but omits the attribute entirely for `undefined`, and an empty
+  // nonce attribute is exactly the mismatch this is meant to avoid.
+  const nonce = loadContext.get(nonceContext) || undefined;
 
   const body = await renderToReadableStream(
     <ServerRouter context={routerContext} url={request.url} nonce={nonce} />,

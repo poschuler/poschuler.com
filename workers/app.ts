@@ -19,7 +19,12 @@ export default {
 
     // Per request, and handed to `<ServerRouter nonce>` in `entry.server.tsx`,
     // which stamps it onto every inline script React Router emits.
-    const nonce = crypto.randomUUID();
+    //
+    // Production only, and that is not an optimisation: dev is exempt from CSP
+    // (see `security-headers.ts`), so a nonce there would be stamped onto
+    // markup no policy will ever check — while React, whose client render
+    // carries no nonce at all, reports the difference as a hydration mismatch.
+    const nonce = import.meta.env.PROD ? crypto.randomUUID() : "";
 
     context.set(cloudflareContext, { env, ctx });
     context.set(nonceContext, nonce);
