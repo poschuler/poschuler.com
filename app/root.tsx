@@ -14,7 +14,7 @@ import { getColorScheme } from "./color-scheme-cookie";
 import { cloudflareContext } from "./context";
 
 // Imported for their hashed build URLs. The `@font-face` rules live in
-// `app/styles/fonts.css`; these two are the latin faces every page needs — the
+// `app/app.css`; these two are the latin faces every page needs — the
 // interface is `font-sans` and every content page is `font-mono` — and without
 // a preload the browser cannot discover either until the stylesheet has parsed.
 import interLatin from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";

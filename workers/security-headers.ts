@@ -27,7 +27,7 @@ export const STRICT_TRANSPORT_SECURITY = "max-age=31536000; includeSubDomains";
  *
  * `style-src` and `font-src` no longer name `fonts.googleapis.com` and
  * `fonts.gstatic.com`. Inter and Intel One Mono are self-hosted from
- * `app/styles/fonts.css`, so a third party can no longer inject a stylesheet or
+ * `app/app.css`, so a third party can no longer inject a stylesheet or
  * a font into this document, and the render path no longer depends on a host
  * this site does not control.
  *

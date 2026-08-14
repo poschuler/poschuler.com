@@ -83,7 +83,7 @@ The same three classes also carry `color-scheme` in `@layer base`: `light`, `dar
 
 ## Typography
 
-- **Inter Variable** for the interface, **Intel One Mono Variable** for everything monospaced. Both are self-hosted from `@fontsource-variable/*`, with the `@font-face` rules written out in `app/styles/fonts.css` rather than imported from the packages — see that file for which subsets ship and why. `root.tsx` preloads the two latin faces; without it the browser cannot discover a font until the stylesheet has parsed.
+- **Inter Variable** for the interface, **Intel One Mono Variable** for everything monospaced. Both are self-hosted from `@fontsource-variable/*`, with the `@font-face` rules written out at the top of `app/app.css` rather than imported from the packages — see the comment there for which subsets ship and why. `root.tsx` preloads the two latin faces; without it the browser cannot discover a font until the stylesheet has parsed.
 - **`font-mono`** for content pages (`/`, `/blog`, `/bookmarks`, `/projects`, `/timeline`, and the Post and Project bodies) and for the Resume's secondary text. This is deliberate character, not an oversight — and it makes the monospace family the site's dominant typeface, which is why it is named rather than left to Tailwind's default stack. On that default it resolved to whatever the visitor's OS shipped, so the site read differently on every machine.
 - Page headings are `text-3xl lg:text-4xl font-semibold tracking-tight`, followed by an italic `blockquote` subtitle in `text-low`. Blog, bookmarks, projects and timeline all share this header shape — match it. The home page does not; see "The home page is the exception".
 
