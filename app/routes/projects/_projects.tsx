@@ -41,8 +41,12 @@ function ArchivedBadge({ project }: { project: ProjectRowType }) {
     return null;
   }
 
+  /* A border rather than a fill. The page is `bg-ui`, and a `bg-subtle` chip
+   * on it is a step *down* the scale — it reads as recessed into the page
+   * rather than as a label on top of it. The site's own rule applies: a
+   * division that needs marking gets a border, not a hue. */
   return (
-    <span className="rounded-md bg-subtle px-2 py-0.5 font-mono text-xs font-semibold text-low">
+    <span className="rounded-md border border-default px-2 py-0.5 font-mono text-xs font-semibold text-low">
       Archived
     </span>
   );
@@ -70,7 +74,7 @@ function Flagship({ project }: { project: ProjectRowType }) {
         )}
       </div>
 
-      <p className="mt-3 max-w-[65ch] text-pretty text-low">{project.summary}</p>
+      <p className="mt-3 text-pretty text-low">{project.summary}</p>
 
       {stack.length > 0 && (
         <p className="mt-3 font-mono text-xs text-low">{stack.join(" · ")}</p>
@@ -133,7 +137,7 @@ export default function Projects() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-2xl space-y-8">
+      <section className="mx-auto w-full max-w-measure space-y-8">
         {flagship.map((project) => (
           <Flagship key={project.idProject} project={project} />
         ))}

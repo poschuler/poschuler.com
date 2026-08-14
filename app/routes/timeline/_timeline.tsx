@@ -53,7 +53,7 @@ export default function Timeline() {
         </div>
       </section>
 
-      <section className="lg:max-w-4xl xl:max-w-5xl 2xl:max-w-7xl mx-auto">
+      <section className="mx-auto w-full max-w-measure">
         {contentItems &&
           contentItems.map((item) => {
             return <ContentItem key={item.idContent} item={item} />;

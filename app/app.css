@@ -161,6 +161,20 @@
     "Intel One Mono Variable", ui-monospace, SFMono-Regular, Menlo, Monaco,
     Consolas, "Liberation Mono", "Courier New", monospace;
 
+  /* The column. Every page is one, and this is how wide it is: `max-w-measure`
+   * on the section, and the same value inside `prose`.
+   *
+   * It was four values before it was one — 650px on the home page, 42rem on
+   * Projects and the Resume, 72ch in prose, and `lg:max-w-4xl xl:max-w-5xl
+   * 2xl:max-w-7xl` on Blog, Bookmarks and Timeline, which grew a list of dates
+   * and titles to 1280px and left a thousand pixels of nothing beside it.
+   *
+   * 42rem is about 70 characters of this monospace, and it holds a fenced code
+   * block of roughly 75 — 98% of the lines in the corpus. The last 2% scroll
+   * inside their own box, which is a better trade than every paragraph on the
+   * site running to a length no one reads. */
+  --container-measure: 42rem;
+
   /* Motion — all three numbers of it. They exist for one thing: a panel
    * entering from an edge of the screen (`ui/sheet.tsx`). Named rather than
    * written into a class list, so the site's whole motion budget is legible
@@ -306,16 +320,9 @@
   color: var(--mauve-11);
   line-height: 1.75;
 
-  /* One measure for prose and code, which is a compromise both can live with
-   * here because the code is narrow: across the seed corpus, half the lines in
-   * a fenced block are under 18 characters and 95% are under 66. At this width
-   * a block holds about 78 characters — 98% of them — and the rest scroll
-   * inside their own box. Widening the article to fit the last 2% would cost
-   * every paragraph on the page a line length no one wants to read.
-   *
-   * In a monospace body `1ch` is exactly one character, so this reads as what
-   * it is: 72 characters. */
-  max-width: 72ch;
+  /* The same column as every list page — see `--container-measure`. An article
+   * and an index are the same one column; only what is stacked in it differs. */
+  max-width: var(--container-measure);
 
   /* A 60-character URL or an inline `code` run longer than the measure has no
    * space to break in. Fenced blocks are exempt on their own: `white-space:

@@ -6,14 +6,16 @@ The conventions this codebase follows: how the interface is put together, how mo
 
 The site is a developer's notebook, not a marketing page. That reads through in every choice: monospace type on content pages, dark mode as a first-class state, and almost no imagery — one portrait and one Open Graph card, both local. Content is the only thing on screen that competes for attention.
 
-Each page is one column, centred, capped at `lg:max-w-4xl` for lists and prose. Nothing is multi-column; nothing is above the fold in a way that pushes content down. A Content Item in a list is a date, an icon, and a title — nothing else. There are no cards, no excerpts, no thumbnails, no read-time estimates.
+**Each page is one column, centred, `max-w-measure` wide** — home, blog, projects, bookmarks, timeline, resume and the article bodies alike. An index and an article are the same column; only what is stacked in it differs. Nothing is multi-column; nothing is above the fold in a way that pushes content down. A Content Item in a list is a title and a date — nothing else. There are no cards, no excerpts, no thumbnails, no read-time estimates.
+
+The width lives in one place, `--container-measure` in `app.css`, and that is the point of it. It was four values before it was one: `max-w-[650px]` on the home page, `max-w-2xl` on Projects and the Resume, `72ch` inside `prose`, and `lg:max-w-4xl xl:max-w-5xl 2xl:max-w-7xl` on Blog, Bookmarks and Timeline — which grew a list of dates and titles to 1280px on a wide screen and left a thousand pixels of nothing beside each one.
 
 ### The home page is the exception, on purpose
 
 `/` is a landing page, not a notebook page, and it breaks three of the rules above deliberately. The reasoning is in `evolution-plan/01-information-architecture.md`, Decision 3; what follows is the rule as it now stands.
 
 - **It leads with content above the fold** — a portrait, the role, the timezone, and two paragraphs — because a visitor who arrives from an application has to learn what this person does before anything else is worth reading.
-- **Its column is `max-w-[650px]`, not `lg:max-w-4xl`.** Prose wants roughly 75 characters a line; `4xl` is a list width. Both sections of the home use the narrower one so the page reads as a single strip rather than a landing page with a wider index bolted underneath.
+- **Its column is `max-w-measure`, like every other page.** Both sections of the home use it, so the page reads as a single strip rather than a landing page with a wider index bolted underneath.
 - **It does not carry the shared header shape** (see Typography): no italic `blockquote` subtitle, because the subtitle slot is doing real work there — role, then location and timezone.
 
 The Timeline it used to render lives at `/timeline`. The home keeps a short, Post-only excerpt of the three newest, and an integration test asserts it stays Post-only: a Bookmark reaching the landing page means the Timeline has leaked back in.
@@ -24,7 +26,9 @@ Between the hero and that excerpt sits **one Project, the flagship, and never mo
 
 `/projects` renders by Tier, and the Tier is the whole layout rule: the flagship alone in its row, at `text-2xl` with its summary, stack and live link; supporting projects in a two-column grid at `text-lg`. Chekalo never competes with anything because nothing else is in its row.
 
-An archived Project says so — a small `bg-subtle` badge beside the title on the index, and a line under the heading on its own page. A finished project is a complete story and costs nothing; one still written in the present tense after it has stopped is what costs.
+An archived Project says so — a small outlined badge beside the title on the index, and a line under the heading on its own page. A finished project is a complete story and costs nothing; one still written in the present tense after it has stopped is what costs.
+
+The badge is a border rather than a fill, and that generalises. Both pages are `bg-ui`, so a `bg-subtle` chip on them is a step *down* the scale: it recedes into the page instead of sitting on it. With no accent in the palette, a label that has to separate itself from its surface takes a border.
 
 A Project page carries its revision line under the summary rather than a published date, because a Project is revised in place and has never been published in the sense a Post has. Earlier revisions go at the foot, below the body, and render only from the second one onward — with one, they would repeat the line under the title.
 
@@ -56,7 +60,7 @@ Two properties are load-bearing and easy to lose when editing it. Every selector
 
 It covers what the corpus contains: headings, paragraphs, lists, links, inline code, fenced blocks, quotes, images and rules. **An element that appears for the first time — a table, a footnote — will render unstyled**, which is the intended failure: it asks for a decision here rather than inheriting a default nobody chose.
 
-**`prose` owns the measure, and no route overrides it.** `max-width: 72ch` — in a monospace body `1ch` is exactly one character, so that reads as what it is. It is one measure serving prose and code both, which works here only because the code is narrow: across the seed corpus half the lines in a fenced block are under 18 characters and 95% are under 66. At this width a block holds about 78, and the rest scroll inside their own box. The two article routes used to widen themselves to `lg:max-w-4xl`, which bought the last 2% of code lines at the price of 93-character paragraphs on every large screen.
+**`prose` takes the site's measure, and no route overrides it.** `max-width: var(--container-measure)` — the same column the index pages use. It serves prose and code both, which works here only because the code is narrow: across the seed corpus half the lines in a fenced block are under 18 characters and 95% are under 66. At this width a block holds about 75, and the last 2% scroll inside their own box. The two article routes used to widen themselves to `lg:max-w-4xl`, which bought those few lines at the price of 93-character paragraphs on every large screen.
 
 **A loose list is the case to get right.** Markdown makes a list loose — `<li><p>…</p></li>` — as soon as one item contains a blank line, and 42 of the 47 list items in the corpus are loose. The block-margin rule reaches those inner paragraphs, so without a reset every item is spaced like a paragraph and the list stops reading as a list. `:where(li, blockquote) > :first-child / :last-child` zeroes the outer margins and leaves the space between two paragraphs in one item intact. A blockquote always wraps its text the same way, which is why it is in the same rule.
 
@@ -89,6 +93,8 @@ The same three classes also carry `color-scheme` in `@layer base`: `light`, `dar
 - **Inter Variable** for the interface, **Intel One Mono Variable** for everything monospaced. Both are self-hosted from `@fontsource-variable/*`, with the `@font-face` rules written out at the top of `app/app.css` rather than imported from the packages — see the comment there for which subsets ship and why. `root.tsx` preloads the two latin faces; without it the browser cannot discover a font until the stylesheet has parsed.
 - **`font-mono`** for content pages (`/`, `/blog`, `/bookmarks`, `/projects`, `/timeline`, and the Post and Project bodies) and for the Resume's secondary text. This is deliberate character, not an oversight — and it makes the monospace family the site's dominant typeface, which is why it is named rather than left to Tailwind's default stack. On that default it resolved to whatever the visitor's OS shipped, so the site read differently on every machine.
 - Page headings are `text-3xl lg:text-4xl font-semibold tracking-tight`, followed by an italic `blockquote` subtitle in `text-low`. Blog, bookmarks, projects and timeline all share this header shape — match it. The home page does not; see "The home page is the exception".
+- **Every item in an index list is a real heading**, and the title leads. `/blog` and `/projects` are pages whose whole job is to be indexed; a list of titles rendered as plain links gives a crawler an `<h1>` and then nothing. `PostItem` takes `headingLevel` because the same item sits at two depths — the page's second level on `/blog`, the third on the home page under "Recent writing".
+- **The date follows the title, quieter.** It read the other way round on both pages: the date at `text-base font-medium` in the default colour, the title a size smaller in `text-low`, which made the loudest thing in the list the one word that tells a reader nothing.
 
 ## Component layers
 

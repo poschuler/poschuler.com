@@ -87,7 +87,7 @@ export const meta: MetaFunction = () => {
 export default function resume() {
   return (
     <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-ui p-4 md:gap-8 md:p-10">
-      <section className="mx-auto w-full max-w-2xl space-y-8">
+      <section className="mx-auto w-full max-w-measure space-y-8">
         {/* The CV's order, and it is load-bearing: a reader is placed by stack
           * before being told the history, not after it. */}
         <Hero />

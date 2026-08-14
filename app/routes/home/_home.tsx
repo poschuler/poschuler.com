@@ -104,7 +104,7 @@ export default function Home() {
 
   return (
     <main className="flex flex-col min-h-[calc(100vh_-_theme(spacing.16))] flex-1 gap-4 p-4 md:gap-8 md:p-10 font-mono bg-ui">
-      <section className="w-full max-w-[650px] mx-auto pt-4">
+      <section className="mx-auto w-full max-w-measure pt-4">
         <div className="mx-auto relative flex size-32 overflow-hidden rounded-full">
           {/* Local, not the GitHub avatar: this is the one image the page cannot
             * afford to have served by somebody else. */}
@@ -174,7 +174,7 @@ export default function Home() {
         * believed; this is where the assertion becomes something a reader can
         * check. Directly below it, for that reason. */}
       {flagship && (
-        <section className="w-full max-w-[650px] mx-auto">
+        <section className="mx-auto w-full max-w-measure">
           <h2 className="text-lg font-semibold tracking-tight">What I build</h2>
 
           <article className="my-4 border-default border-l-2 py-4 px-4">
@@ -202,11 +202,11 @@ export default function Home() {
 
       {/* The same column as the hero, so the page reads as one narrow strip
         * rather than a landing page with a wider index bolted underneath. */}
-      <section className="w-full max-w-[650px] mx-auto">
+      <section className="mx-auto w-full max-w-measure">
         <h2 className="text-lg font-semibold tracking-tight">Recent writing</h2>
 
         {recentPosts.map((post) => (
-          <PostItem key={post.idContent} post={post} />
+          <PostItem key={post.idContent} post={post} headingLevel="h3" />
         ))}
 
         <Link

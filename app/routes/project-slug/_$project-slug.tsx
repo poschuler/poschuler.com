@@ -88,12 +88,14 @@ export default function Project() {
           * nothing. A dead one still written in the present tense is what
           * costs. */}
         {status === "archived" && (
-          <p className="not-prose mb-4 inline-flex rounded-md bg-subtle px-2 py-0.5 font-mono text-xs font-semibold text-low">
+          <p className="not-prose mb-4 inline-flex rounded-md border border-default px-2 py-0.5 font-mono text-xs font-semibold text-low">
             Archived — no longer maintained
           </p>
         )}
 
-        <p className="lead text-pretty">{summary}</p>
+        {/* `lead` was a `@tailwindcss/typography` class and went with it. The
+          * summary is the first paragraph of the article and reads as one. */}
+        <p className="text-pretty">{summary}</p>
 
         <div className="not-prose flex flex-wrap items-center gap-4">
           {liveUrl && <LiveLink href={liveUrl} className="text-low" />}

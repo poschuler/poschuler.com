@@ -49,9 +49,8 @@ export default function Blog() {
           </blockquote>
         </div>
       </section>
-      {/* <Separator className="mx-auto w-28" /> */}
 
-      <section className="lg:max-w-4xl xl:max-w-5xl 2xl:max-w-7xl mx-auto">
+      <section className="mx-auto w-full max-w-measure">
         {posts &&
           posts.map((post) => {
             return <PostItem key={post.idContent} post={post} />;
