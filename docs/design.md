@@ -108,7 +108,9 @@ A `ui/` primitive is a Base UI part, a `cva` for its variants, `className` merge
 
 **A dialog is given a name it cannot omit.** `SheetContent` takes `title` as a required prop and renders it as the `Dialog.Title`, visually hidden. A modal with no accessible name is announced as nothing, and an optional prop is one a caller forgets — the mobile navigation had, for as long as it existed.
 
-**Hidden, though, because this panel is the only one.** A title earns the screen when the reader could have opened one of several panels and needs to know which — filters, sorting, a detail view. Opened from a single trigger and holding a single thing, a visible "Navigation" names what the reader just did. The panel's header bar exists to keep the close button out of the content's way, not to hold a heading; when a second panel appears, that is when to render the name in it.
+**Hidden, though, because this panel is the only one.** A title earns the screen when the reader could have opened one of several panels and needs to know which — filters, sorting, a detail view. Opened from a single trigger and holding a single thing, a visible "Navigation" names what the reader just did. What the bar shows instead comes from `heading`, a separate prop, because the two are different questions: the accessible name says *which dialog this is*, and the visible slot holds whatever makes the panel continuous with the surface it replaced. Here that is the wordmark. When a second panel appears, its name is what belongs in `heading`.
+
+**The panel is full width on a phone and a drawer from `sm` up**, and that follows from the same slot. At three quarters the bar was a wide empty strip beside a close button, and the one thing that belonged in it — the wordmark — would have been the site's own wordmark repeated forty pixels from where it already sat, because the header stayed visible in the strip left over. Full width replaces the header rather than competing with it, and the bar is `h-16` so it lands exactly where the header was. The slide still arrives from the right, which is what says where it came from.
 
 Two Base UI conventions matter when extending them:
 

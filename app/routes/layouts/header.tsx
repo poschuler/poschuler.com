@@ -18,6 +18,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from "~/components/ui/sheet";
+import { cn } from "~/lib/utils";
 
 /** One list, rendered twice — the row above `md`, the panel below it. */
 const NAV_ITEMS = [
@@ -28,6 +29,26 @@ const NAV_ITEMS = [
   { to: "/timeline", label: "timeline", Icon: Clock },
   { to: "/resume", label: "resume", Icon: FileCode2 },
 ] as const;
+
+/**
+ * The mark, in the header and again at the head of the open panel. Written
+ * once because it is one thing: only the element around it differs. In the
+ * header it is the link home; in the panel it is not, because `home` is the
+ * first item in the list directly under it.
+ */
+function Wordmark({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        "flex items-center gap-2 font-semibold text-default text-lg md:text-base",
+        className,
+      )}
+    >
+      <Terminal className="size-6" />
+      poschuler
+    </span>
+  );
+}
 
 /**
  * One row that reflows, rather than two whole headers hidden past each other.
@@ -50,12 +71,8 @@ const NAV_ITEMS = [
 export function Header() {
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-default border-b bg-subtle px-4 md:gap-6 md:px-6">
-      <Link
-        to="/"
-        className="mr-auto flex items-center gap-2 font-semibold text-default text-lg md:text-base"
-      >
-        <Terminal className="size-6" />
-        <span>poschuler</span>
+      <Link to="/" className="mr-auto">
+        <Wordmark />
       </Link>
 
       <nav
@@ -94,7 +111,7 @@ export function Header() {
           <span className="sr-only">Open navigation</span>
         </SheetTrigger>
 
-        <SheetContent title="Navigation">
+        <SheetContent title="Navigation" heading={<Wordmark />}>
           {/* Every link is a `SheetClose`: client-side navigation leaves the
             * sheet mounted, so the panel has to dismiss itself on the way out. */}
           <nav aria-label="Main" className="grid gap-1 text-lg">

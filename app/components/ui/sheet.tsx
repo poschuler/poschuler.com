@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   Dialog as BaseDialog,
   type DialogPopupProps,
@@ -40,6 +41,7 @@ type StyledProps<Props> = Omit<Props, "className"> & { className?: string };
  */
 function SheetContent({
   title,
+  heading,
   className,
   children,
   ...props
@@ -47,9 +49,17 @@ function SheetContent({
   /**
    * Required rather than optional: a dialog with no accessible name is one a
    * screen reader announces as nothing, and an optional prop is one a caller
-   * forgets. Not rendered visibly — see the bar below.
+   * forgets. Never rendered visibly — `heading` is what the bar shows.
    */
   title: string;
+  /**
+   * What sits at the left of the bar. Separate from `title` because the two
+   * are not the same thing: the accessible name says *which dialog this is*,
+   * and what belongs on screen here is whatever makes the panel continuous
+   * with the surface it replaced — for the navigation, the site's wordmark.
+   * A panel that could have been one of several wants its name here instead.
+   */
+  heading?: ReactNode;
 }) {
   return (
     <BaseDialog.Portal>
@@ -62,9 +72,17 @@ function SheetContent({
           "motion-reduce:transition-none",
         )}
       />
+      {/* Full width on a phone, a drawer from `sm` up. At three quarters the
+        * bar was a wide empty strip beside a close button, and the one thing
+        * that belonged in it — the wordmark — would have been the site's own
+        * wordmark repeated forty pixels from where it already was, since the
+        * header stayed visible in the strip left over. Full width replaces the
+        * header instead of competing with it, and the bar becomes the thing it
+        * covers. The slide still arrives from the right, which is what says
+        * where it came from. */}
       <BaseDialog.Popup
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex w-3/4 flex-col border-default border-l bg-app shadow-lg focus:outline-none sm:max-w-sm",
+          "fixed inset-y-0 right-0 z-50 flex w-full flex-col bg-app shadow-lg focus:outline-none sm:w-3/4 sm:max-w-sm sm:border-default sm:border-l",
           "transition-transform duration-panel ease-panel",
           "data-ending-style:duration-panel-out data-ending-style:ease-in",
           "data-starting-style:translate-x-full data-ending-style:translate-x-full",
@@ -73,14 +91,12 @@ function SheetContent({
         )}
         {...props}
       >
-        {/* The bar exists to give the close button a home out of the content's
-          * way, not to hold a heading. The title stays invisible: this panel
-          * opens from one trigger and holds one thing, so a visible
-          * "Navigation" would only name what the reader just did. A dialog
-          * that could be one of several — filters, sorting — would want its
-          * name on screen, and that is when to render it here. */}
-        <div className="flex h-16 shrink-0 items-center justify-end border-default border-b px-4">
+        {/* `h-16` is the site header's height: the bar lands exactly where the
+          * header was, so the panel reads as that header rather than as a
+          * sheet of paper dropped over it. */}
+        <div className="flex h-16 shrink-0 items-center justify-between gap-2 border-default border-b px-4">
           <BaseDialog.Title className="sr-only">{title}</BaseDialog.Title>
+          {heading ?? <span />}
           <BaseDialog.Close
             aria-label={`Close ${title.toLowerCase()}`}
             className="-mr-2 flex size-11 shrink-0 items-center justify-center rounded-md text-low transition-colors hover:bg-hover hover:text-default focus:outline-none focus-visible:ring-2 focus-visible:ring-default"
