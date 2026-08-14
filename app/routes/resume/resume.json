@@ -127,7 +127,7 @@
   "education": [
     {
       "row": 2,
-      "institution": "Escuela de Postgrado UTP",
+      "institution": "Universidad Tecnológica del Perú (UTP) Graduate School",
       "url": "https://www.postgradoutp.edu.pe/",
       "area": "MBA",
       "summary": "",
@@ -136,7 +136,7 @@
     },
     {
       "row": 5,
-      "institution": "Universidad Tecnológica del Perú (UTP)",
+      "institution": "UTP",
       "url": "https://www.utp.edu.pe/",
       "area": "B.S. in Software Engineering",
       "summary": "",
