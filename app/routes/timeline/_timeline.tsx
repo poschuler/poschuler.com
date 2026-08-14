@@ -47,7 +47,7 @@ export default function Timeline() {
         </div>
 
         <div className="max-w-[450px] mx-auto">
-          <blockquote className="text-center mt-2 italic text-muted-foreground text-lg">
+          <blockquote className="text-center mt-2 italic text-low text-lg">
             What I write and what I read, in the order it happened
           </blockquote>
         </div>

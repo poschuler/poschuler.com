@@ -44,7 +44,7 @@ export default function Blog() {
         </div>
 
         <div className="max-w-[450px] mx-auto">
-          <blockquote className="text-center mt-2 italic text-muted-foreground text-lg">
+          <blockquote className="text-center mt-2 italic text-low text-lg">
             My articles on topics I care about
           </blockquote>
         </div>

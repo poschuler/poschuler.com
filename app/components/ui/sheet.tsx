@@ -77,7 +77,7 @@ function SheetContent({
         {...props}
       >
         {children}
-        <BaseDialog.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+        <BaseDialog.Close className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-default disabled:pointer-events-none">
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </BaseDialog.Close>
@@ -116,7 +116,7 @@ function SheetFooter({
 function SheetTitle({ className, ...props }: StyledProps<DialogTitleProps>) {
   return (
     <BaseDialog.Title
-      className={cn("text-lg font-semibold text-foreground", className)}
+      className={cn("text-lg font-semibold text-default", className)}
       {...props}
     />
   );
@@ -128,7 +128,7 @@ function SheetDescription({
 }: StyledProps<DialogDescriptionProps>) {
   return (
     <BaseDialog.Description
-      className={cn("text-sm text-muted-foreground", className)}
+      className={cn("text-sm text-low", className)}
       {...props}
     />
   );

@@ -32,22 +32,20 @@ A Project page carries its revision line under the summary rather than a publish
 
 Color comes from **Radix Colors** scales, never from Tailwind's default palette. Radix's 12-step scales are semantic by position — step 1 is app background, 6 is a subtle border, 9 is a solid fill, 12 is high-contrast text — and each has a matched dark variant, so a single token name works in both themes with no `dark:` variant needed.
 
-`app/app.css` maps those scales onto named tokens in a Tailwind v4 `@theme` block. **Six families are imported, and six are used** — an imported scale ships ~2.5 kB of custom properties into render-blocking CSS whether or not a token reads it, so adding an `@import` without a matching token is a regression:
+`app/app.css` maps those scales onto named tokens in a Tailwind v4 `@theme` block. **Two families are imported, and two have tokens** — an imported scale ships ~2.2 kB of custom properties into render-blocking CSS whether or not a token reads it, so adding an `@import` without a matching token is a regression:
 
 | Family     | Scale     | Used for                       |
 | ---------- | --------- | ------------------------------ |
 | neutral    | `mauve`   | every surface, border and text |
-| primary    | `indigo`  | accent                         |
-| danger     | `tomato`  | destructive states             |
-| warning    | `amber`   | caution states                 |
-| success    | `grass`   | confirmation states            |
-| info       | `violet`  | informational states           |
+| primary    | `indigo`  | reserved for an accent         |
 
-Adding a family means three edits in step: the `@import` pair in `app.css`, the tokens in `@theme`, and `SCALES` in `scripts/generate-system-dark-css.mjs` (then re-run it). Drop one and either the token resolves to nothing or `system` users get the light value in dark mode.
+Four further families — `tomato`, `amber`, `grass` and `violet`, mapped to `danger`, `warning`, `success` and `info` — were imported and tokenised but never painted anything, and were removed. Bringing a family back means three edits in step: the `@import` pair in `app.css`, the tokens in `@theme`, and `SCALES` in `scripts/generate-system-dark-css.mjs` (then re-run it). Drop one and either the token resolves to nothing or `system` users get the light value in dark mode.
 
-**As rendered today the site is monochrome.** `indigo` has tokens but nothing paints with them, so the table above is intent rather than description. Anything designed to match the site — the Open Graph card, for one — should be mauve only, and reach for a border rather than a hue when it needs to divide something.
+**As rendered, the site is monochrome.** `indigo` has tokens but nothing paints with them; it is held for an accent that has not been designed yet. Anything meant to match the site — the Open Graph card, for one — should be mauve only, and reach for a border rather than a hue when it needs to divide something.
 
-The reason nothing paints with it is that the classes reaching for the accent name **shadcn's** tokens rather than this project's: `bg-primary` and `text-primary` instead of `bg-primary-solid` and `text-primary-default`, plus `bg-secondary`, `text-secondary-foreground`, `ring-ring` and `ring-offset-background`, none of which exist in `@theme`. They resolve to nothing and the elements inherit their colour. `app/components/ui/button.tsx` still carries them; the Resume's chips did until they were rewritten to `text-low`, which is what new code should do. **Substituting a real token for a dead one is a rename and is always safe; deciding that the accent should now appear somewhere it never did is a design decision** — do not smuggle the second in under the first.
+Every class in the tree resolves to a token that exists. It was not always so: the tree was scaffolded from shadcn/ui and carried `bg-primary`, `bg-secondary`, `bg-card`, `bg-accent`, `text-muted-foreground`, `ring-ring`, `ring-offset-background` and `border-input` — eighteen names that live in shadcn's `@theme` and not in this one. They emitted no CSS, so every element carrying one silently inherited its colour, and the site's whole low-emphasis tier rendered at full contrast. They were substituted for real tokens in one pass. **Substituting a real token for a dead one is a rename and is always safe; deciding that the accent should now appear somewhere it never did is a design decision** — do not smuggle the second in under the first.
+
+The lesson generalises past shadcn: **a Tailwind class naming a token that does not exist fails silently.** Nothing in the type system, the linter or the test suite catches it — the class is simply dropped from the output. When adding a token-bearing class, confirm the token is in `@theme`, or grep the built CSS in `build/client/assets/root-*.css` for it.
 
 Each family expands into the same step vocabulary — `app`, `subtle`, `ui`, `hover`, `active`, `border`, `solid`, `solid-hover`, `solid-active` for backgrounds; `default` / `low` for text; `default` / `ui` / `hover` / `active` for borders and rings.
 
@@ -81,8 +79,7 @@ Radix ships its dark values scoped to `.dark, .dark-theme`, which a `.system` ro
 
 - **Inter** for the interface, loaded from Google Fonts with `preconnect` hints in `root.tsx`'s `links`.
 - **`font-mono`** for content pages (`/`, `/blog`, `/bookmarks`, `/timeline`, `/blog/:slug`) and for the Resume's secondary text. This is deliberate character, not an oversight.
-- Page headings are `text-3xl lg:text-4xl font-semibold tracking-tight`, followed by an italic `blockquote` subtitle in `text-muted-foreground`. Blog, bookmarks and timeline all share this header shape — match it. The home page does not; see "The home page is the exception".
-- **`text-muted-foreground` resolves to nothing.** No `muted` token exists in `app/app.css`, so every element carrying that class renders in the inherited colour. It is inherited from shadcn and used across the Resume and the `ui/` primitives, which is why the subtitle rule above still names it — the rule describes what the code says, not what it paints. New code should use `text-low`. Fixing the existing occurrences is a change of its own, not something to do in passing.
+- Page headings are `text-3xl lg:text-4xl font-semibold tracking-tight`, followed by an italic `blockquote` subtitle in `text-low`. Blog, bookmarks, projects and timeline all share this header shape — match it. The home page does not; see "The home page is the exception".
 
 ## Component layers
 
@@ -97,7 +94,11 @@ Two layers, both canonical since the inherited component sets were deleted:
 
 `ui/` holds only what is actually imported — `button`, `icon-button`, `dialog`, `sheet`, `command`, `brand-icons`. Add the one file you need, never a set.
 
-Every primitive follows the same shape: a Base UI part, styled with `cva` variants, `className` merged through `cn()`, and props typed as `Omit<Part.Props, "className"> & { className?: string }`. Two Base UI conventions matter when extending them:
+Every primitive follows the same shape: a Base UI part, styled with `cva` variants, `className` merged through `cn()`, and props typed as `Omit<Part.Props, "className"> & { className?: string }`.
+
+**Only the variants the site actually renders carry styles.** `button` keeps `outline` and `secondary`, `icon-button` keeps `contained` and `outline`, and both stop there. A variant nobody asks for is a set of class names no browser ever evaluates, which is exactly where a dead token hides indefinitely — the removed `danger` and `success` variants had been reaching for `ring-danger` and `ring-success`, neither of which exists. Adding one back is three lines when a second consumer appears.
+
+Two Base UI conventions matter when extending them:
 
 - **Compose with `render`, not by nesting.** `<Button render={<Link to="/blog" />}>blog</Button>` — Base UI merges the props of both, so event handlers from each side run. That is what lets a `SheetClose` wrap a `Link` in `header.tsx` and both dismiss the sheet and navigate.
 - **Transitions key off `data-open` / `data-closed`**, not the `data-state` shadcn/ui uses. Copying a shadcn class list wholesale will silently animate nothing.

@@ -127,7 +127,7 @@ export default function Projects() {
         </div>
 
         <div className="max-w-[450px] mx-auto">
-          <blockquote className="text-center mt-2 italic text-muted-foreground text-lg">
+          <blockquote className="text-center mt-2 italic text-low text-lg">
             Things I have built and run, rather than things I have used
           </blockquote>
         </div>

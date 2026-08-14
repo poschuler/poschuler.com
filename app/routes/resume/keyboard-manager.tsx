@@ -102,7 +102,7 @@ export function KeyboardManager() {
                   >
                     <BrandNetworkIcon
                       network={profile.network}
-                      className="mr-2 size-4 text-muted-foreground"
+                      className="mr-2 size-4 text-low"
                     />
                     <span className="font-mono">{profile.network}</span>
                     <CommandShortcut className="uppercase">

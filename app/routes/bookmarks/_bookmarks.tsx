@@ -50,7 +50,7 @@ export default function Bookmarks() {
         </div>
 
         <div className="max-w-[450px] mx-auto">
-          <blockquote className="text-center mt-2 italic text-muted-foreground text-lg">
+          <blockquote className="text-center mt-2 italic text-low text-lg">
             Links I've bookmarked and learned from
           </blockquote>
         </div>

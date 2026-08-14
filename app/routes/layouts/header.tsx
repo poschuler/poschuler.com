@@ -25,15 +25,15 @@ function Wordmark({ className }: { className?: string }) {
 
 export function Header() {
   return (
-    <header className="sticky top-0 flex h-16 items-center gap-4 bg-subtle border-default border-b bg-background px-4 md:px-6 justify-end md:justify-normal z-10">
-      <nav className="hidden flex-col gap-6 text-de text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6 flex-grow">
+    <header className="sticky top-0 flex h-16 items-center gap-4 bg-subtle border-default border-b px-4 md:px-6 justify-end md:justify-normal z-10">
+      <nav className="hidden flex-col gap-6 text-default text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6 flex-grow">
         <Wordmark className="flex items-center gap-2 text-lg font-semibold md:text-base" />
         <div className="flex flex-grow justify-end items-center gap-6 text-low text-lg font-semibold md:text-base">
           {NAV_ITEMS.map(({ to, label, Icon }) => (
             <Link
               key={to}
               to={to}
-              className="flex items-center gap-2 text-muted-foreground transition-colors duration-200 hover:text-default"
+              className="flex items-center gap-2 text-low transition-colors duration-200 hover:text-default"
             >
               <Icon className="h-4 w-4" />
               <span>{label}</span>

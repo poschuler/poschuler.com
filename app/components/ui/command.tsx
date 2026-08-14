@@ -57,7 +57,7 @@ function CommandInput({
       <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
       <Autocomplete.Input
         className={cn(
-          "flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+          "flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-low disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
         {...props}
@@ -102,11 +102,11 @@ function CommandGroup({
 }: CommandGroupProps) {
   return (
     <Autocomplete.Group
-      className={cn("overflow-hidden px-2 text-foreground", className)}
+      className={cn("overflow-hidden px-2 text-default", className)}
       {...props}
     >
       {heading ? (
-        <Autocomplete.GroupLabel className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+        <Autocomplete.GroupLabel className="px-2 py-1.5 text-xs font-medium text-low">
           {heading}
         </Autocomplete.GroupLabel>
       ) : null}
@@ -119,7 +119,7 @@ function CommandItem({ className, ...props }: StyledProps<AutocompleteItemProps>
   return (
     <Autocomplete.Item
       className={cn(
-        "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-hover data-[highlighted]:text-default data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className,
       )}
       {...props}
@@ -146,7 +146,7 @@ function CommandShortcut({
   return (
     <span
       className={cn(
-        "ml-auto text-xs tracking-widest text-muted-foreground",
+        "ml-auto text-xs tracking-widest text-low",
         className,
       )}
       {...props}

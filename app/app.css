@@ -1,21 +1,13 @@
 @import "tailwindcss" source(".");
 
-/* Only the six families the `@theme` block below maps onto tokens. Every scale
- * imported here ships ~2.5 kB of custom properties whether or not anything
+/* Only the families the `@theme` block below maps onto tokens. Every scale
+ * imported here ships ~2.2 kB of custom properties whether or not anything
  * reads it, so an unused import is dead weight in render-blocking CSS.
  * Keep this list in sync with SCALES in scripts/generate-system-dark-css.mjs. */
 @import "@radix-ui/colors/mauve";
 @import "@radix-ui/colors/mauve-dark";
 @import "@radix-ui/colors/indigo";
 @import "@radix-ui/colors/indigo-dark";
-@import "@radix-ui/colors/tomato";
-@import "@radix-ui/colors/tomato-dark";
-@import "@radix-ui/colors/amber";
-@import "@radix-ui/colors/amber-dark";
-@import "@radix-ui/colors/grass";
-@import "@radix-ui/colors/grass-dark";
-@import "@radix-ui/colors/violet";
-@import "@radix-ui/colors/violet-dark";
 
 /* `.system` (= "follow the OS") under prefers-color-scheme: dark.
  * Generated — see scripts/generate-system-dark-css.mjs. Must come last so it
@@ -61,57 +53,11 @@
   --background-color-primary-solid-hover: var(--indigo-10);
   --background-color-primary-solid-active: var(--indigo-11);
 
-  --background-color-danger-app: var(--tomato-1);
-  --background-color-danger-subtle: var(--tomato-2);
-  --background-color-danger-ui: var(--tomato-3);
-  --background-color-danger-hover: var(--tomato-4);
-  --background-color-danger-active: var(--tomato-5);
-  --background-color-danger-solid: var(--tomato-9);
-  --background-color-danger-solid-hover: var(--tomato-10);
-  --background-color-danger-solid-active: var(--tomato-11);
-
-  --background-color-warning-app: var(--amber-1);
-  --background-color-warning-subtle: var(--amber-2);
-  --background-color-warning-ui: var(--amber-3);
-  --background-color-warning-hover: var(--amber-4);
-  --background-color-warning-active: var(--amber-5);
-  --background-color-warning-solid: var(--amber-9);
-  --background-color-warning-solid-hover: var(--amber-10);
-  --background-color-warning-solid-active: var(--amber-11);
-
-  --background-color-success-app: var(--grass-1);
-  --background-color-success-subtle: var(--grass-2);
-  --background-color-success-ui: var(--grass-3);
-  --background-color-success-hover: var(--grass-4);
-  --background-color-success-active: var(--grass-5);
-  --background-color-success-solid: var(--grass-9);
-  --background-color-success-solid-hover: var(--grass-10);
-  --background-color-success-solid-active: var(--grass-11);
-
-  --background-color-info-app: var(--violet-1);
-
-  --background-color-pending-app: var(--amber-1);
-
   --text-color-default: var(--mauve-12);
   --text-color-low: var(--mauve-11);
 
   --text-color-primary-default: var(--indigo-12);
   --text-color-primary-low: var(--indigo-11);
-
-  --text-color-danger-default: var(--tomato-12);
-  --text-color-danger-low: var(--tomato-11);
-
-  --text-color-warning-default: var(--amber-12);
-  --text-color-warning-low: var(--amber-11);
-
-  --text-color-info-default: var(--violet-12);
-  --text-color-info-low: var(--violet-11);
-
-  --text-color-pending-default: var(--amber-12);
-  --text-color-pending-low: var(--amber-11);
-
-  --text-color-success-default: var(--grass-12);
-  --text-color-success-low: var(--grass-11);
 
   --ring-color-default: var(--mauve-6);
   --ring-color-hover: var(--mauve-8);
@@ -122,18 +68,6 @@
   --ring-color-primary-active: var(--indigo-9);
   --ring-color-primary-highlight: var(--indigo-12);
 
-  --ring-color-danger-default: var(--tomato-6);
-  --ring-color-danger-ui: var(--tomato-7);
-  --ring-color-danger-hover: var(--tomato-8);
-  --ring-color-danger-active: var(--tomato-9);
-  --ring-color-danger-highlight: var(--tomato-12);
-
-  --ring-color-success-default: var(--grass-6);
-  --ring-color-success-ui: var(--grass-7);
-  --ring-color-success-hover: var(--grass-8);
-  --ring-color-success-active: var(--grass-9);
-  --ring-color-success-highlight: var(--grass-12);
-
   --border-color-default: var(--mauve-6);
   --border-color-hover: var(--mauve-8);
   --border-color-active: var(--mauve-9);
@@ -143,30 +77,6 @@
   --border-color-primary-hover: var(--indigo-8);
   --border-color-primary-active: var(--indigo-9);
 
-  --border-color-danger-default: var(--tomato-6);
-  --border-color-danger-ui: var(--tomato-7);
-  --border-color-danger-hover: var(--tomato-8);
-  --border-color-danger-active: var(--tomato-9);
-
-  --border-color-warning-default: var(--amber-6);
-  --border-color-warning-ui: var(--amber-7);
-  --border-color-warning-hover: var(--amber-8);
-  --border-color-warning-active: var(--amber-9);
-
-  --border-color-info-default: var(--violet-6);
-  --border-color-info-ui: var(--violet-7);
-  --border-color-info-hover: var(--violet-8);
-  --border-color-info-active: var(--violet-9);
-
-  --border-color-pending-default: var(--amber-6);
-  --border-color-pending-ui: var(--amber-7);
-  --border-color-pending-hover: var(--amber-8);
-  --border-color-pending-active: var(--amber-9);
-
-  --border-color-success-default: var(--grass-6);
-  --border-color-success-ui: var(--grass-7);
-  --border-color-success-hover: var(--grass-8);
-  --border-color-success-active: var(--grass-9);
   --radius-chip: 20px;
 
   --background-color-subtle-modal-overlay: var(--mauve-2) / 70%;
