@@ -114,43 +114,13 @@
       ]
     },
     {
-      "row": 4,
-      "name": "Software Enterprise Services",
-      "position": "Software Developer",
-      "location": "",
-      "startDate": "2014",
-      "endDate": "2014",
-      "summary": "Provided maintenance for the bank's web application supporting the loan processing system.",
-      "highlights": []
-    },
-    {
-      "row": 3,
-      "name": "MINEDU Peru",
-      "position": "Software Developer",
-      "location": "",
-      "startDate": "2013",
-      "endDate": "2014",
-      "summary": "Designed, developed, and implemented the nationwide student admission system for pedagogical institutes supported by MINEDU.",
-      "highlights": []
-    },
-    {
-      "row": 2,
-      "name": "Software Enterprise Services",
-      "position": "Software Developer",
-      "location": "",
-      "startDate": "2012",
-      "endDate": "2013",
-      "summary": "Developed new functionalities for the bank's system supporting mortgage loans.",
-      "highlights": []
-    },
-    {
       "row": 1,
-      "name": "SISPRO S.A.C.",
+      "name": "Software Enterprise Services · MINEDU Peru · SISPRO",
       "position": "Software Developer",
       "location": "",
       "startDate": "2011",
-      "endDate": "2012",
-      "summary": "Performed analysis, maintenance, and development of applications for BANBIF, including the integration of RENIEC's (National Registry of Identification and Civil Status) queuing system into an application for customer identification.",
+      "endDate": "2014",
+      "summary": "Banking applications through two consultancies — loan processing, mortgage lending, and customer identification against RENIEC, Peru's national identity registry — and, at MINEDU, the nationwide admission system for Peru's pedagogical institutes.",
       "highlights": []
     }
   ],
