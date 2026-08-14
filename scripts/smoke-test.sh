@@ -24,7 +24,7 @@ BASE="http://localhost:${PORT}"
 
 # Derived, not hardcoded: a Slug never changes once published, but which Posts
 # exist does.
-FIRST_PAYLOAD=$(find seed/kv/kv_payloads -name '*.en.json' | sort | head -1)
+FIRST_PAYLOAD=$(find seed/kv/kv_payloads/blog -name '*.en.json' | sort | head -1)
 POST_SLUG=$(basename "${FIRST_PAYLOAD}" .en.json)
 
 ROUTES=(/ /blog /bookmarks /resume /robots.txt /sitemap.xml "/blog/${POST_SLUG}")

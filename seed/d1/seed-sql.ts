@@ -8,6 +8,21 @@
  * reading its output.
  */
 
+import { validateRevisions } from "../../app/lib/revisions.ts";
+import { declaredTypeMatchesTree, treeOf } from "./content-tree.ts";
+
+/**
+ * The last segment of a path, on either separator.
+ *
+ * Not `node:path.basename`, which resolves against the platform the generator
+ * happens to run on — the same content must produce the same `seed.sql`
+ * everywhere, because CI compares it against the committed file byte for byte.
+ */
+function basenameOf(relativePath: string): string {
+  const segments = relativePath.split(/[\\/]/);
+  return segments[segments.length - 1];
+}
+
 export interface FrontMatterAttributes {
   type: "post" | "link";
   repository: string;
@@ -17,6 +32,12 @@ export interface FrontMatterAttributes {
   externalUrl?: string;
   source?: string;
   tags?: string[];
+  /**
+   * `unknown` rather than `Revision[]`: this is a YAML field, so the type here
+   * would be a claim about a file nobody has checked. `validateRevisions` is
+   * what turns it into a list.
+   */
+  updates?: unknown;
 }
 
 /** A row that will be seeded, and the identity used to decide it survives a prune. */
@@ -29,13 +50,26 @@ export type SeededRow = {
   key: string;
 };
 
-/** A Markdown file that produces no row, and why. */
+/** A Markdown file that produces no row, and why — a state the seed tolerates. */
 export type SkippedFile = { reason: string };
 
-export type ContentFileResult = SeededRow | SkippedFile;
+/**
+ * A Markdown file that produces no row and must stop the build.
+ *
+ * Distinct from a skip on purpose (ADR 0004): an unpublished draft is a warning
+ * nobody needs to act on, while a file whose tree and declared type disagree is
+ * a mistake that used to publish an empty page in silence.
+ */
+export type InvalidFile = { error: string };
+
+export type ContentFileResult = SeededRow | SkippedFile | InvalidFile;
 
 export function isSkipped(result: ContentFileResult): result is SkippedFile {
   return "reason" in result;
+}
+
+export function isInvalid(result: ContentFileResult): result is InvalidFile {
+  return "error" in result;
 }
 
 /**
@@ -69,11 +103,37 @@ export function parseContentFilename(
   return { slug: match[1], lang: match[2] || null };
 }
 
-/** The `INSERT OR REPLACE` for one Markdown file, or the reason there is none. */
+/**
+ * The `INSERT OR REPLACE` for one Markdown file, or the reason there is none.
+ *
+ * Takes the path relative to `app/content`, not a bare filename: the directory
+ * decides what the file is and the filename gives its Slug (ADR 0004). Those
+ * are two separate readings of the same path, and before this only the second
+ * one happened.
+ */
 export function contentRowFor(
-  filename: string,
+  relativePath: string,
   attributes: FrontMatterAttributes,
 ): ContentFileResult {
+  const tree = treeOf(relativePath);
+
+  if (tree === null) {
+    return {
+      error: `${relativePath} is not under a content tree — nothing would read it and nothing would say so`,
+    };
+  }
+
+  if (tree === "projects") {
+    return { error: `${relativePath} is a Project and does not belong in the content table` };
+  }
+
+  if (!declaredTypeMatchesTree(attributes.type, tree)) {
+    return {
+      error: `${relativePath} declares type '${attributes.type}' but sits in the ${tree} tree`,
+    };
+  }
+
+  const filename = basenameOf(relativePath);
   const parsed = parseContentFilename(filename);
 
   if (!parsed) {
@@ -91,26 +151,35 @@ export function contentRowFor(
       return { reason: `post ${filename} must have a language in its filename` };
     }
 
+    const revisions = validateRevisions(attributes.updates);
+
+    if ("error" in revisions) {
+      return { error: `${relativePath}: ${revisions.error}` };
+    }
+
     return {
       statement: `
-INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, tags, repository, updated_at)
-VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attributes.description)}, ${publishedAt}, ${tagsJson}, ${escapeSql(attributes.repository)}, CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, tags, repository, updates, updated_at)
+VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attributes.description)}, ${publishedAt}, ${tagsJson}, ${escapeSql(attributes.repository)}, ${escapeSql(JSON.stringify(revisions.revisions))}, CURRENT_TIMESTAMP);
 `,
       key: `${slug}:${lang}`,
     };
   }
 
-  if (attributes.type === "link") {
-    return {
-      statement: `
+  // A Bookmark is a pointer; its body lives at the Source and is not yours to
+  // revise. Declaring `updates` on one is a misunderstanding worth failing on
+  // rather than ignoring, because ignoring it looks identical to working.
+  if (attributes.updates !== undefined) {
+    return { error: `${relativePath} is a Bookmark and cannot carry updates — the body is not here` };
+  }
+
+  return {
+    statement: `
 INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, tags, updated_at)
 VALUES (${escapedSlug}, NULL, 'link', ${title}, ${escapeSql(attributes.externalUrl)}, ${escapeSql(attributes.source)}, ${publishedAt}, ${tagsJson}, CURRENT_TIMESTAMP);
 `,
-      key: `${slug}:`,
-    };
-  }
-
-  return { reason: `${filename} declares no recognised type` };
+    key: `${slug}:`,
+  };
 }
 
 /**

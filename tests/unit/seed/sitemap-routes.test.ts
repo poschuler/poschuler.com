@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildSitemapRoutes,
   type SitemapContentItem,
+  type SitemapProject,
 } from "../../../seed/kv/sitemap-routes";
 
 /**
@@ -38,7 +39,14 @@ const routesFor = (
   items: SitemapContentItem[],
   fallbackLastmod = FALLBACK,
   resumeLastmod = RESUME_LASTMOD,
-) => buildSitemapRoutes(items, { fallbackLastmod, resumeLastmod });
+  projects: SitemapProject[] = [],
+) => buildSitemapRoutes(items, { fallbackLastmod, resumeLastmod }, projects);
+
+/** `updates` arrives as the stored JSON string, the form the column holds. */
+const project = (slug: string, ...dates: string[]): SitemapProject => ({
+  slug,
+  updates: JSON.stringify(dates.map((date) => ({ date, note: "Revised." }))),
+});
 
 const urlsOf = (routes: ReturnType<typeof buildSitemapRoutes>) => routes.map((route) => route.url);
 
@@ -104,6 +112,39 @@ describe("buildSitemapRoutes", () => {
     const others = routes.filter((route) => route.url !== "/resume");
 
     expect(others.every((route) => route.lastmod !== "2026-02-02")).toBe(true);
+  });
+
+  /**
+   * A Project has no Published At — it is revised in place — so the only date
+   * it can be listed by is its most recent revision.
+   */
+  it("lists the index and one URL per Project, dated by its latest revision", () => {
+    const routes = routesFor(items, FALLBACK, RESUME_LASTMOD, [
+      project("chekalo", "2026-08-20", "2027-01-15"),
+      project("poschuler-com", "2026-08-22"),
+    ]);
+    const lastmodOf = (url: string) => routes.find((route) => route.url === url)?.lastmod;
+
+    expect(urlsOf(routes)).toContain("/projects");
+    expect(lastmodOf("/projects/chekalo")).toBe("2027-01-15");
+    expect(lastmodOf("/projects/poschuler-com")).toBe("2026-08-22");
+  });
+
+  it("dates the index by the most recently revised Project", () => {
+    const routes = routesFor(items, FALLBACK, RESUME_LASTMOD, [
+      project("chekalo", "2026-08-20"),
+      project("poschuler-com", "2027-03-01"),
+    ]);
+
+    expect(routes.find((route) => route.url === "/projects")?.lastmod).toBe("2027-03-01");
+  });
+
+  /**
+   * Phase 1a ships the table before the first Project is written, and an index
+   * advertising nothing is worse than no index at all.
+   */
+  it("advertises no project routes at all when there are none", () => {
+    expect(urlsOf(routesFor(items))).not.toContain("/projects");
   });
 
   it("ranks the home page above the sections and the sections above the Posts", () => {

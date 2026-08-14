@@ -4,7 +4,11 @@ import { execSync } from "node:child_process";
 import fm from "front-matter";
 import { renderPostHtml } from "./markdown.ts";
 import { generateSitemap } from "../../app/lib/seo/sitemap.ts";
-import { buildSitemapRoutes, type SitemapContentItem } from "./sitemap-routes.ts";
+import {
+    buildSitemapRoutes,
+    type SitemapContentItem,
+    type SitemapProject,
+} from "./sitemap-routes.ts";
 import resume from "../../app/routes/resume/resume.json" with { type: "json" };
 
 /**
@@ -17,6 +21,7 @@ import resume from "../../app/routes/resume/resume.json" with { type: "json" };
  */
 
 const CONTENT_DIR = path.join(process.cwd(), "app", "content", "blog");
+const PROJECT_CONTENT_DIR = path.join(process.cwd(), "app", "content", "projects");
 const TEMP_JSON_DIR = path.join(process.cwd(), "seed", "kv", "kv_payloads");
 const D1_BINDING_NAME = "poschuler";
 const PUBLIC_HOST = "https://poschuler.com";
@@ -31,6 +36,12 @@ interface PostAttributes {
     repository?: string;
 }
 
+type ProjectRowType = SitemapProject & {
+    lang: string;
+    tier: string;
+    sortOrder: number;
+};
+
 type ContentRowType = SitemapContentItem & {
     idContent: number;
     lang: string;
@@ -42,6 +53,25 @@ type ContentRowType = SitemapContentItem & {
     tags: string[];
 };
 
+/** Runs one read against the local D1 and returns its rows. */
+function queryD1<Row>(sql: string): Row[] {
+    const command = `pnpm exec wrangler d1 execute ${D1_BINDING_NAME} --command "${sql}" --json`;
+
+    try {
+        const results = JSON.parse(execSync(command, { encoding: "utf-8", stdio: "pipe" }));
+
+        if (Array.isArray(results) && results[0]?.results) {
+            return results[0].results as Row[];
+        }
+
+        return (results?.results ?? []) as Row[];
+    } catch {
+        console.error("\n❌ ERROR: Failed to execute D1 command.");
+        console.error("   Check the D1 binding and that Wrangler is authenticated.");
+        process.exit(1);
+    }
+}
+
 function fetchAll(): ContentRowType[] {
     console.log(`\n1. 📡 Fetching content from D1 database: ${D1_BINDING_NAME}...`);
 
@@ -49,31 +79,61 @@ function fetchAll(): ContentRowType[] {
     // collapses them and SQLite reads the aliases as bare identifiers. It works
     // by accident. Fixing it means single-quoting the aliases, not adding
     // backslashes.
-    const d1Command = `pnpm exec wrangler d1 execute ${D1_BINDING_NAME} --command "select id_content as "idContent", slug as "slug", lang as "lang", type as "type", title as "title", published_at as "publishedAt", strftime('%Y-%m-%d', published_at) AS "publishedStringDate", description as "description", external_url as "externalUrl", source as "source", tags as "tags" from content order by published_at desc" --json`;
+    const rows = queryD1<ContentRowType>(
+        `select id_content as "idContent", slug as "slug", lang as "lang", type as "type", title as "title", published_at as "publishedAt", strftime('%Y-%m-%d', published_at) AS "publishedStringDate", description as "description", external_url as "externalUrl", source as "source", tags as "tags" from content order by published_at desc`,
+    );
+
+    if (!rows.length) {
+        console.warn("   -> ⚠️ WARNING: D1 returned zero rows. Check the 'content' table.");
+    }
+
+    return rows;
+}
+
+/**
+ * The Projects, ordered the way the index renders them.
+ *
+ * No warning when there are none: unlike `content`, an empty `project` table is
+ * an ordinary state — the schema ships before the first Project is written.
+ */
+function fetchAllProjects(): ProjectRowType[] {
+    return queryD1<ProjectRowType>(
+        `select slug as "slug", lang as "lang", tier as "tier", sort_order as "sortOrder", updates as "updates" from project order by sort_order asc, slug asc`,
+    );
+}
+
+/**
+ * Renders one Markdown body into its payload.
+ *
+ * Throws rather than logging and carrying on, which is what this used to do: a
+ * body that failed to render left the row seeded and the key absent, so the
+ * Post listed, linked and indexed with a page that 404s its own content — the
+ * same silent shape ADR 0004 removes from the classification rules.
+ */
+async function writePayload(
+    sourcePath: string,
+    outputDir: string,
+    slug: string,
+    lang: string,
+): Promise<void> {
+    let fileContent: string;
 
     try {
-        const output = execSync(d1Command, { encoding: 'utf-8', stdio: 'pipe' });
-
-        const results = JSON.parse(output);
-
-        let posts: ContentRowType[] = [];
-        if (Array.isArray(results) && results[0]?.results) {
-            posts = results[0].results as ContentRowType[];
-        } else if (results?.results) {
-            posts = results.results as ContentRowType[];
-        }
-
-        if (!posts.length) {
-            console.warn("   -> ⚠️ WARNING: D1 returned zero rows. Check the 'content' table.");
-        }
-
-        return posts;
-
-    } catch (error) {
-        console.error("\n❌ ERROR: Failed to execute D1 command.");
-        console.error("   Asegúrese de que el binding D1 y la autenticación de Wrangler sean correctos.");
-        process.exit(1);
+        fileContent = await fs.readFile(sourcePath, "utf-8");
+    } catch {
+        throw new Error(`${sourcePath} is seeded in D1 but not on disk — nothing would render it`);
     }
+
+    const { attributes, body } = fm<PostAttributes>(fileContent);
+    const html = await renderPostHtml(body);
+    const payload: BlogContentPayload = { attributes, html };
+
+    await fs.mkdir(outputDir, { recursive: true });
+    await fs.writeFile(
+        path.join(outputDir, `${slug}.${lang}.json`),
+        JSON.stringify(payload, null, 2),
+        "utf-8",
+    );
 }
 
 async function generateKvJsonFiles() {
@@ -81,33 +141,37 @@ async function generateKvJsonFiles() {
 
     const allContentItems = fetchAll();
     const posts = allContentItems.filter((item) => item.type === "post");
+    const projects = fetchAllProjects();
 
     await fs.rm(TEMP_JSON_DIR, { recursive: true, force: true });
     await fs.mkdir(TEMP_JSON_DIR, { recursive: true });
 
-    console.log(`\n2. 📄 Found ${posts.length} posts to process. Writing JSON files to ${TEMP_JSON_DIR}...`);
+    console.log(`\n2. 📄 Found ${posts.length} posts and ${projects.length} projects. Writing JSON files to ${TEMP_JSON_DIR}...`);
 
     for (const post of posts) {
         const { slug, lang } = post;
 
-        const filePath = path.join(CONTENT_DIR, slug, `${slug}.${lang}.md`);
-        const jsonFilePath = path.join(TEMP_JSON_DIR, `${slug}.${lang}.json`);
+        await writePayload(
+            path.join(CONTENT_DIR, slug, `${slug}.${lang}.md`),
+            path.join(TEMP_JSON_DIR, "blog"),
+            slug,
+            lang,
+        );
 
-        try {
-            const fileContent = await fs.readFile(filePath, "utf-8");
-            const { attributes, body } = fm<PostAttributes>(fileContent);
+        console.log(`   -> ✅ JSON written for key: blog:${slug}:${lang}`);
+    }
 
-            const html = await renderPostHtml(body);
+    for (const project of projects) {
+        const { slug, lang } = project;
 
-            const payload: BlogContentPayload = { attributes, html };
+        await writePayload(
+            path.join(PROJECT_CONTENT_DIR, slug, `${slug}.${lang}.md`),
+            path.join(TEMP_JSON_DIR, "projects"),
+            slug,
+            lang,
+        );
 
-            await fs.writeFile(jsonFilePath, JSON.stringify(payload, null, 2), "utf-8");
-
-            console.log(`   -> ✅ JSON written for key: blog:${slug}.${lang}`);
-
-        } catch (e) {
-            console.error(`   -> ❌ ERROR: Failed to process ${filePath}. Check if the file exists or is valid Markdown.`);
-        }
+        console.log(`   -> ✅ JSON written for key: project:${slug}:${lang}`);
     }
 
     // Not the clock. This file is committed and CI compares it against a fresh
@@ -120,10 +184,11 @@ async function generateKvJsonFiles() {
 
     const sitemap = generateSitemap({
         domain: PUBLIC_HOST,
-        routes: buildSitemapRoutes(allContentItems, {
-            fallbackLastmod,
-            resumeLastmod: resume.meta.lastModified,
-        }),
+        routes: buildSitemapRoutes(
+            allContentItems,
+            { fallbackLastmod, resumeLastmod: resume.meta.lastModified },
+            projects,
+        ),
     });
 
     await fs.writeFile(

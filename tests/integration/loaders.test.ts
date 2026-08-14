@@ -29,7 +29,7 @@ let postSlug: string;
 
 /** Derived rather than hardcoded — a Slug never changes, but which Posts exist does. */
 async function firstPublishedSlug(): Promise<string> {
-  const payloads = await fs.readdir(path.join(process.cwd(), "seed", "kv", "kv_payloads"));
+  const payloads = await fs.readdir(path.join(process.cwd(), "seed", "kv", "kv_payloads", "blog"));
   const [first] = payloads.filter((file) => file.endsWith(".en.json")).sort();
 
   return first.replace(/\.en\.json$/, "");

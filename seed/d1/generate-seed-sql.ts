@@ -5,10 +5,16 @@ import fm from "front-matter";
 import {
     buildSeedSql,
     contentRowFor,
+    isInvalid,
     isSkipped,
     type FrontMatterAttributes,
     type SeededRow,
 } from "./seed-sql.ts";
+import { CONTENT_TREES, unclaimedTrees } from "./content-tree.ts";
+import { buildProjectSeedSql, projectRowFor, type ProjectFrontMatter } from "./project-sql.ts";
+
+/** The trees whose files become rows in `content`. Projects have their own. */
+const CONTENT_TABLE_TREES = ["blog", "bookmarks"] as const;
 
 /**
  * Walks `app/content`, turns every Markdown file into a row, writes `seed.sql`.
@@ -22,7 +28,9 @@ const CONTENT_DIR = path.join(process.cwd(), "app", "content");
 const OUTPUT_SQL_FILE = path.join(process.cwd(), "seed", "d1", "seed.sql");
 
 async function getMarkdownFilePaths(dir: string): Promise<string[]> {
-    const entries = await fs.readdir(dir, { withFileTypes: true });
+    // A tree that does not exist yet is empty, not an error: `projects/` has no
+    // files until the first one is written, and the schema ships before it.
+    const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => []);
     const filePromises = entries.map(async (entry) => {
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
@@ -43,10 +51,71 @@ async function getMarkdownFilePaths(dir: string): Promise<string[]> {
     return nestedFiles.flat().sort();
 }
 
+/**
+ * The `projects/` tree, walked by its own rules into its own table.
+ *
+ * Separate from the loop above rather than a branch inside it: the two produce
+ * rows for different tables, from different front matter, with different
+ * invariants. The only thing they share is the tree that decides which one runs
+ * (ADR 0004).
+ */
+async function collectProjectRows(): Promise<SeededRow[]> {
+    const filePaths = await getMarkdownFilePaths(path.join(CONTENT_DIR, "projects"));
+    const rows: SeededRow[] = [];
+
+    for (const filePath of filePaths) {
+        const relativePath = path.relative(CONTENT_DIR, filePath);
+        console.log(`Processing ${relativePath}...`);
+
+        const fileContent = await fs.readFile(filePath, "utf-8");
+        const { attributes } = fm<ProjectFrontMatter>(fileContent);
+
+        const result = projectRowFor(relativePath, attributes);
+
+        if (isInvalid(result)) {
+            throw new Error(result.error);
+        }
+
+        if (isSkipped(result)) {
+            console.warn(`- Skipping: ${result.reason}`);
+            continue;
+        }
+
+        rows.push(result);
+        console.log(`✅ Generated SQL for project: ${result.key}`);
+    }
+
+    return rows;
+}
+
+/** Reads the disk; the rule itself lives in `content-tree.ts`. */
+async function assertEveryTreeIsClaimed(contentDir: string): Promise<void> {
+    const entries = await fs.readdir(contentDir, { withFileTypes: true });
+    const unclaimed = unclaimedTrees(
+        entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name),
+    );
+
+    if (unclaimed.length > 0) {
+        throw new Error(
+            `app/content holds ${unclaimed.join(", ")}, which no generator walks. ` +
+            `Anything in there would publish nothing and say nothing. ` +
+            `Known trees: ${Object.keys(CONTENT_TREES).join(", ")}.`,
+        );
+    }
+}
+
 async function generateSqlSeed() {
     console.log("🌱 Starting content analysis for SQL generation...");
 
-    const filePaths = await getMarkdownFilePaths(CONTENT_DIR);
+    await assertEveryTreeIsClaimed(CONTENT_DIR);
+
+    // Only the trees whose rows land in `content`. Projects have their own
+    // table and their own generator — see ADR 0004.
+    const filePaths = (
+        await Promise.all(
+            CONTENT_TABLE_TREES.map((tree) => getMarkdownFilePaths(path.join(CONTENT_DIR, tree))),
+        )
+    ).flat();
 
     if (filePaths.length === 0) {
         console.log("No markdown files found in app/content. Exiting.");
@@ -58,13 +127,17 @@ async function generateSqlSeed() {
     const rows: SeededRow[] = [];
 
     for (const filePath of filePaths) {
-        const filename = path.basename(filePath);
-        console.log(`Processing ${filename}...`);
+        const relativePath = path.relative(CONTENT_DIR, filePath);
+        console.log(`Processing ${relativePath}...`);
 
         const fileContent = await fs.readFile(filePath, "utf-8");
         const { attributes } = fm<FrontMatterAttributes>(fileContent);
 
-        const result = contentRowFor(filename, attributes);
+        const result = contentRowFor(relativePath, attributes);
+
+        if (isInvalid(result)) {
+            throw new Error(result.error);
+        }
 
         if (isSkipped(result)) {
             console.warn(`- Skipping: ${result.reason}`);
@@ -75,7 +148,9 @@ async function generateSqlSeed() {
         console.log(`✅ Generated SQL for ${attributes.type}: ${result.key}`);
     }
 
-    const sqlCommands = buildSeedSql(rows);
+    const projectRows = await collectProjectRows();
+
+    const sqlCommands = buildSeedSql(rows) + buildProjectSeedSql(projectRows);
 
     try {
         await fs.mkdir(path.dirname(OUTPUT_SQL_FILE), { recursive: true });
@@ -83,7 +158,7 @@ async function generateSqlSeed() {
 
         console.log(`\n\n🌳 SQL generation complete! File saved to: ${OUTPUT_SQL_FILE}`);
         console.log("-----------------------------------------------------------------");
-        console.log(`>>> Ejecute el seeding con el siguiente comando:`);
+        console.log(`>>> Seed with:`);
         console.log(`pnpm exec wrangler d1 execute poschuler --remote --file ${path.relative(process.cwd(), OUTPUT_SQL_FILE)}`);
 
     } catch (e) {

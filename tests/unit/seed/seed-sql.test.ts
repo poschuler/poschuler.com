@@ -4,6 +4,7 @@ import {
   buildSeedSql,
   contentRowFor,
   escapeSql,
+  isInvalid,
   isSkipped,
   parseContentFilename,
   type FrontMatterAttributes,
@@ -86,7 +87,7 @@ describe("parseContentFilename", () => {
 
 describe("contentRowFor — Posts", () => {
   it("emits an upsert keyed by (Slug, Locale)", () => {
-    const result = contentRowFor("value-objects.en.md", post());
+    const result = contentRowFor("blog/value-objects/value-objects.en.md", post());
 
     expect(isSkipped(result)).toBe(false);
 
@@ -101,21 +102,21 @@ describe("contentRowFor — Posts", () => {
    * indexes. Losing it would turn a re-seed into duplicate rows.
    */
   it("upserts rather than inserting, so re-running the seed is a no-op", () => {
-    const row = contentRowFor("value-objects.en.md", post()) as SeededRow;
+    const row = contentRowFor("blog/value-objects/value-objects.en.md", post()) as SeededRow;
 
     expect(row.statement).toMatch(/INSERT OR REPLACE/);
     expect(row.statement).not.toMatch(/^\s*INSERT INTO/m);
   });
 
   it("carries the columns a Post has and none of the Bookmark ones", () => {
-    const row = contentRowFor("value-objects.en.md", post()) as SeededRow;
+    const row = contentRowFor("blog/value-objects/value-objects.en.md", post()) as SeededRow;
 
-    expect(row.statement).toContain("(slug, lang, type, title, description, published_at, tags, repository, updated_at)");
+    expect(row.statement).toContain("(slug, lang, type, title, description, published_at, tags, repository, updates, updated_at)");
     expect(row.statement).not.toContain("external_url");
   });
 
   it("serialises absent tags as an empty JSON array, not as NULL", () => {
-    const row = contentRowFor("x.en.md", post({ tags: undefined })) as SeededRow;
+    const row = contentRowFor("blog/x/x.en.md", post({ tags: undefined })) as SeededRow;
 
     expect(row.statement).toContain(`'[]'`);
   });
@@ -127,7 +128,7 @@ describe("contentRowFor — Posts", () => {
    * nobody reads.
    */
   it("skips a Post whose filename carries no recognised Locale", () => {
-    const result = contentRowFor("setup-project.en-old.md", post());
+    const result = contentRowFor("blog/setup-project/setup-project.en-old.md", post());
 
     expect(isSkipped(result)).toBe(true);
     expect((result as { reason: string }).reason).toMatch(/must have a language/);
@@ -136,14 +137,14 @@ describe("contentRowFor — Posts", () => {
 
 describe("contentRowFor — Bookmarks", () => {
   it("emits an upsert keyed by Slug alone, with a null Locale", () => {
-    const row = contentRowFor("how-i-would-do-auth.md", bookmark()) as SeededRow;
+    const row = contentRowFor("bookmarks/how-i-would-do-auth.md", bookmark()) as SeededRow;
 
     expect(row.key).toBe("how-i-would-do-auth:");
     expect(row.statement).toContain("'how-i-would-do-auth', NULL, 'link'");
   });
 
   it("carries the Source and external URL a Bookmark has", () => {
-    const row = contentRowFor("a.md", bookmark()) as SeededRow;
+    const row = contentRowFor("bookmarks/a.md", bookmark()) as SeededRow;
 
     expect(row.statement).toContain("(slug, lang, type, title, external_url, source, published_at, tags, updated_at)");
     expect(row.statement).toContain("'https://example.com/a', 'Example'");
@@ -151,24 +152,94 @@ describe("contentRowFor — Bookmarks", () => {
 });
 
 describe("contentRowFor — anything else", () => {
-  it("skips a file declaring an unrecognised type", () => {
-    const result = contentRowFor("x.md", { ...post(), type: "note" as never });
-
-    expect(isSkipped(result)).toBe(true);
-  });
-
   it("skips a filename it cannot parse at all", () => {
-    const result = contentRowFor("not-markdown.txt", post());
+    const result = contentRowFor("blog/x/not-markdown.txt", post());
 
     expect(isSkipped(result)).toBe(true);
     expect((result as { reason: string }).reason).toMatch(/could not parse/);
   });
 });
 
+/**
+ * ADR 0004. These are failures, not skips: each one used to produce a row, a
+ * page or a silence that looked like success.
+ */
+describe("contentRowFor — the tree and the front matter must agree", () => {
+  it("fails a Post filed under bookmarks, which used to seed a row with no body", () => {
+    const result = contentRowFor("bookmarks/value-objects.en.md", post());
+
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/sits in the bookmarks tree/);
+  });
+
+  it("fails a file declaring a type no tree holds", () => {
+    const result = contentRowFor("blog/x/x.en.md", { ...post(), type: "note" as never });
+
+    expect(isInvalid(result)).toBe(true);
+  });
+
+  /** Invisible rather than misfiled: nothing would read it and nothing would say so. */
+  it("fails a file under a directory no generator claims", () => {
+    const result = contentRowFor("drafts/x.en.md", post());
+
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/not under a content tree/);
+  });
+
+  it("fails a Project handed to the content generator", () => {
+    const result = contentRowFor("projects/chekalo/chekalo.en.md", post());
+
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/does not belong in the content table/);
+  });
+});
+
+describe("contentRowFor — revisions", () => {
+  it("stores an absent list as an empty array, not as NULL", () => {
+    const row = contentRowFor("blog/a/a.en.md", post()) as SeededRow;
+
+    expect(row.statement).toContain("updates, updated_at)");
+    expect(row.statement).toContain(`'[]'`);
+  });
+
+  it("stores the list newest first, whatever order the file used", () => {
+    const row = contentRowFor(
+      "blog/a/a.en.md",
+      post({
+        updates: [
+          { date: "2026-01-01", note: "First revision." },
+          { date: "2027-08-14", note: "Second revision." },
+        ],
+      }),
+    ) as SeededRow;
+
+    expect(row.statement).toContain(
+      `'[{"date":"2027-08-14","note":"Second revision."},{"date":"2026-01-01","note":"First revision."}]'`,
+    );
+  });
+
+  it("fails a malformed list rather than dating the page by its publication", () => {
+    const result = contentRowFor("blog/a/a.en.md", post({ updates: [{ note: "No date." }] }));
+
+    expect(isInvalid(result)).toBe(true);
+  });
+
+  /** A Bookmark's body lives at the Source; it is not yours to revise. */
+  it("fails a Bookmark that declares updates", () => {
+    const result = contentRowFor(
+      "bookmarks/a.md",
+      bookmark({ updates: [{ date: "2026-01-01", note: "x" }] }),
+    );
+
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/the body is not here/);
+  });
+});
+
 describe("buildSeedSql", () => {
   const rows = (): SeededRow[] => [
-    contentRowFor("a.en.md", post()) as SeededRow,
-    contentRowFor("b.md", bookmark()) as SeededRow,
+    contentRowFor("blog/a/a.en.md", post()) as SeededRow,
+    contentRowFor("bookmarks/b.md", bookmark()) as SeededRow,
   ];
 
   /**

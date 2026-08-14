@@ -133,13 +133,11 @@ describe("ordinary Markdown still renders", () => {
  * rather than as HTML nobody re-reads.
  */
 describe("the committed KV payloads match what the pipeline produces today", () => {
-  const payloadDir = path.join(process.cwd(), "seed", "kv", "kv_payloads");
+  const payloadDir = path.join(process.cwd(), "seed", "kv", "kv_payloads", "blog");
   const contentDir = path.join(process.cwd(), "app", "content", "blog");
 
   it("re-renders every published Post byte for byte", async () => {
-    const files = (await fs.readdir(payloadDir)).filter(
-      (file) => file.endsWith(".json") && file !== "sitemap.json",
-    );
+    const files = (await fs.readdir(payloadDir)).filter((file) => file.endsWith(".json"));
 
     expect(files.length).toBeGreaterThan(0);
 
@@ -159,9 +157,7 @@ describe("the committed KV payloads match what the pipeline produces today", () 
   });
 
   it("leaves no executable HTML in any published Post", async () => {
-    const files = (await fs.readdir(payloadDir)).filter(
-      (file) => file.endsWith(".json") && file !== "sitemap.json",
-    );
+    const files = (await fs.readdir(payloadDir)).filter((file) => file.endsWith(".json"));
 
     for (const file of files) {
       const { html } = JSON.parse(await fs.readFile(path.join(payloadDir, file), "utf-8")) as { html: string };

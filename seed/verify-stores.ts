@@ -3,6 +3,9 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import fm from "front-matter";
 
+import { kvKeyFor } from "./kv/kv-keys.ts";
+import { listPayloadFiles } from "./kv/payload-files.ts";
+
 /**
  * Asserts that a seeded store actually holds what this repo says it should.
  *
@@ -121,13 +124,19 @@ async function verify(mode: string): Promise<boolean> {
 
     console.log(`==> KV (${mode})`);
 
-    const payloads = (await fsPromise.readdir(PAYLOAD_DIR)).filter((file) => file.endsWith(".json"));
+    const payloads = await listPayloadFiles(PAYLOAD_DIR);
     let identical = 0;
 
     for (const filename of payloads) {
-        const key = filename === "sitemap.json"
-            ? "sitemap"
-            : `blog:${filename.replace(/\.(en|es)\.json$/, "")}:${filename.match(/\.(en|es)\.json$/)?.[1]}`;
+        // Derived, not rebuilt. This used to reimplement the key layout inline,
+        // which made it the third copy of a rule `kv-keys.ts` exists to hold
+        // once — and this script's whole job is to catch keys that disagree.
+        const key = kvKeyFor(filename);
+
+        if (!key) {
+            passed = report(filename, false, "no key could be derived from this payload") && passed;
+            continue;
+        }
 
         const local = await fsPromise.readFile(path.join(PAYLOAD_DIR, filename), "utf-8");
         let stored = "";

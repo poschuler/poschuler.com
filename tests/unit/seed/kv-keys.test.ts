@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { kvKeyFor } from "../../../seed/kv/kv-keys";
+import { KV_PREFIXES, kvKeyFor } from "../../../seed/kv/kv-keys";
 
 /**
  * The upload script and the test setup both derive keys with this. A key layout
@@ -11,22 +11,47 @@ import { kvKeyFor } from "../../../seed/kv/kv-keys";
  * published Post that 404s.
  */
 
+const PAYLOAD_DIR = path.join(process.cwd(), "seed", "kv", "kv_payloads");
+
+/** Every payload, as a path relative to `kv_payloads/`. */
+async function committedPayloads(): Promise<string[]> {
+  const entries = await fs.readdir(PAYLOAD_DIR, { withFileTypes: true, recursive: true });
+
+  return entries
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+    .map((entry) => path.relative(PAYLOAD_DIR, path.join(entry.parentPath, entry.name)));
+}
+
 describe("kvKeyFor", () => {
   it("maps a Post payload to blog:<slug>:<locale>", () => {
-    expect(kvKeyFor("value-objects.en.json")).toBe("blog:value-objects:en");
+    expect(kvKeyFor("blog/value-objects.en.json")).toBe("blog:value-objects:en");
+  });
+
+  /** The directory decides the prefix, exactly as it decides a content file's kind. */
+  it("maps a Project payload to project:<slug>:<locale>", () => {
+    expect(kvKeyFor("projects/chekalo.en.json")).toBe("project:chekalo:en");
   });
 
   /** The Slug is everything before the last dot, so a dotted Slug survives. */
   it("keeps the dots inside a Slug", () => {
-    expect(kvKeyFor("a.dotted.slug.es.json")).toBe("blog:a.dotted.slug:es");
+    expect(kvKeyFor("blog/a.dotted.slug.es.json")).toBe("blog:a.dotted.slug:es");
   });
 
   it("gives the sitemap a key of its own", () => {
     expect(kvKeyFor("sitemap.json")).toBe("sitemap");
   });
 
-  it("returns null for a name it cannot split", () => {
-    expect(kvKeyFor("nolocale.json")).toBeNull();
+  it("reads a Windows-style path the same way", () => {
+    expect(kvKeyFor("blog\\value-objects.en.json")).toBe("blog:value-objects:en");
+  });
+
+  it.each([
+    ["blog/nolocale.json", "a name it cannot split"],
+    ["drafts/x.en.json", "a directory with no prefix"],
+    ["x.en.json", "a payload loose at the root"],
+    ["blog/nested/x.en.json", "a path nested deeper than the layout allows"],
+  ])("returns null for %s — %s", (relativePath) => {
+    expect(kvKeyFor(relativePath)).toBeNull();
   });
 
   /**
@@ -34,25 +59,23 @@ describe("kvKeyFor", () => {
    * match what the route asks KV for is a 404 nobody sees until a visitor does.
    */
   it("derives a key for every committed payload", async () => {
-    const dir = path.join(process.cwd(), "seed", "kv", "kv_payloads");
-    const files = (await fs.readdir(dir)).filter((file) => file.endsWith(".json"));
+    const payloads = await committedPayloads();
 
-    expect(files.length).toBeGreaterThan(0);
+    expect(payloads.length).toBeGreaterThan(0);
 
-    for (const file of files) {
-      expect(kvKeyFor(file), `${file} produced no key`).toBeTruthy();
+    for (const payload of payloads) {
+      expect(kvKeyFor(payload), `${payload} produced no key`).toBeTruthy();
     }
   });
 
-  /** `/blog/:blogSlug` reads `blog:<slug>:en`; these are the keys it will find. */
-  it("produces keys in the shape the Post route looks up", async () => {
-    const dir = path.join(process.cwd(), "seed", "kv", "kv_payloads");
-    const files = (await fs.readdir(dir)).filter(
-      (file) => file.endsWith(".json") && file !== "sitemap.json",
-    );
+  /** These are the keys the Post and Project routes will look up. */
+  it("produces keys in the shape the routes look up", async () => {
+    const payloads = (await committedPayloads()).filter((file) => file !== "sitemap.json");
 
-    for (const file of files) {
-      expect(kvKeyFor(file)).toMatch(/^blog:[^:]+:(en|es)$/);
+    for (const payload of payloads) {
+      expect(kvKeyFor(payload)).toMatch(
+        new RegExp(`^(${KV_PREFIXES.join("|")}):[^:]+:(en|es)$`),
+      );
     }
   });
 });
