@@ -9,6 +9,7 @@ export default [
     layout("routes/layouts/_layout.tsx", [
         route("/", "routes/home/_home.tsx"),
         route("/bookmarks", "routes/bookmarks/_bookmarks.tsx"),
+        route("/timeline", "routes/timeline/_timeline.tsx"),
         route("/blog", "routes/blog/_blog.tsx"),
         route("/resume", "routes/resume/_resume.tsx"),
         route("/blog/:blogSlug", "routes/blog-slug/_$blog-slug.tsx"),

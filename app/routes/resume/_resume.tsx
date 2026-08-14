@@ -26,7 +26,10 @@ export const meta: MetaFunction = () => {
     { tagName: "link", rel: "canonical", href: "https://poschuler.com/resume" },
     { property: "og:title", content: "Resume | Paul Osorio Schuler" },
     { property: "og:description", content: "The professional history of Paul Osorio Schuler, Staff Software Engineer: roles, education, skills and certificates, from 12+ years building backend systems in banking and automation." },
-    { property: "og:image", content: "https://avatars.githubusercontent.com/u/1238212?v=4" },
+    { property: "og:image", content: "https://poschuler.com/og.png" },
+    { property: "og:image:width", content: "1200" },
+    { property: "og:image:height", content: "630" },
+    { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
     { property: "og:url", content: "https://poschuler.com/resume" },
   ];

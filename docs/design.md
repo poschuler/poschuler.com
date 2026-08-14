@@ -4,9 +4,19 @@ The conventions this codebase follows: how the interface is put together, how mo
 
 ## Design intent
 
-The site is a developer's notebook, not a marketing page. That reads through in every choice: monospace type on content pages, a single accent hue, dark mode as a first-class state, and no imagery beyond a GitHub avatar. Content is the only thing on screen that competes for attention.
+The site is a developer's notebook, not a marketing page. That reads through in every choice: monospace type on content pages, dark mode as a first-class state, and almost no imagery — one portrait and one Open Graph card, both local. Content is the only thing on screen that competes for attention.
 
 Each page is one column, centred, capped at `lg:max-w-4xl` for lists and prose. Nothing is multi-column; nothing is above the fold in a way that pushes content down. A Content Item in a list is a date, an icon, and a title — nothing else. There are no cards, no excerpts, no thumbnails, no read-time estimates.
+
+### The home page is the exception, on purpose
+
+`/` is a landing page, not a notebook page, and it breaks three of the rules above deliberately. The reasoning is in `evolution-plan/01-information-architecture.md`, Decision 3; what follows is the rule as it now stands.
+
+- **It leads with content above the fold** — a portrait, the role, the timezone, and two paragraphs — because a visitor who arrives from an application has to learn what this person does before anything else is worth reading.
+- **Its column is `max-w-[650px]`, not `lg:max-w-4xl`.** Prose wants roughly 75 characters a line; `4xl` is a list width. Both sections of the home use the narrower one so the page reads as a single strip rather than a landing page with a wider index bolted underneath.
+- **It does not carry the shared header shape** (see Typography): no italic `blockquote` subtitle, because the subtitle slot is doing real work there — role, then location and timezone.
+
+The Timeline it used to render lives at `/timeline`. The home keeps a short, Post-only excerpt of the three newest, and an integration test asserts it stays Post-only: a Bookmark reaching the landing page means the Timeline has leaked back in.
 
 ## Color
 
@@ -24,6 +34,8 @@ Color comes from **Radix Colors** scales, never from Tailwind's default palette.
 | info       | `violet`  | informational states           |
 
 Adding a family means three edits in step: the `@import` pair in `app.css`, the tokens in `@theme`, and `SCALES` in `scripts/generate-system-dark-css.mjs` (then re-run it). Drop one and either the token resolves to nothing or `system` users get the light value in dark mode.
+
+**As rendered today the site is monochrome.** `indigo` has tokens but nothing paints with them: the only classes that reach for the accent — `bg-primary`, `text-primary`, `text-primary-foreground` in `app/components/ui/button.tsx` and `app/routes/resume/skills.tsx` — name shadcn's tokens, not this project's (`bg-primary-solid`, `text-primary-default`), so they resolve to nothing and those elements inherit their colour. The table above is therefore intent, not description. Anything designed to match the site — the Open Graph card, for one — should be mauve only, and reach for a border rather than a hue when it needs to divide something. Whoever fixes those class names is also deciding whether the accent enters the site for real; that is a design decision, not a rename.
 
 Each family expands into the same step vocabulary — `app`, `subtle`, `ui`, `hover`, `active`, `border`, `solid`, `solid-hover`, `solid-active` for backgrounds; `default` / `low` for text; `default` / `ui` / `hover` / `active` for borders and rings.
 
@@ -56,8 +68,9 @@ Radix ships its dark values scoped to `.dark, .dark-theme`, which a `.system` ro
 ## Typography
 
 - **Inter** for the interface, loaded from Google Fonts with `preconnect` hints in `root.tsx`'s `links`.
-- **`font-mono`** for content pages (`/`, `/blog`, `/bookmarks`, `/blog/:slug`) and for the Resume's secondary text. This is deliberate character, not an oversight.
-- Page headings are `text-3xl lg:text-4xl font-semibold tracking-tight`, followed by an italic `blockquote` subtitle in `text-muted-foreground`. Home, blog and bookmarks all share this header shape — match it.
+- **`font-mono`** for content pages (`/`, `/blog`, `/bookmarks`, `/timeline`, `/blog/:slug`) and for the Resume's secondary text. This is deliberate character, not an oversight.
+- Page headings are `text-3xl lg:text-4xl font-semibold tracking-tight`, followed by an italic `blockquote` subtitle in `text-muted-foreground`. Blog, bookmarks and timeline all share this header shape — match it. The home page does not; see "The home page is the exception".
+- **`text-muted-foreground` resolves to nothing.** No `muted` token exists in `app/app.css`, so every element carrying that class renders in the inherited colour. It is inherited from shadcn and used across the Resume and the `ui/` primitives, which is why the subtitle rule above still names it — the rule describes what the code says, not what it paints. New code should use `text-low`. Fixing the existing occurrences is a change of its own, not something to do in passing.
 
 ## Component layers
 
@@ -122,7 +135,11 @@ Every user-facing route exports its own `meta`, and each one supplies the full s
 
 **Open Graph descriptors use `property`, never `name`.** That is what the OG protocol specifies, and scrapers that follow it strictly — LinkedIn among them — ignore a `name`. Only `description` stays a `name`, because that one is an HTML meta tag rather than an OG one.
 
-`og:type` is `"article"` for a Post and `"website"` for everything else. `og:image` is the GitHub avatar throughout.
+`og:type` is `"article"` for a Post and `"website"` for everything else.
+
+`og:image` is `https://poschuler.com/og.png` throughout — one static 1200×630 card carrying the portrait, the name and the role, in the site's own palette. It replaced a hotlinked GitHub avatar, which was a 460 px square where every scraper expects a 1.91:1 rectangle. It is deliberately identity rather than page content, because a single card has to serve the home page, a Post, the Bookmarks and the Resume alike; per-page generated cards are a later idea, not a gap. Every route ships `og:image:width`, `og:image:height` and `og:image:alt` alongside it, so a scraper can lay the card out before it has finished downloading it.
+
+The home page also emits a `Person` JSON-LD block through the same `meta` export, using React Router's `script:ld+json` descriptor. Its `sameAs` is derived from the contact links the page renders rather than restated, so the two cannot drift apart.
 
 **Write metadata the way the rest of the site is written.** Titles name the page — `Blog | Paul Osorio Schuler`, not `Paul Osorio Schuler's Blog | Software Architecture, Node.js & Azure`. Descriptions say what is on the page, in plain words, and only claim what the page actually contains: the blog once advertised Azure while no Post mentioned it. No "advanced", no "insights", no "essential reading". This is a notebook, and the metadata is part of its voice.
 

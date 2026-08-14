@@ -62,7 +62,10 @@ export function meta({ loaderData }: Route.MetaArgs) {
         { tagName: "link", rel: "canonical", href: `https://poschuler.com/blog/${slug}` },
         { property: "og:title", content: `${title}` },
         { property: "og:description", content: `${description}` },
-        { property: "og:image", content: "https://avatars.githubusercontent.com/u/1238212?v=4" },
+        { property: "og:image", content: "https://poschuler.com/og.png" },
+        { property: "og:image:width", content: "1200" },
+        { property: "og:image:height", content: "630" },
+        { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
         { property: "og:type", content: "article" },
         { property: "og:url", content: `https://poschuler.com/blog/${slug}` },
     ];

@@ -1,6 +1,6 @@
-import { PenLine } from "lucide-react";
-import { Link, useLoaderData, type MetaFunction } from "react-router";
-import { findAllPosts, type PostRowType } from "~/models/content.server";
+import { useLoaderData, type MetaFunction } from "react-router";
+import { findAllPosts } from "~/models/content.server";
+import { PostItem } from "~/components/post-item";
 import type { Route } from "./+types/_blog";
 import { cloudflareContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
@@ -21,7 +21,10 @@ export const meta: MetaFunction = () => {
     { tagName: "link", rel: "canonical", href: "https://poschuler.com/blog" },
     { property: "og:title", content: "Blog | Paul Osorio Schuler" },
     { property: "og:description", content: "Long-form articles by Paul Osorio Schuler on building backend systems with Node.js and TypeScript: API structure, domain-driven design and software architecture." },
-    { property: "og:image", content: "https://avatars.githubusercontent.com/u/1238212?v=4" },
+    { property: "og:image", content: "https://poschuler.com/og.png" },
+    { property: "og:image:width", content: "1200" },
+    { property: "og:image:height", content: "630" },
+    { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
     { property: "og:url", content: "https://poschuler.com/blog" },
   ];
@@ -51,30 +54,9 @@ export default function Blog() {
       <section className="lg:max-w-4xl xl:max-w-5xl 2xl:max-w-7xl mx-auto">
         {posts &&
           posts.map((post) => {
-            return <Post key={post.idContent} post={post} />;
+            return <PostItem key={post.idContent} post={post} />;
           })}
       </section>
     </main>
-  );
-}
-
-type PostProps = {
-  post: PostRowType;
-};
-
-function Post({ post }: PostProps) {
-  return (
-    <div className="my-4 py-4 px-4 border-default border-l-2">
-      <small className="text-base font-medium leading-none">
-        {post.publishedStringDate}
-      </small>
-
-      <div className="flex gap-2 mt-2 text-low">
-        <PenLine className="h-6 w-6" />
-        <Link className="text-low" to={`/blog/${post.slug}`}>
-          {post.title}
-        </Link>
-      </div>
-    </div>
   );
 }

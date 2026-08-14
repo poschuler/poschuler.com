@@ -19,7 +19,7 @@ An external article Paul read and chose to endorse. Only its metadata lives here
 _Avoid_: link, read, favourite
 
 **Timeline**:
-The single reverse-chronological listing on the home page that interleaves Posts and Bookmarks. It is the site's front page and the only place the two kinds appear together.
+The single reverse-chronological listing that interleaves Posts and Bookmarks. It is the only place the two kinds appear together. It lives at `/timeline`; it used to be the front page, and the home page now carries a short, Post-only excerpt that is **not** a Timeline — a listing without Bookmarks in it is something else.
 _Avoid_: feed, stream, activity
 
 **Source**:

@@ -27,7 +27,10 @@ export const meta: MetaFunction = () => {
     { tagName: "link", rel: "canonical", href: `https://poschuler.com/bookmarks` },
     { property: "og:title", content: `Bookmarks | Paul Osorio Schuler` },
     { property: "og:description", content: `External articles Paul Osorio Schuler has read and kept, on TypeScript, web development, auth and security, accessibility and performance.` },
-    { property: "og:image", content: "https://avatars.githubusercontent.com/u/1238212?v=4" },
+    { property: "og:image", content: "https://poschuler.com/og.png" },
+    { property: "og:image:width", content: "1200" },
+    { property: "og:image:height", content: "630" },
+    { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
     { property: "og:url", content: `https://poschuler.com/bookmarks` },
   ];

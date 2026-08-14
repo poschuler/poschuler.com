@@ -89,9 +89,10 @@ Routes are declared explicitly in `app/routes.ts` (config-based, not file-system
 
 | Route            | Store  | Cache-Control  | Notes                                       |
 | ---------------- | ------ | -------------- | ------------------------------------------- |
-| `/`              | D1     | none           | Timeline — `findAll`, Posts and Bookmarks interleaved |
+| `/`              | D1     | none           | landing page — `findAllPosts`, sliced to the three newest |
 | `/blog`          | D1     | none           | `findAllPosts`                              |
 | `/bookmarks`     | D1     | none           | `findAllBookmarks`                          |
+| `/timeline`      | D1     | none           | Timeline — `findAll`, Posts and Bookmarks interleaved |
 | `/blog/:blogSlug`| KV     | none           | Locale hardcoded to `en`; body injected via `dangerouslySetInnerHTML` |
 | `/resume`        | none   | none           | no loader — sections import `resume.json` directly      |
 | `/resume.pdf`    | fetch  | 1 day          | proxies `cdn.poschuler.dev`, forces `Content-Disposition: attachment` |

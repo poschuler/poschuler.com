@@ -31,12 +31,13 @@ const FALLBACK = "2026-07-28";
 const urlsOf = (routes: ReturnType<typeof buildSitemapRoutes>) => routes.map((route) => route.url);
 
 describe("buildSitemapRoutes", () => {
-  it("lists the four static routes and one per Post", () => {
+  it("lists the five static routes and one per Post", () => {
     expect(urlsOf(buildSitemapRoutes(items, FALLBACK))).toEqual([
       "/",
       "/resume",
       "/blog",
       "/bookmarks",
+      "/timeline",
       "/blog/newest-post",
       "/blog/older-post",
     ]);
@@ -60,6 +61,8 @@ describe("buildSitemapRoutes", () => {
     expect(lastmodOf("/")).toBe("2026-05-01");
     expect(lastmodOf("/blog")).toBe("2026-05-01");
     expect(lastmodOf("/bookmarks")).toBe("2026-03-01");
+    // Everything, so it moves with whichever kind of Content Item is newest.
+    expect(lastmodOf("/timeline")).toBe("2026-05-01");
   });
 
   it("falls back for a section with nothing in it", () => {
@@ -73,7 +76,7 @@ describe("buildSitemapRoutes", () => {
   it("still lists the static routes when the store is empty", () => {
     const routes = buildSitemapRoutes([], FALLBACK);
 
-    expect(urlsOf(routes)).toEqual(["/", "/resume", "/blog", "/bookmarks"]);
+    expect(urlsOf(routes)).toEqual(["/", "/resume", "/blog", "/bookmarks", "/timeline"]);
     expect(routes.every((route) => route.lastmod === FALLBACK || route.url === "/resume")).toBe(true);
   });
 

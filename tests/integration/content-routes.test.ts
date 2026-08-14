@@ -4,6 +4,7 @@ import { loader as blogSlugLoader } from "~/routes/blog-slug/_$blog-slug";
 import { loader as blogLoader } from "~/routes/blog/_blog";
 import { loader as bookmarksLoader } from "~/routes/bookmarks/_bookmarks";
 import { loader as homeLoader } from "~/routes/home/_home";
+import { loader as timelineLoader } from "~/routes/timeline/_timeline";
 
 import {
   openTestPlatform,
@@ -13,7 +14,7 @@ import {
 } from "../setup/platform";
 
 /**
- * The four routes that read a store. These modules also export a React
+ * The five routes that read a store. These modules also export a React
  * component, which is why they are `.tsx` — importing them here evaluates the
  * module, it never renders anything.
  *
@@ -31,7 +32,9 @@ const get = (path: string) => new Request(`https://poschuler.com${path}`);
 beforeAll(async () => {
   platform = await openTestPlatform();
 
-  const { contentItems } = await homeLoader(routeArgs<ArgsOf<typeof homeLoader>>(platform, get("/")));
+  const { contentItems } = await timelineLoader(
+    routeArgs<ArgsOf<typeof timelineLoader>>(platform, get("/timeline")),
+  );
   postSlug = contentItems.find((item) => item.type === "post")!.slug;
 });
 
@@ -39,10 +42,10 @@ afterAll(async () => {
   await platform?.dispose();
 });
 
-describe("/ — the Timeline", () => {
+describe("/timeline — the Timeline", () => {
   it("interleaves Posts and Bookmarks, newest first", async () => {
-    const { contentItems } = await homeLoader(
-      routeArgs<ArgsOf<typeof homeLoader>>(platform, get("/")),
+    const { contentItems } = await timelineLoader(
+      routeArgs<ArgsOf<typeof timelineLoader>>(platform, get("/timeline")),
     );
 
     expect(contentItems.length).toBeGreaterThan(0);
@@ -50,6 +53,25 @@ describe("/ — the Timeline", () => {
     expect(contentItems.some((item) => item.type === "link")).toBe(true);
 
     const dates = contentItems.map((item) => item.publishedAt);
+    expect(dates).toEqual([...dates].sort().reverse());
+  });
+});
+
+/**
+ * The home page is a landing page, not an index: it carries a short, Post-only
+ * excerpt. A Bookmark reaching it means the Timeline has leaked back in.
+ */
+describe("/ — the landing page", () => {
+  it("returns the newest Posts only, and no more than three", async () => {
+    const { recentPosts } = await homeLoader(
+      routeArgs<ArgsOf<typeof homeLoader>>(platform, get("/")),
+    );
+
+    expect(recentPosts.length).toBeGreaterThan(0);
+    expect(recentPosts.length).toBeLessThanOrEqual(3);
+    expect(recentPosts.every((post) => post.type === "post")).toBe(true);
+
+    const dates = recentPosts.map((post) => post.publishedAt);
     expect(dates).toEqual([...dates].sort().reverse());
   });
 });

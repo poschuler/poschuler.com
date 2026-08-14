@@ -49,6 +49,9 @@ export function buildSitemapRoutes(
     { url: "/resume", lastmod: RESUME_LASTMOD, changefreq: "monthly", priority: 0.8 },
     { url: "/blog", lastmod: lastModOf(posts), changefreq: "monthly", priority: 0.6 },
     { url: "/bookmarks", lastmod: lastModOf(bookmarks), changefreq: "monthly", priority: 0.5 },
+    // Dated from everything, because it is everything: the Timeline is the one
+    // section a new Post *or* a new Bookmark changes.
+    { url: "/timeline", lastmod: lastModOf(items), changefreq: "monthly", priority: 0.5 },
     ...posts.map((post) => ({
       url: `/blog/${post.slug}`,
       lastmod: post.publishedStringDate,
