@@ -114,7 +114,10 @@ export function Header() {
             ))}
           </nav>
 
-          <div className="mt-auto flex items-center justify-between border-default border-t pt-4">
+          {/* Bled back out to the panel's edge, so this divider lines up with
+            * the one under the panel's own header rather than floating inset
+            * from it. */}
+          <div className="-mx-4 mt-auto flex items-center justify-between border-default border-t px-4 pt-4">
             <span className="text-low text-sm">Theme</span>
             <ModeToggle />
           </div>
