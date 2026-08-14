@@ -6,9 +6,7 @@ export function About() {
 
   return (
     <Section title="About">
-      <p className="text-pretty font-mono text-sm text-low">
-        {summary}
-      </p>
+      <p className="text-pretty text-low text-sm">{summary}</p>
     </Section>
   );
 }

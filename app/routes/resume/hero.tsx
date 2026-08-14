@@ -1,6 +1,8 @@
 import { Link } from "react-router";
 import { Download, Globe, Mail } from "lucide-react";
+
 import { BrandNetworkIcon } from "~/components/ui/brand-icons";
+import { Button } from "~/components/ui/button";
 import { basics, languages } from "./resume.json";
 
 export function Hero() {
@@ -14,76 +16,81 @@ export function Hero() {
   } = basics;
 
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-start justify-between gap-4">
       <div className="flex-1 space-y-1.5">
-        <h1 className="text-2xl font-bold">{name}</h1>
-        <p className="max-w-md text-pretty font-mono text-sm text-low">
-          {label}
-        </p>
+        <h1 className="font-sans font-semibold text-2xl">{name}</h1>
+
+        <p className="max-w-md text-pretty text-low text-sm">{label}</p>
+
         {/* Plain text, not a link: the timezone is the part a distributed team
           * screens on, and a map of the city answers a question nobody asked. */}
-        <p className="max-w-md items-center text-pretty font-mono text-xs text-low">
-          <span className="inline-flex gap-x-1.5 align-baseline leading-none">
-            <Globe className="size-3" />
-            {city}, {region} · {timezone}
-          </span>
+        <p className="inline-flex items-center gap-x-1.5 text-low text-xs">
+          <Globe className="size-3 shrink-0" aria-hidden />
+          {city}, {region} · {timezone}
         </p>
-        <div className="mt-auto flex text-pretty font-mono text-sm text-low">
-          <div className="mt-1 flex flex-wrap gap-1">
-            {languages.map((item) => (
-              <div
-                key={item.row}
-                className="inline-flex items-center rounded-md border border-transparent bg-subtle px-1 py-0 font-mono text-[10px] font-semibold text-low"
-              >
-                {`${item.language} - ${item.fluency}`}
-              </div>
-            ))}
-          </div>
-        </div>
 
-        <div className="flex gap-x-1 pt-1 font-mono text-sm text-low">
-          <a
-            href={`mailto:${email}`}
-            title={`Mail to ${email}`}
-            className="inline-flex size-8 items-center justify-center whitespace-nowrap rounded-md border border-default bg-app text-sm font-medium transition-colors hover:bg-active hover:text-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-default disabled:pointer-events-none disabled:opacity-50"
+        <ul className="flex flex-wrap gap-1 pt-1">
+          {languages.map((item) => (
+            <li
+              key={item.row}
+              className="inline-flex items-center rounded-md border border-default px-1.5 py-0 font-semibold text-[10px] text-low"
+            >
+              {`${item.language} — ${item.fluency}`}
+            </li>
+          ))}
+        </ul>
+
+        {/* The site's own button, rendered as the anchor each one needs. These
+          * were three copies of a fifteen-class string that had drifted from
+          * the component in two places. */}
+        <div className="flex flex-wrap items-center gap-1 pt-2">
+          <Button
+            variant="outline"
+            size="icon"
+            render={<a href={`mailto:${email}`} title={`Mail to ${email}`} />}
           >
             <Mail className="size-4" />
-          </a>
+            <span className="sr-only">Email {name}</span>
+          </Button>
 
           {profiles.map((profile) => (
-            <a
+            <Button
               key={profile.network}
-              href={`${profile.url}`}
-              title={`${profile.network}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex size-8 items-center justify-center whitespace-nowrap rounded-md border border-default bg-app text-sm font-medium transition-colors hover:bg-active hover:text-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-default disabled:pointer-events-none disabled:opacity-50"
+              variant="outline"
+              size="icon"
+              render={
+                <a
+                  href={profile.url}
+                  title={profile.network}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              }
             >
               <BrandNetworkIcon network={profile.network} className="size-4" />
-            </a>
+              <span className="sr-only">{profile.network}</span>
+            </Button>
           ))}
-        </div>
 
-        <div className="flex gap-x-1 pt-1 font-mono text-sm text-low">
-          <Link
-            to="/resume.pdf"
-            reloadDocument
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-md border border-default bg-app text-xs font-medium transition-colors hover:bg-active hover:text-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-default disabled:pointer-events-none disabled:opacity-50 p-2"
+          <Button
+            variant="outline"
+            render={<Link to="/resume.pdf" reloadDocument />}
           >
-            <Download className="size-4 mr-2" />
-            <span>Download as PDF</span>
-          </Link>
+            <Download className="mr-2 size-4" />
+            Download as PDF
+          </Button>
         </div>
-
-        <div className="flex gap-x-1 pt-1 font-mono text-sm text-low"></div>
       </div>
+
       <span className="flex size-28 shrink-0 overflow-hidden rounded-xl">
+        {/* `object-cover` for the same reason the home page portrait has it:
+          * without it a source that is not exactly square is stretched. */}
         <img
           src={image}
           alt={name}
           width={112}
           height={112}
-          className="aspect-square h-full w-full"
+          className="size-full object-cover"
         />
       </span>
     </div>

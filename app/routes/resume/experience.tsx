@@ -5,44 +5,56 @@ export function Experience() {
   return (
     <Section title="Work Experience">
       {work.map((item) => (
-        <div key={item.row} className="rounded-lg bg-subtle text-default p-1">
-          <div className="flex flex-col space-y-1.5">
-            <div className="flex items-center justify-between gap-x-2 text-base">
-              <h3 className="inline-flex items-center justify-center gap-x-1 font-semibold leading-none">
-                {item.name}
-                <span className="inline-flex gap-x-1">
-                  {item.location && item.location !== "" && (
-                    <div className="inline-flex items-center text-nowrap rounded-md border border-transparent bg-ui px-2 py-0.5 align-middle font-mono text-xs font-semibold text-low transition-colors hover:bg-hover">
-                      {item.location}
-                    </div>
-                  )}
-                </span>
-              </h3>
-              <div className="text-sm tabular-nums text-low">
-                {`${item.startDate} - ${item.endDate}`}
-              </div>
-            </div>
-            <h4 className="font-mono text-sm leading-none">{item.position}</h4>
+        /* The same left border every list on the site uses, rather than a
+         * filled card. The fill was `bg-subtle` on a `bg-ui` page — a step
+         * *down* the scale, so the card sank into the page instead of sitting
+         * on it — and it was padded by `p-1`, four pixels, which is a rounded
+         * rectangle drawn tight around its own text. */
+        <article
+          key={item.row}
+          className="border-default border-l-2 py-3 pl-4"
+        >
+          <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
+            <h3 className="font-sans font-semibold text-base leading-none">
+              {item.name}
+            </h3>
+            <span className="text-low text-sm">
+              {`${item.startDate} - ${item.endDate}`}
+            </span>
           </div>
 
-          <div className="mt-2 mb-2 text-pretty font-mono text-xs leading-5 text-low">
-            {item.summary && (
-              item.summary
+          {/* The position stays a heading. It is the phrase this page most
+            * wants to be found by, and a crawler reads a heading differently
+            * from a line of text. The location chip sits beside it rather than
+            * inside the `<h3>`, where the heading a screen reader announced
+            * was "Scotiabank Lima, Peru". */}
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <h4 className="font-sans font-medium text-low text-sm">
+              {item.position}
+            </h4>
+            {item.location && (
+              <span className="inline-flex items-center text-nowrap rounded-md border border-default px-2 py-0.5 font-semibold text-low text-xs">
+                {item.location}
+              </span>
             )}
-
-            {item.highlights && item.highlights.length > 0 && (
-              <ul className="mt-4 list-disc pl-4 space-y-2">
-                {item.highlights.map((highlight, index) => (
-                  <li key={index} className="text-pretty font-mono text-xs text-low">
-                    {highlight}
-                  </li>
-                ))}
-              </ul>
-            )}
-
           </div>
 
-        </div>
+          {item.summary && (
+            <p className="mt-2 text-pretty text-low text-xs leading-5">
+              {item.summary}
+            </p>
+          )}
+
+          {item.highlights && item.highlights.length > 0 && (
+            <ul className="mt-3 list-disc space-y-2 pl-4 text-low text-xs">
+              {item.highlights.map((highlight) => (
+                <li key={highlight} className="text-pretty">
+                  {highlight}
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
       ))}
     </Section>
   );

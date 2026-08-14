@@ -4,42 +4,40 @@ import { certificates } from "./resume.json";
 export function Certificates() {
   return (
     <Section title="Certificates">
-      <div className="-mx-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 print:grid-cols-3 print:gap-2">
+      {/* Two columns, not three. The page column is `max-w-measure`, so a third
+        * column left each card about 200px — narrower than the certificate
+        * names it has to hold. The `-mx-3` that pulled this grid outside the
+        * column went with it. */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 print:grid-cols-2 print:gap-2">
         {certificates.map((cert) => (
-          <div
+          <article
             key={cert.row}
-            className="flex flex-col overflow-hidden rounded-lg border border-default bg-subtle p-3 text-default"
+            className="flex flex-col rounded-lg border border-default p-3"
           >
-            <div className="flex flex-col space-y-1.5">
-              <div className="space-y-1">
-                <h3 className="text-base font-semibold tracking-tight">
-                  <a
-                    className="inline-flex items-center gap-1 hover:underline"
-                    target="_blank"
-                    href={cert.url}
-                    rel="noreferrer"
-                  >
-                    {cert.name}
-                  </a>
-                </h3>
-                <p className="font-mono text-xs text-low">
-                  {cert.issuer}
-                </p>
-              </div>
-            </div>
-            <div className="mt-auto flex text-pretty font-mono text-sm text-low">
-              <div className="mt-2 flex flex-wrap gap-1">
-                {cert.keywords.map((item) => (
-                  <div
-                    key={`${cert.row}-${item}`}
-                    className="inline-flex items-center text-nowrap rounded-md border border-transparent bg-ui px-1 py-0 font-mono text-[10px] font-semibold text-low transition-colors hover:bg-hover"
-                  >
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+            <h3 className="font-sans font-semibold text-base tracking-tight">
+              <a
+                className="transition-colors duration-200 hover:text-low"
+                target="_blank"
+                href={cert.url}
+                rel="noopener noreferrer"
+              >
+                {cert.name}
+              </a>
+            </h3>
+
+            <p className="mt-1 text-low text-xs">{cert.issuer}</p>
+
+            <ul className="mt-auto flex flex-wrap gap-1 pt-2">
+              {cert.keywords.map((item) => (
+                <li
+                  key={`${cert.row}-${item}`}
+                  className="inline-flex items-center text-nowrap rounded-md border border-default px-1.5 py-0 font-semibold text-[10px] text-low"
+                >
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </article>
         ))}
       </div>
     </Section>

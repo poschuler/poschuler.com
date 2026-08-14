@@ -32,6 +32,14 @@ The badge is a border rather than a fill, and that generalises. Both pages are `
 
 A Project page carries its revision line under the summary rather than a published date, because a Project is revised in place and has never been published in the sense a Post has. Earlier revisions go at the foot, below the body, and render only from the second one onward — with one, they would repeat the line under the title.
 
+### The Resume
+
+**Every entry is the site's left border, not a filled card**, so a work history reads with the same grammar as an index of Posts. The entries were `bg-subtle` blocks on a `bg-ui` page — a step *down* the scale, so each one sank into the page rather than sitting on it — and they were padded by `p-1`, four pixels, which is a rounded rectangle drawn tight around its own text. Only the Certificates keep a box, because they are a grid rather than a list, and it is a border with no fill.
+
+**A chip is a border.** Languages, skills, the location beside a role, a certificate's keywords: all outlined, none filled, for the same reason the archived badge is. With no accent in the palette, a fill on a label either disappears into its surface or invents a hierarchy that is not there.
+
+**The Resume's own headings carry the page's message.** `<h1>` the name, `<h2>` the sections, `<h3>` the employer, `<h4>` the role — the role especially, because "Senior Backend Engineer" is the phrase this page most wants to be found by and a crawler reads a heading differently from a line of text. The location sits beside the employer heading, never inside it: within the `<h3>` the announced heading was "Scotiabank Lima, Peru".
+
 ## Color
 
 Color comes from **Radix Colors** scales, never from Tailwind's default palette. Radix's 12-step scales are semantic by position — step 1 is app background, 6 is a subtle border, 9 is a solid fill, 12 is high-contrast text — and each has a matched dark variant, so a single token name works in both themes with no `dark:` variant needed.
@@ -91,7 +99,7 @@ The same three classes also carry `color-scheme` in `@layer base`: `light`, `dar
 ## Typography
 
 - **Inter Variable** for the interface, **Intel One Mono Variable** for everything monospaced. Both are self-hosted from `@fontsource-variable/*`, with the `@font-face` rules written out at the top of `app/app.css` rather than imported from the packages — see the comment there for which subsets ship and why. `root.tsx` preloads the two latin faces; without it the browser cannot discover a font until the stylesheet has parsed.
-- **`font-mono`** for content pages (`/`, `/blog`, `/bookmarks`, `/projects`, `/timeline`, and the Post and Project bodies) and for the Resume's secondary text. This is deliberate character, not an oversight — and it makes the monospace family the site's dominant typeface, which is why it is named rather than left to Tailwind's default stack. On that default it resolved to whatever the visitor's OS shipped, so the site read differently on every machine.
+- **`font-mono`** for content pages (`/`, `/blog`, `/bookmarks`, `/projects`, `/timeline`, and the Post and Project bodies) and for the Resume's secondary text. **The Resume states it as the page being mono and its headings opting out** with `font-sans`, rather than by applying mono to each element — which is how two dates ended up sans by omission and one heading mono by hand, neither on purpose. This is deliberate character, not an oversight — and it makes the monospace family the site's dominant typeface, which is why it is named rather than left to Tailwind's default stack. On that default it resolved to whatever the visitor's OS shipped, so the site read differently on every machine.
 - Page headings are `text-3xl lg:text-4xl font-semibold tracking-tight`, followed by an italic `blockquote` subtitle in `text-low`. Blog, bookmarks, projects and timeline all share this header shape — match it. The home page does not; see "The home page is the exception".
 - **Every item in an index list is a real heading**, and the title leads. These are pages whose whole job is to be indexed; a list of titles rendered as plain links gives a crawler an `<h1>` and then nothing, which is what `/blog`, `/bookmarks` and `/timeline` each did. `ContentItem` takes `headingLevel` because the same item sits at two depths — the page's second level on an index, the third on the home page under "Recent writing".
 - **The date follows the title, quieter.** It read the other way round on both pages: the date at `text-base font-medium` in the default colour, the title a size smaller in `text-low`, which made the loudest thing in the list the one word that tells a reader nothing.

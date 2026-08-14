@@ -12,18 +12,18 @@ export function Skills() {
       <div className="space-y-2">
         {skills.map((group) => (
           <div key={group.row}>
-            <h4 className="font-mono text-xs font-semibold">{group.category}</h4>
+            <h3 className="font-sans font-semibold text-xs">{group.category}</h3>
 
-            <div className="mt-1 flex flex-wrap gap-1">
+            <ul className="mt-1 flex flex-wrap gap-1">
               {group.items.map((item) => (
-                <div
+                <li
                   key={item}
-                  className="inline-flex items-center rounded-md border border-transparent bg-subtle px-2 py-0.5 font-mono text-xs font-semibold text-low"
+                  className="inline-flex items-center rounded-md border border-default px-2 py-0.5 font-semibold text-low text-xs"
                 >
                   {item}
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         ))}
       </div>

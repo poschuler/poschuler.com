@@ -84,9 +84,19 @@ export const meta: MetaFunction = () => {
   ];
 };
 
+/**
+ * `font-mono` sits on the `<main>` rather than on eighteen elements below it.
+ * The Resume's rule is that its headings are sans and everything else is mono
+ * (see `docs/design.md`, Typography), and this states it directly: the page is
+ * mono, and a heading opts out with `font-sans`.
+ *
+ * It was written the other way round — mono applied by hand, element by
+ * element — which is why the two dates were sans by omission and one `<h4>`
+ * was mono by hand, neither of them on purpose.
+ */
 export default function resume() {
   return (
-    <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-ui p-4 md:gap-8 md:p-10">
+    <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-ui p-4 font-mono md:gap-8 md:p-10">
       <section className="mx-auto w-full max-w-measure space-y-8">
         {/* The CV's order, and it is load-bearing: a reader is placed by stack
           * before being told the history, not after it. */}
