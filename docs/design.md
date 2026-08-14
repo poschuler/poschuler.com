@@ -108,6 +108,8 @@ A `ui/` primitive is a Base UI part, a `cva` for its variants, `className` merge
 
 **A dialog is given a name it cannot omit.** `SheetContent` takes `title` as a required prop and renders it as the `Dialog.Title`, visually hidden. A modal with no accessible name is announced as nothing, and an optional prop is one a caller forgets — the mobile navigation had, for as long as it existed.
 
+**Hidden, though, because this panel is the only one.** A title earns the screen when the reader could have opened one of several panels and needs to know which — filters, sorting, a detail view. Opened from a single trigger and holding a single thing, a visible "Navigation" names what the reader just did. The panel's header bar exists to keep the close button out of the content's way, not to hold a heading; when a second panel appears, that is when to render the name in it.
+
 Two Base UI conventions matter when extending them:
 
 - **Compose with `render`, not by nesting.** `<Button render={<Link to="/blog" />}>blog</Button>` — Base UI merges the props of both, so event handlers from each side run. That is what lets a `SheetClose` wrap a `Link` in `header.tsx` and both dismiss the sheet and navigate.

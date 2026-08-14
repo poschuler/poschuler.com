@@ -46,9 +46,8 @@ function SheetContent({
 }: StyledProps<DialogPopupProps> & {
   /**
    * Required rather than optional: a dialog with no accessible name is one a
-   * screen reader announces as nothing. It is also the panel's visible
-   * heading — the bar has to exist to give the close button a home, and a bar
-   * holding one X and a stretch of nothing is worse than a bar with a label.
+   * screen reader announces as nothing, and an optional prop is one a caller
+   * forgets. Not rendered visibly — see the bar below.
    */
   title: string;
 }) {
@@ -74,13 +73,14 @@ function SheetContent({
         )}
         {...props}
       >
-        <div className="flex h-16 shrink-0 items-center gap-2 border-default border-b px-4">
-          {/* Renders an `<h2>`, which Tailwind's preflight leaves at inherited
-            * size and weight — so it is the same line it looks like, and it is
-            * the dialog's accessible name rather than a label beside one. */}
-          <BaseDialog.Title className="min-w-0 flex-1 truncate font-semibold text-default">
-            {title}
-          </BaseDialog.Title>
+        {/* The bar exists to give the close button a home out of the content's
+          * way, not to hold a heading. The title stays invisible: this panel
+          * opens from one trigger and holds one thing, so a visible
+          * "Navigation" would only name what the reader just did. A dialog
+          * that could be one of several — filters, sorting — would want its
+          * name on screen, and that is when to render it here. */}
+        <div className="flex h-16 shrink-0 items-center justify-end border-default border-b px-4">
+          <BaseDialog.Title className="sr-only">{title}</BaseDialog.Title>
           <BaseDialog.Close
             aria-label={`Close ${title.toLowerCase()}`}
             className="-mr-2 flex size-11 shrink-0 items-center justify-center rounded-md text-low transition-colors hover:bg-hover hover:text-default focus:outline-none focus-visible:ring-2 focus-visible:ring-default"
