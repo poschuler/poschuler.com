@@ -9,7 +9,7 @@
  */
 
 import { validateRevisions } from "../../app/lib/revisions.ts";
-import { basenameOf, declaredTypeMatchesTree, treeOf } from "./content-tree.ts";
+import { basenameOf, declaredTypeMatches, isMisplaced, placementOf } from "./content-tree.ts";
 
 export interface FrontMatterAttributes {
   type: "post" | "link";
@@ -26,6 +26,21 @@ export interface FrontMatterAttributes {
    * what turns it into a list.
    */
   updates?: unknown;
+}
+
+/**
+ * Where a Part sits in its Series, as the manifest says.
+ *
+ * It arrives as an argument rather than being read from front matter, and that
+ * is the decision itself (ADR 0007): a Part does not know where it is. The
+ * manifest lists the Parts of each section, in order, and the generator turns
+ * those lists into these three values.
+ */
+export interface PartPlacement {
+  seriesSlug: string;
+  section: string;
+  /** The position in its section's list — an index, never written by hand. */
+  order: number;
 }
 
 /** A row that will be seeded, and the identity used to decide it survives a prune. */
@@ -95,29 +110,34 @@ export function parseContentFilename(
  * The `INSERT OR REPLACE` for one Markdown file, or the reason there is none.
  *
  * Takes the path relative to `app/content`, not a bare filename: the directory
- * decides what the file is and the filename gives its Slug (ADR 0004). Those
- * are two separate readings of the same path, and before this only the second
- * one happened.
+ * decides what the file is, how deep it sits decides whether it is inside a
+ * Container, and the filename gives its Slug (ADR 0004). Those are separate
+ * readings of the same path, and before this only the last one happened.
+ *
+ * `part` is supplied by the caller for a Post that lives inside a Series,
+ * because only the manifest knows where it sits. A nested Post without one is a
+ * Part nothing indexes, which is a failure rather than a loose Post.
  */
 export function contentRowFor(
   relativePath: string,
   attributes: FrontMatterAttributes,
+  part?: PartPlacement,
 ): ContentFileResult {
-  const tree = treeOf(relativePath);
+  const placed = placementOf(relativePath);
 
-  if (tree === null) {
+  if (isMisplaced(placed)) {
+    return { error: placed.error };
+  }
+
+  if (placed.type === "project" || placed.type === "series") {
     return {
-      error: `${relativePath} is not under a content tree — nothing would read it and nothing would say so`,
+      error: `${relativePath} is a ${placed.type} and does not belong in the content table`,
     };
   }
 
-  if (tree === "projects") {
-    return { error: `${relativePath} is a Project and does not belong in the content table` };
-  }
-
-  if (!declaredTypeMatchesTree(attributes.type, tree)) {
+  if (!declaredTypeMatches(attributes.type, placed)) {
     return {
-      error: `${relativePath} declares type '${attributes.type}' but sits in the ${tree} tree`,
+      error: `${relativePath} declares type '${attributes.type}' but its position in the ${placed.tree} tree says '${placed.type}'`,
     };
   }
 
@@ -139,16 +159,31 @@ export function contentRowFor(
       return { reason: `post ${filename} must have a language in its filename` };
     }
 
+    // After the Locale check, deliberately: a draft that carries no Locale is
+    // not seeded at all, so the manifest has no reason to list it.
+    if (placed.container !== null && !part) {
+      return {
+        error: `${relativePath} is not listed in the ${placed.container} manifest — a Part nothing indexes cannot be reached or ordered`,
+      };
+    }
+
     const revisions = validateRevisions(attributes.updates);
 
     if ("error" in revisions) {
       return { error: `${relativePath}: ${revisions.error}` };
     }
 
+    // Written here or written as NULL, never read from front matter. The three
+    // always travel together, which is why the invariant that they are all
+    // present or all absent is not checked anywhere: it is not representable.
+    const container = part
+      ? `${escapeSql(part.seriesSlug)}, ${escapeSql(part.section)}, ${part.order}`
+      : "NULL, NULL, NULL";
+
     return {
       statement: `
-INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, tags, repository, updates, updated_at)
-VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attributes.description)}, ${publishedAt}, ${tagsJson}, ${escapeSql(attributes.repository)}, ${escapeSql(JSON.stringify(revisions.revisions))}, CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, tags, repository, updates, series_slug, series_section, section_order, updated_at)
+VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attributes.description)}, ${publishedAt}, ${tagsJson}, ${escapeSql(attributes.repository)}, ${escapeSql(JSON.stringify(revisions.revisions))}, ${container}, CURRENT_TIMESTAMP);
 `,
       key: `${slug}:${lang}`,
     };
@@ -168,6 +203,30 @@ VALUES (${escapedSlug}, NULL, 'link', ${title}, ${escapeSql(attributes.externalU
 `,
     key: `${slug}:`,
   };
+}
+
+/**
+ * The identities claimed by more than one file.
+ *
+ * `content` is unique on `(slug, lang)` **site-wide**, not per tree, so a Part
+ * named `project-setup` competes with every loose Post and every future Field
+ * Note. The database would catch it — as a constraint violation partway through
+ * seeding the deployed store, naming a row rather than a file. This catches it
+ * on the developer's machine, before the SQL is written.
+ */
+export function duplicateKeys(rows: SeededRow[]): string[] {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+
+  for (const row of rows) {
+    if (seen.has(row.key)) {
+      duplicates.add(row.key);
+    }
+
+    seen.add(row.key);
+  }
+
+  return [...duplicates];
 }
 
 /**

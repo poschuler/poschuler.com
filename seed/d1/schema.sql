@@ -19,6 +19,18 @@ CREATE TABLE content (
 
     tags TEXT, -- Store as JSON string (e.g., '["tag1", "tag2"]')
 
+    -- The Container, when this Post has one. All three are written by the
+    -- generator from the Series manifest and never appear in front matter: a
+    -- Part does not know where it is, the manifest says (ADR 0007).
+    --
+    -- `series_slug` is what makes a correct link possible from anywhere. Any
+    -- listing that renders a Post needs it to build the href — the Timeline
+    -- interleaves Bookmarks, loose Posts and Parts, and each takes a different
+    -- prefix.
+    series_slug TEXT,
+    series_section TEXT,   -- the section's slug, within that Series
+    section_order INTEGER, -- the Part's position in its section's list
+
     -- What the author says changed, newest first, as a JSON array of
     -- { date, note }. Distinct from `updated_at` below, which is when the
     -- pipeline last wrote the row and moves on every seed. See ADR 0005.
@@ -87,3 +99,73 @@ CREATE TABLE project (
 );
 
 CREATE UNIQUE INDEX project_idx ON project (slug, lang);
+
+-- A Series is a Container, not a Content Item: it has no Published At — it is
+-- revised in place as Parts arrive — and never appears in the Timeline. What it
+-- holds instead is a contract with the reader, stated once and, for the
+-- Destination, never changed.
+CREATE TABLE series (
+    id_series INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    slug TEXT NOT NULL,
+    lang TEXT NOT NULL, -- as on a Project: prose in one Locale
+
+    title TEXT NOT NULL,
+    description TEXT, -- SEO meta description
+
+    -- Editorial, and deliberately not derived from every section being
+    -- complete: another section can always be added. It states whether the
+    -- Destination has been reached.
+    status TEXT NOT NULL,
+
+    -- The four halves of the contract, all required. A landing that omits one
+    -- of them is the failure this phase exists to prevent: a reader cannot tell
+    -- whether the series is for them.
+    starting_point TEXT NOT NULL,
+    destination TEXT NOT NULL,
+    out_of_scope TEXT NOT NULL, -- Store as JSON string (e.g., '["Microservices"]')
+    audience TEXT NOT NULL,
+
+    -- No `updates` column, unlike `project`. ADR 0005 gives Revisions to a
+    -- document with no other possible date; a Series has one — what changes on
+    -- its landing is that a Part arrived, and that Part is already dated.
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now')),
+
+    CONSTRAINT series_status_known
+    CHECK (status IN ('ongoing', 'complete'))
+);
+
+CREATE UNIQUE INDEX series_idx ON series (slug, lang);
+
+-- One row per section of a Series' arc, in the order the manifest lists them.
+CREATE TABLE series_section (
+    id_series_section INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    series_slug TEXT NOT NULL,
+    lang TEXT NOT NULL,
+
+    slug TEXT NOT NULL,
+    title TEXT NOT NULL,
+    summary TEXT NOT NULL, -- one or two sentences; rendered even when the section is planned
+
+    -- Nullable, and the only value it accepts is 'complete'. The other two
+    -- states `08` described are already stated by the structure: a section with
+    -- no Parts is planned, a section with Parts is in progress. Only *finished*
+    -- cannot be observed, because it is a promise the author holds. Allowing
+    -- the other two to be declared would restore two sources of truth free to
+    -- disagree. See ADR 0007.
+    status TEXT,
+
+    -- The position in the manifest's list, written by the generator. A list has
+    -- no gaps and no duplicate positions, which is why nothing checks for them.
+    section_order INTEGER NOT NULL,
+
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now')),
+
+    CONSTRAINT series_section_status_known
+    CHECK (status IS NULL OR status = 'complete')
+);
+
+CREATE UNIQUE INDEX series_section_idx ON series_section (series_slug, lang, slug);

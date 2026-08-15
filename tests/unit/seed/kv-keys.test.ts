@@ -32,6 +32,17 @@ describe("kvKeyFor", () => {
     expect(kvKeyFor("projects/chekalo.en.json")).toBe("project:chekalo:en");
   });
 
+  /**
+   * A Series landing is not a Post, so it gets a key space of its own — while
+   * its Parts' bodies stay under `blog:`, because the prefix says what kind of
+   * payload it is and not which URL serves it.
+   */
+  it("maps a Series landing to series:<slug>:<locale>", () => {
+    expect(kvKeyFor("series/pragmatic-nodejs-api.en.json")).toBe(
+      "series:pragmatic-nodejs-api:en",
+    );
+  });
+
   /** The Slug is everything before the last dot, so a dotted Slug survives. */
   it("keeps the dots inside a Slug", () => {
     expect(kvKeyFor("blog/a.dotted.slug.es.json")).toBe("blog:a.dotted.slug:es");

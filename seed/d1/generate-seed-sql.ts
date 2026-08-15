@@ -5,15 +5,36 @@ import fm from "front-matter";
 import {
     buildSeedSql,
     contentRowFor,
+    duplicateKeys,
     isInvalid,
     isSkipped,
+    parseContentFilename,
     type FrontMatterAttributes,
+    type PartPlacement,
     type SeededRow,
 } from "./seed-sql.ts";
-import { CONTENT_TREES, unclaimedTrees } from "./content-tree.ts";
+import {
+    basenameOf,
+    CONTENT_TREES,
+    isMisplaced,
+    pathSegments,
+    placementOf,
+    unclaimedTrees,
+} from "./content-tree.ts";
 import { buildProjectSeedSql, projectRowFor, type ProjectFrontMatter } from "./project-sql.ts";
+import {
+    buildSeriesSeedSql,
+    isInvalidSeries,
+    seriesRowsFor,
+    type SeriesFrontMatter,
+    type SeriesPartFile,
+} from "./series-sql.ts";
 
-/** The trees whose files become rows in `content`. Projects have their own. */
+/**
+ * The trees whose loose files become rows in `content`. Projects have their
+ * own table, and `series/` is walked separately below — it holds two kinds of
+ * document at once, and which is which is decided by depth.
+ */
 const CONTENT_TABLE_TREES = ["blog", "bookmarks"] as const;
 
 /**
@@ -88,6 +109,170 @@ async function collectProjectRows(): Promise<SeededRow[]> {
     return rows;
 }
 
+/** One Series folder, read off the disk and split by what each file is. */
+interface SeriesFolder {
+    manifests: Array<{ relativePath: string; attributes: SeriesFrontMatter; body: string }>;
+    /**
+     * The Parts the manifest is reconciled against: only the files carrying a
+     * recognised Locale, because a draft is never seeded and so is never
+     * indexed either.
+     */
+    parts: SeriesPartFile[];
+    /**
+     * Every file below the folder, drafts included — each one still has to be
+     * offered a row, if only to be skipped with a reason.
+     */
+    nested: Array<{ relativePath: string; attributes: FrontMatterAttributes }>;
+}
+
+/**
+ * Reads `series/` into one entry per Series folder.
+ *
+ * The manifest and its Parts are told apart by depth, not by a filename
+ * convention (`content-tree.ts`): the file named after its folder is that
+ * folder, and a subfolder is content living inside it.
+ */
+async function readSeriesFolders(): Promise<Map<string, SeriesFolder>> {
+    const filePaths = await getMarkdownFilePaths(path.join(CONTENT_DIR, "series"));
+    const folders = new Map<string, SeriesFolder>();
+
+    for (const filePath of filePaths) {
+        const relativePath = path.relative(CONTENT_DIR, filePath);
+        console.log(`Processing ${relativePath}...`);
+
+        const placed = placementOf(relativePath);
+
+        if (isMisplaced(placed)) {
+            throw new Error(placed.error);
+        }
+
+        const segments = pathSegments(relativePath);
+        const folderName = segments[1];
+        const folder = folders.get(folderName) ?? { manifests: [], parts: [], nested: [] };
+
+        folders.set(folderName, folder);
+
+        const fileContent = await fs.readFile(filePath, "utf-8");
+
+        if (placed.type === "series") {
+            const { attributes, body } = fm<SeriesFrontMatter>(fileContent);
+
+            folder.manifests.push({ relativePath, attributes, body });
+            continue;
+        }
+
+        const { attributes } = fm<FrontMatterAttributes>(fileContent);
+        const parsed = parseContentFilename(segments[segments.length - 1]);
+
+        folder.nested.push({ relativePath, attributes });
+
+        if (parsed?.lang) {
+            folder.parts.push({
+                slug: parsed.slug,
+                lang: parsed.lang,
+                folder: segments[segments.length - 2],
+                relativePath,
+            });
+        }
+    }
+
+    return folders;
+}
+
+/**
+ * The `series/` tree: two tables of its own, plus the Container columns on
+ * every Part's row in `content`.
+ *
+ * The manifest is read first because it is the only thing that knows where a
+ * Part sits — see ADR 0007 — so a Part's row cannot be written until its
+ * Series has been validated and its lists turned into positions.
+ */
+async function collectSeriesRows(): Promise<{
+    series: SeededRow[];
+    sections: SeededRow[];
+    content: SeededRow[];
+}> {
+    const folders = await readSeriesFolders();
+    const series: SeededRow[] = [];
+    const sections: SeededRow[] = [];
+    const content: SeededRow[] = [];
+
+    for (const [folderName, folder] of folders) {
+        if (folder.manifests.length === 0) {
+            throw new Error(
+                `app/content/series/${folderName} holds Parts and no manifest — nothing would order them or say what the series is for`,
+            );
+        }
+
+        const placements = new Map<string, PartPlacement>();
+        const locales = new Set<string>();
+
+        for (const manifest of folder.manifests) {
+            const parsed = parseContentFilename(basenameOf(manifest.relativePath));
+            const locale = parsed?.lang;
+
+            if (!locale) {
+                throw new Error(`${manifest.relativePath} must have a language in its filename`);
+            }
+
+            locales.add(locale);
+
+            const result = seriesRowsFor(
+                manifest.relativePath,
+                manifest.attributes,
+                manifest.body,
+                folder.parts.filter((part) => part.lang === locale),
+            );
+
+            if (isInvalidSeries(result)) {
+                throw new Error(result.error);
+            }
+
+            series.push(result.series);
+            sections.push(...result.sections);
+
+            for (const [slug, placement] of result.parts) {
+                placements.set(`${slug}:${locale}`, placement);
+            }
+
+            console.log(`✅ Generated SQL for series: ${result.series.key}`);
+        }
+
+        // A Part in a Locale its Series does not have would otherwise be
+        // reconciled against nothing and seeded with no Container.
+        for (const part of folder.parts) {
+            if (!locales.has(part.lang)) {
+                throw new Error(
+                    `${part.relativePath} is in '${part.lang}' and ${folderName} has no manifest in that Locale`,
+                );
+            }
+        }
+
+        for (const file of folder.nested) {
+            const parsed = parseContentFilename(basenameOf(file.relativePath));
+            const placement = parsed?.lang
+                ? placements.get(`${parsed.slug}:${parsed.lang}`)
+                : undefined;
+
+            const result = contentRowFor(file.relativePath, file.attributes, placement);
+
+            if (isInvalid(result)) {
+                throw new Error(result.error);
+            }
+
+            if (isSkipped(result)) {
+                console.warn(`- Skipping: ${result.reason}`);
+                continue;
+            }
+
+            content.push(result);
+            console.log(`✅ Generated SQL for part: ${result.key}`);
+        }
+    }
+
+    return { series, sections, content };
+}
+
 /** Reads the disk; the rule itself lives in `content-tree.ts`. */
 async function assertEveryTreeIsClaimed(contentDir: string): Promise<void> {
     const entries = await fs.readdir(contentDir, { withFileTypes: true });
@@ -117,11 +302,6 @@ async function generateSqlSeed() {
         )
     ).flat();
 
-    if (filePaths.length === 0) {
-        console.log("No markdown files found in app/content. Exiting.");
-        return;
-    }
-
     console.log(`Found ${filePaths.length} markdown files to process.`);
 
     const rows: SeededRow[] = [];
@@ -149,8 +329,35 @@ async function generateSqlSeed() {
     }
 
     const projectRows = await collectProjectRows();
+    const seriesRows = await collectSeriesRows();
 
-    const sqlCommands = buildSeedSql(rows) + buildProjectSeedSql(projectRows);
+    rows.push(...seriesRows.content);
+
+    // The guard `buildSeedSql` documents but does not make: with no rows its
+    // prune matches everything, so an empty walk would empty the live table.
+    // It has to sit after the Series tree is walked, because `blog/` and
+    // `bookmarks/` are no longer the only places a Content Item comes from.
+    if (rows.length === 0) {
+        console.log("No content items found in app/content. Exiting.");
+        return;
+    }
+
+    // `content` is unique on (Slug, Locale) site-wide, not per tree, so a Part
+    // competes with every loose Post. Caught here rather than by the database
+    // partway through seeding the deployed store.
+    const duplicates = duplicateKeys(rows);
+
+    if (duplicates.length > 0) {
+        throw new Error(
+            `two Content Items claim the same identity: ${duplicates.join(", ")}. ` +
+            `A Slug is unique across the whole site, not within a tree.`,
+        );
+    }
+
+    const sqlCommands =
+        buildSeedSql(rows) +
+        buildProjectSeedSql(projectRows) +
+        buildSeriesSeedSql(seriesRows.series, seriesRows.sections);
 
     try {
         await fs.mkdir(path.dirname(OUTPUT_SQL_FILE), { recursive: true });

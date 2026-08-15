@@ -22,19 +22,19 @@ import resume from "../../app/routes/resume/resume.json" with { type: "json" };
 
 const CONTENT_DIR = path.join(process.cwd(), "app", "content", "blog");
 const PROJECT_CONTENT_DIR = path.join(process.cwd(), "app", "content", "projects");
+const SERIES_CONTENT_DIR = path.join(process.cwd(), "app", "content", "series");
 const TEMP_JSON_DIR = path.join(process.cwd(), "seed", "kv", "kv_payloads");
 const D1_BINDING_NAME = "poschuler";
 const PUBLIC_HOST = "https://poschuler.com";
 
-interface BlogContentPayload { attributes: PostAttributes; html: string; }
-
-interface PostAttributes {
-    title: string;
-    description: string;
-    tags: string[];
-    publishedAt: string;
-    repository?: string;
-}
+/**
+ * One rendered document: its front matter, verbatim, and its body as HTML.
+ *
+ * `attributes` is deliberately untyped. Three kinds of document go through this
+ * — a Post, a Project and a Series landing — and the payload carries whatever
+ * the file declared; what each route reads out of it is the route's business.
+ */
+interface RenderedDocument { attributes: Record<string, unknown>; html: string; }
 
 type ProjectRowType = SitemapProject & {
     lang: string;
@@ -49,6 +49,16 @@ type ContentRowType = SitemapContentItem & {
     externalUrl: string;
     source: string;
     tags: string[];
+    /**
+     * The Container, when the Post has one. It is what says where the Markdown
+     * is: a Part lives under its Series, not under `blog/`.
+     */
+    seriesSlug: string | null;
+};
+
+type SeriesRowType = {
+    slug: string;
+    lang: string;
 };
 
 /** Runs one read against the local D1 and returns its rows. */
@@ -78,7 +88,7 @@ function fetchAll(): ContentRowType[] {
     // by accident. Fixing it means single-quoting the aliases, not adding
     // backslashes.
     const rows = queryD1<ContentRowType>(
-        `select id_content as "idContent", slug as "slug", lang as "lang", type as "type", title as "title", published_at as "publishedAt", strftime('%Y-%m-%d', published_at) AS "publishedStringDate", description as "description", external_url as "externalUrl", source as "source", tags as "tags", updates as "updates" from content order by published_at desc`,
+        `select id_content as "idContent", slug as "slug", lang as "lang", type as "type", title as "title", published_at as "publishedAt", strftime('%Y-%m-%d', published_at) AS "publishedStringDate", description as "description", external_url as "externalUrl", source as "source", tags as "tags", updates as "updates", series_slug as "seriesSlug" from content order by published_at desc`,
     );
 
     if (!rows.length) {
@@ -97,6 +107,18 @@ function fetchAll(): ContentRowType[] {
 function fetchAllProjects(): ProjectRowType[] {
     return queryD1<ProjectRowType>(
         `select slug as "slug", lang as "lang", updates as "updates" from project order by sort_order asc, slug asc`,
+    );
+}
+
+/**
+ * The Series landings, whose bodies are rendered like any other document's.
+ *
+ * A Series has no date of its own — what changes on its landing is that a Part
+ * arrived — so there is nothing here to order by but the Slug.
+ */
+function fetchAllSeries(): SeriesRowType[] {
+    return queryD1<SeriesRowType>(
+        `select slug as "slug", lang as "lang" from series order by slug asc`,
     );
 }
 
@@ -122,9 +144,9 @@ async function writePayload(
         throw new Error(`${sourcePath} is seeded in D1 but not on disk — nothing would render it`);
     }
 
-    const { attributes, body } = fm<PostAttributes>(fileContent);
+    const { attributes, body } = fm<Record<string, unknown>>(fileContent);
     const html = await renderPostHtml(body);
-    const payload: BlogContentPayload = { attributes, html };
+    const payload: RenderedDocument = { attributes, html };
 
     await fs.mkdir(outputDir, { recursive: true });
     await fs.writeFile(
@@ -140,23 +162,36 @@ async function generateKvJsonFiles() {
     const allContentItems = fetchAll();
     const posts = allContentItems.filter((item) => item.type === "post");
     const projects = fetchAllProjects();
+    const series = fetchAllSeries();
 
     await fs.rm(TEMP_JSON_DIR, { recursive: true, force: true });
     await fs.mkdir(TEMP_JSON_DIR, { recursive: true });
 
-    console.log(`\n2. 📄 Found ${posts.length} posts and ${projects.length} projects. Writing JSON files to ${TEMP_JSON_DIR}...`);
+    console.log(`\n2. 📄 Found ${posts.length} posts, ${projects.length} projects and ${series.length} series. Writing JSON files to ${TEMP_JSON_DIR}...`);
 
     for (const post of posts) {
-        const { slug, lang } = post;
+        const { slug, lang, seriesSlug } = post;
 
+        // Where the Markdown is, which is not where the payload goes: a Part
+        // lives under its Series on disk and under `blog:` in KV.
+        const sourcePath = seriesSlug
+            ? path.join(SERIES_CONTENT_DIR, seriesSlug, slug, `${slug}.${lang}.md`)
+            : path.join(CONTENT_DIR, slug, `${slug}.${lang}.md`);
+
+        await writePayload(sourcePath, path.join(TEMP_JSON_DIR, "blog"), slug, lang);
+
+        console.log(`   -> ✅ JSON written for key: blog:${slug}:${lang}`);
+    }
+
+    for (const { slug, lang } of series) {
         await writePayload(
-            path.join(CONTENT_DIR, slug, `${slug}.${lang}.md`),
-            path.join(TEMP_JSON_DIR, "blog"),
+            path.join(SERIES_CONTENT_DIR, slug, `${slug}.${lang}.md`),
+            path.join(TEMP_JSON_DIR, "series"),
             slug,
             lang,
         );
 
-        console.log(`   -> ✅ JSON written for key: blog:${slug}:${lang}`);
+        console.log(`   -> ✅ JSON written for key: series:${slug}:${lang}`);
     }
 
     for (const project of projects) {

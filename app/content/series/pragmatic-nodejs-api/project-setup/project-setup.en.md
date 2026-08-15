@@ -1,6 +1,6 @@
 ---
 type: 'post'
-title: 'Pragmatic Node.js API #1: Setup Node.js, Express & TypeScript Project in 2026'
+title: 'Setup Node.js, Express & TypeScript Project in 2026'
 description: 'The definitive starting point for your next project. Learn to setup Node.js, Express, and TypeScript using a professional, class-based architecture designed for long-term maintainability and scale.'
 tags: ['Nodejs', 'TypeScript', 'Express', 'Backend']
 publishedAt: '2025-12-25'

@@ -1,6 +1,6 @@
 ---
 type: 'post'
-title: 'Pragmatic Node.js API #3: Vertical Slices Architecture and Domain Logic'
+title: 'Vertical Slices Architecture and Domain Logic'
 description: 'Organize your Node.js API using Vertical Slices to encapsulate features and maintain a clear separation of concerns, enhancing maintainability and scalability.'
 tags: ['Nodejs', 'TypeScript', 'Express', 'Backend', 'Vertical Slices', 'Software Architecture']
 publishedAt: '2026-02-20'

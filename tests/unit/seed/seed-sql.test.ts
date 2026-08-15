@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildSeedSql,
   contentRowFor,
+  duplicateKeys,
   escapeSql,
   isInvalid,
   isSkipped,
@@ -111,8 +112,20 @@ describe("contentRowFor — Posts", () => {
   it("carries the columns a Post has and none of the Bookmark ones", () => {
     const row = contentRowFor("blog/value-objects/value-objects.en.md", post()) as SeededRow;
 
-    expect(row.statement).toContain("(slug, lang, type, title, description, published_at, tags, repository, updates, updated_at)");
+    expect(row.statement).toContain("(slug, lang, type, title, description, published_at, tags, repository, updates, series_slug, series_section, section_order, updated_at)");
     expect(row.statement).not.toContain("external_url");
+  });
+
+  /**
+   * The Container columns travel together or not at all, which is why nothing
+   * checks that they do: a loose Post is written with three NULLs rather than
+   * with the columns omitted, so a Post that leaves a Series cannot keep half
+   * of one.
+   */
+  it("writes a loose Post with no Container rather than with none of the columns", () => {
+    const row = contentRowFor("blog/value-objects/value-objects.en.md", post()) as SeededRow;
+
+    expect(row.statement).toContain("'[]', NULL, NULL, NULL, CURRENT_TIMESTAMP)");
   });
 
   it("serialises absent tags as an empty JSON array, not as NULL", () => {
@@ -151,6 +164,72 @@ describe("contentRowFor — Bookmarks", () => {
   });
 });
 
+/**
+ * A Part is a Post with a Container. Everything that makes it one is written
+ * here from the manifest's lists — a Part's own file says nothing about where
+ * it sits (ADR 0007).
+ */
+describe("contentRowFor — Parts of a Series", () => {
+  const partPath = "series/pragmatic-nodejs-api/project-setup/project-setup.en.md";
+  const placement = { seriesSlug: "pragmatic-nodejs-api", section: "fundamentals", order: 1 };
+
+  it("writes the Container the manifest supplies", () => {
+    const row = contentRowFor(partPath, post(), placement) as SeededRow;
+
+    expect(row.key).toBe("project-setup:en");
+    expect(row.statement).toContain("'pragmatic-nodejs-api', 'fundamentals', 1, CURRENT_TIMESTAMP)");
+  });
+
+  /** Zero is a position, and a falsy one. It must survive the round trip. */
+  it("writes the first Part's position rather than dropping it", () => {
+    const row = contentRowFor(partPath, post(), { ...placement, order: 0 }) as SeededRow;
+
+    expect(row.statement).toContain("'fundamentals', 0, CURRENT_TIMESTAMP)");
+  });
+
+  /**
+   * The other half of *manifest and disk reconcile*: a Part nothing indexes
+   * would be seeded with no Container, so no listing could link to it.
+   */
+  it("fails a Part its manifest does not list", () => {
+    const result = contentRowFor(partPath, post());
+
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/not listed in the pragmatic-nodejs-api manifest/);
+  });
+
+  /**
+   * The draft beside part one. It stays unpublished because `en-old` is not a
+   * Locale — which used to hold by accident, and is the one file that must be
+   * skipped rather than failed for being absent from the manifest.
+   */
+  it("skips a draft inside a Series instead of demanding the manifest list it", () => {
+    const result = contentRowFor(
+      "series/pragmatic-nodejs-api/project-setup/project-setup.en-old.md",
+      post(),
+    );
+
+    expect(isSkipped(result)).toBe(true);
+    expect((result as { reason: string }).reason).toMatch(/must have a language/);
+  });
+
+  it("fails a Part declaring itself the Series it belongs to", () => {
+    const result = contentRowFor(partPath, { ...post(), type: "series" as never }, placement);
+
+    expect(isInvalid(result)).toBe(true);
+  });
+
+  it("fails a Series manifest handed to the content generator", () => {
+    const result = contentRowFor(
+      "series/pragmatic-nodejs-api/pragmatic-nodejs-api.en.md",
+      post(),
+    );
+
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/does not belong in the content table/);
+  });
+});
+
 describe("contentRowFor — anything else", () => {
   it("skips a filename it cannot parse at all", () => {
     const result = contentRowFor("blog/x/not-markdown.txt", post());
@@ -169,7 +248,7 @@ describe("contentRowFor — the tree and the front matter must agree", () => {
     const result = contentRowFor("bookmarks/value-objects.en.md", post());
 
     expect(isInvalid(result)).toBe(true);
-    expect((result as { error: string }).error).toMatch(/sits in the bookmarks tree/);
+    expect((result as { error: string }).error).toMatch(/in the bookmarks tree says 'link'/);
   });
 
   it("fails a file declaring a type no tree holds", () => {
@@ -198,7 +277,7 @@ describe("contentRowFor — revisions", () => {
   it("stores an absent list as an empty array, not as NULL", () => {
     const row = contentRowFor("blog/a/a.en.md", post()) as SeededRow;
 
-    expect(row.statement).toContain("updates, updated_at)");
+    expect(row.statement).toContain("updates, series_slug");
     expect(row.statement).toContain(`'[]'`);
   });
 
@@ -233,6 +312,29 @@ describe("contentRowFor — revisions", () => {
 
     expect(isInvalid(result)).toBe(true);
     expect((result as { error: string }).error).toMatch(/the body is not here/);
+  });
+});
+
+/**
+ * A Slug is unique across the whole site, not within a tree: `content` carries
+ * one partial unique index on `(slug, lang)` and another on `(slug)`. Shortening
+ * a Part's Slug is exactly the move that can collide with a loose Post.
+ */
+describe("duplicateKeys", () => {
+  const row = (key: string): SeededRow => ({ key, statement: "" });
+
+  it("names nothing when every Content Item claims its own identity", () => {
+    expect(duplicateKeys([row("a:en"), row("b:en"), row("b:")])).toEqual([]);
+  });
+
+  it("names a Slug two files claim in the same Locale", () => {
+    expect(duplicateKeys([row("project-setup:en"), row("project-setup:en")])).toEqual([
+      "project-setup:en",
+    ]);
+  });
+
+  it("names each collision once, however many files share it", () => {
+    expect(duplicateKeys([row("a:en"), row("a:en"), row("a:en")])).toEqual(["a:en"]);
   });
 });
 

@@ -1,6 +1,6 @@
 ---
 type: 'post'
-title: 'Pragmatic Node.js API #2: Schema Validation and Global Error Handling'
+title: 'Schema Validation and Global Error Handling'
 description: 'Standardize your API integrity by implementing Zod for type-safe validation and a centralized error-handling middleware.'
 tags: ['Nodejs', 'TypeScript', 'Express', 'Backend', 'Zod', 'Error Handling']
 publishedAt: '2025-12-27'

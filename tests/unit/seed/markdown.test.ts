@@ -134,22 +134,40 @@ describe("ordinary Markdown still renders", () => {
  */
 describe("the committed KV payloads match what the pipeline produces today", () => {
   const payloadDir = path.join(process.cwd(), "seed", "kv", "kv_payloads", "blog");
-  const contentDir = path.join(process.cwd(), "app", "content", "blog");
+  const contentRoot = path.join(process.cwd(), "app", "content");
+
+  /**
+   * Every Markdown file in the repository, by filename.
+   *
+   * A payload under `blog/` no longer says where its source is: a Part's body
+   * belongs to the `blog:` key space, because that is what kind of payload it
+   * is, while the file itself lives under its Series. Looking the filename up
+   * keeps this test out of the business of rebuilding content paths, which is
+   * `generate-kv-json.ts`'s job and only needs doing once.
+   */
+  async function markdownByFilename(): Promise<Map<string, string>> {
+    const entries = await fs.readdir(contentRoot, { withFileTypes: true, recursive: true });
+
+    return new Map(
+      entries
+        .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+        .map((entry) => [entry.name, path.join(entry.parentPath, entry.name)]),
+    );
+  }
 
   it("re-renders every published Post byte for byte", async () => {
     const files = (await fs.readdir(payloadDir)).filter((file) => file.endsWith(".json"));
+    const sources = await markdownByFilename();
 
     expect(files.length).toBeGreaterThan(0);
 
     for (const file of files) {
-      const [slug, locale] = [file.replace(/\.[^.]+\.json$/, ""), file.replace(/\.json$/, "").split(".").pop()];
       const payload = JSON.parse(await fs.readFile(path.join(payloadDir, file), "utf-8")) as { html: string };
+      const sourcePath = sources.get(file.replace(/\.json$/, ".md"));
 
-      const markdown = await fs.readFile(
-        path.join(contentDir, slug, `${slug}.${locale}.md`),
-        "utf-8",
-      );
+      expect(sourcePath, `${file} has no Markdown file behind it`).toBeDefined();
 
+      const markdown = await fs.readFile(sourcePath as string, "utf-8");
       const rendered = await renderPostHtml(fm<unknown>(markdown).body);
 
       expect(rendered, `${file} is out of step with its Markdown source`).toBe(payload.html);
