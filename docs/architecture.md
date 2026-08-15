@@ -17,7 +17,9 @@ Cloudflare Worker  (workers/app.ts → createRequestHandler)
   └──▶ cdn.poschuler.dev    — the Resume PDF, proxied
 ```
 
-`workers/app.ts` is the only entry point. Per request it builds a `RouterContextProvider`, sets the `cloudflareContext` declared in `app/context.ts`, and hands it to the request handler; loaders then read bindings with `const { env } = context.get(cloudflareContext)`. There is no module-level singleton holding a binding — the Workers runtime forbids capturing request-scoped state across requests.
+`workers/app.ts` is the only entry point. Per request it consults `app/lib/redirects.ts`, builds a `RouterContextProvider`, sets the `cloudflareContext` declared in `app/context.ts`, and hands it to the request handler; loaders then read bindings with `const { env } = context.get(cloudflareContext)`. There is no module-level singleton holding a binding — the Workers runtime forbids capturing request-scoped state across requests.
+
+The redirects come first because a URL this site no longer serves has no route to match and no loader to run. The table and the matching are a separate module for the same reason the security headers are: this one cannot be imported by a test. Every entry is a permanent 301 with no expiry — it exists for links already published, which never update — and a test walks the map against D1, because a 301 pointing at a 404 is worse than no redirect at all.
 
 **No exceptions, and one of them was paid for.** `app/color-scheme-cookie.ts` briefly built its cookie at module scope from `process.env`, throwing on a missing value. It took production down: the module is evaluated on the way to serving *any* request, so a missing var meant error 1101 on every route — the whole site off to protect a theme preference. The cookie is now built per request from the `env` in `cloudflareContext`, like everything else.
 
@@ -35,18 +37,34 @@ app/content/<tree>/**/*.md                ← source of truth, versioned in git
    │
    ├─ front matter ──▶ seed/d1/generate-seed-sql.ts ──▶ seed/d1/seed.sql ──▶ D1 `content`
    │                     (front-matter)                   (committed)          `project`
+   │                                                                           `series`
+   │                                                                           `series_section`
    │
    └─ body ──────────▶ seed/kv/generate-kv-json.ts ──▶ seed/kv/kv_payloads/<kind>/*.json ──▶ KV
                          (seed/kv/markdown.ts)                              `blog:<slug>:<locale>`
                          (app/lib/seo/sitemap.ts)                           `project:<slug>:<locale>`
+                                                                            `series:<slug>:<locale>`
                                                                             `sitemap`
 ```
 
-The trees are `blog/`, `bookmarks/` and `projects/`. Each generator walks only
-its own, and the `type` in the front matter is checked against the tree rather
-than believed — a mismatch, or a top-level directory no generator walks, fails
-the build. Payload directories follow the same rule: the directory a payload
-sits in decides its key prefix.
+The trees are `blog/`, `bookmarks/`, `projects/` and `series/`. Each generator
+walks only its own, and the `type` in the front matter is checked against the
+tree rather than believed — a mismatch, or a top-level directory no generator
+walks, fails the build. Payload directories follow the same rule: the directory
+a payload sits in decides its key prefix.
+
+Inside a tree, **depth decides what a file is**: the file named after its folder
+*is* that folder, and a subfolder is content living inside it. So
+`series/<series>/<series>.en.md` is the Series and
+`series/<series>/<part>/<part>.en.md` is a Post whose container it is — one
+tree, two types, told apart by the path (ADR 0004, amended). What each tree
+allows to nest is declared in `CONTENT_TREES`; `blog/`, `bookmarks/` and
+`projects/` allow nothing, so a stray subfolder fails rather than acquiring a
+meaning.
+
+The arc itself — which sections a Series has, in what order, and which Parts sit
+in each — is declared once in the Series manifest and nowhere else. A Part's
+front matter says nothing about where it is (ADR 0007).
 
 Both generators are Node scripts run from the developer's machine, never in the Worker. That is why `front-matter` and `marked` appear in `dependencies` yet are absent from every runtime import. Sitemap and `robots.txt` rendering is hand-rolled in `app/lib/seo/`, with no third-party SEO dependency.
 
@@ -92,9 +110,12 @@ Read-only at runtime, written only by the seed pipeline.
 | ----------------------- | ---------------------------------------------------------- |
 | `blog:<slug>:<locale>`    | `{ attributes, html }` — front matter plus rendered Post HTML |
 | `project:<slug>:<locale>` | `{ attributes, html }` — the same shape, for a Project body   |
+| `series:<slug>:<locale>`  | `{ attributes, html }` — a Series landing's prose             |
 | `sitemap`                 | `{ sitemap }` — the full sitemap XML as a string              |
 
 A Post body is one KV read. Missing key → 404, which is also how an unpublished or misspelled slug behaves.
+
+**The prefix says what kind of payload it is, not which URL serves it.** A Part of a Series is an ordinary Post with a container, so its body sits under `blog:` and is served at `/series/<series>/<part>`. A Series landing takes its own prefix because it is not a Post — a different kind of document, like a Project.
 
 ## Routes
 
@@ -103,10 +124,13 @@ Routes are declared explicitly in `app/routes.ts` (config-based, not file-system
 | Route            | Store  | Cache-Control  | Notes                                       |
 | ---------------- | ------ | -------------- | ------------------------------------------- |
 | `/`              | D1     | none           | landing page — three newest Posts, plus the flagship Project |
-| `/blog`          | D1     | none           | `findAllPosts`                              |
+| `/blog`          | D1     | none           | loose Posts and Series as single entries, merged by date |
 | `/bookmarks`     | D1     | none           | `findAllBookmarks`                          |
 | `/timeline`      | D1     | none           | Timeline — `findAll`, Posts and Bookmarks interleaved |
-| `/blog/:blogSlug`| KV     | none           | Locale hardcoded to `en`; body injected via `dangerouslySetInnerHTML` |
+| `/blog/:blogSlug`| D1 + KV | none          | the row first: a Post with a container 301s to it. Locale hardcoded to `en`; body injected via `dangerouslySetInnerHTML` |
+| `/series`        | D1     | none           | `findAllSeries` — every Series, including one with nothing published |
+| `/series/:seriesSlug` | D1 + KV | none      | the contract and the arc from D1, the prose from `series:` |
+| `/series/:seriesSlug/:partSlug` | D1 + KV | none | position derived from the arc; a Part the arc does not hold is a 404 |
 | `/projects`      | D1     | none           | `findAllProjects` — flagship first, supporting in a grid |
 | `/projects/:project` | D1 + KV | none      | row frames the page, KV carries the body; Locale hardcoded to `en` |
 | `/resume`        | none   | none           | no loader — sections import `resume.json` directly      |
@@ -188,15 +212,16 @@ Three conditions the script enforces on itself, each one learned by getting it w
 - **`unit`** — no bindings. The Markdown sanitiser, the theme cookie, the sitemap and `robots.txt` renderers, `shouldRevalidate`, the seed generators' logic, and the security headers.
 - **`integration`** — real D1 and KV, from Miniflare, seeded from the committed fixtures into `.wrangler/state-test`. The content queries and every loader that reads a store.
 
-**Three modules exist so that logic could be tested at all**, and the split is the same each time — the rules move out, the I/O stays put:
+**Four modules exist so that logic could be tested at all**, and the split is the same each time — the rules move out, the I/O stays put:
 
 | Pure module | Extracted from | What it owns |
 | ----------- | -------------- | ------------ |
 | `seed/d1/seed-sql.ts` | `generate-seed-sql.ts` | filename → row, SQL escaping, insert-before-prune |
 | `seed/kv/sitemap-routes.ts` | `generate-kv-json.ts` | which routes the sitemap advertises |
 | `workers/security-headers.ts` | `workers/app.ts` | the headers and the CSP |
+| `app/lib/redirects.ts` | `workers/app.ts` | the URLs this site no longer serves |
 
-The last one is not a preference: `workers/app.ts` imports `virtual:react-router/server-build`, which only exists under the React Router Vite plugin, so the module cannot be imported from a test at all. The policy can.
+The last two are not a preference: `workers/app.ts` imports `virtual:react-router/server-build`, which only exists under the React Router Vite plugin, so the module cannot be imported from a test at all. The policy and the map can.
 
 **The seed refactor was verified by regeneration, not by reading.** `seed.sql` and `kv_payloads/` are committed, so the check is exact: regenerate both and require nothing to have changed. That is now `scripts/check-generated-fixtures.sh`, run on every push — the bar any refactor of the generators is held to is enforced rather than remembered.
 

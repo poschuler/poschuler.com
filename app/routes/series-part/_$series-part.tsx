@@ -3,6 +3,7 @@ import { PostArticle } from "~/components/post-article";
 import { cloudflareContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { validateRevisions } from "~/lib/revisions";
+import { blogPosting, breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
 import { orientationFor } from "~/lib/series-arc";
 import { findSeriesArc, findSeriesBySlug } from "~/models/series.server";
 import type { Route } from "./+types/_$series-part";
@@ -76,6 +77,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     title: attributes.title,
     description: attributes.description,
     publishedAt: new Date(attributes.publishedAt).toLocaleDateString(),
+    // The same date, unformatted. What a reader sees is written for their
+    // locale; what a crawler is told has to stay `YYYY-MM-DD`.
+    datePublished: attributes.publishedAt,
     repository: attributes.repository,
     html,
     // A malformed list is caught at build time; a page is better off without
@@ -88,8 +92,10 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  const { title, description, seriesSlug, slug } = loaderData;
-  const url = `${SITE}/series/${seriesSlug}/${slug}`;
+  const { title, description, seriesSlug, seriesTitle, slug, datePublished, revisions } =
+    loaderData;
+  const path = `/series/${seriesSlug}/${slug}`;
+  const url = `${SITE}${path}`;
 
   return [
     { title: `${title} | Paul Osorio Schuler` },
@@ -103,6 +109,29 @@ export function meta({ loaderData }: Route.MetaArgs) {
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "article" },
     { property: "og:url", content: url },
+    {
+      "script:ld+json": blogPosting({
+        path,
+        title,
+        description,
+        datePublished,
+        // Newest first, guaranteed by `validateRevisions`.
+        dateRevised: revisions[0]?.date,
+        seriesSlug,
+      }),
+    },
+    // Home › Series › the Series › this Part — and **no Section**. A
+    // `BreadcrumbList` describes the URLs that lead to a page, and a Section
+    // has none. It appears in the visual breadcrumb above the article because
+    // there it is context for a reader, not a claim about the site's structure.
+    {
+      "script:ld+json": breadcrumbList([
+        HOME_CRUMB,
+        { name: "Series", path: "/series" },
+        { name: seriesTitle, path: `/series/${seriesSlug}` },
+        { name: title, path },
+      ]),
+    },
   ];
 }
 

@@ -2,6 +2,7 @@ import { useLoaderData, type MetaFunction } from "react-router";
 import { SeriesItem } from "~/components/series-item";
 import { cloudflareContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
+import { breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
 import { findAllSeries } from "~/models/series.server";
 import type { Route } from "./+types/_series";
 
@@ -46,6 +47,12 @@ export const meta: MetaFunction = () => {
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
     { property: "og:url", content: `${SITE}/series` },
+    // An index, so a trail and nothing more. Emitting an `ItemList` of the
+    // series here would be a second description of documents that each already
+    // describe themselves one click away.
+    {
+      "script:ld+json": breadcrumbList([HOME_CRUMB, { name: "Series", path: "/series" }]),
+    },
   ];
 };
 

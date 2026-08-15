@@ -1,5 +1,6 @@
 import { createRequestHandler, RouterContextProvider } from "react-router";
 import { cloudflareContext, nonceContext, type AppEnv } from "../app/context";
+import { resolveRedirect } from "../app/lib/redirects";
 import { withSecurityHeaders } from "./security-headers";
 
 const requestHandler = createRequestHandler(
@@ -15,6 +16,19 @@ const requestHandler = createRequestHandler(
  */
 export default {
   async fetch(request, env, ctx) {
+    // Before the router, because a URL that no longer exists has no route to
+    // match and no loader to run. The table and the matching live in
+    // `app/lib/redirects.ts`, which is where they can be tested — this module
+    // depends on a virtual build the test runner cannot resolve.
+    //
+    // 301, which transfers the authority the old address earned. A 302 tells
+    // the engine to keep the old one indexed and move nothing.
+    const destination = resolveRedirect(new URL(request.url));
+
+    if (destination) {
+      return new Response(null, { status: 301, headers: { Location: destination } });
+    }
+
     const context = new RouterContextProvider();
 
     // Per request, and handed to `<ServerRouter nonce>` in `entry.server.tsx`,

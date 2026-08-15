@@ -220,7 +220,7 @@ async function generateKvJsonFiles() {
         routes: buildSitemapRoutes(
             allContentItems,
             { fallbackLastmod, resumeLastmod: resume.meta.lastModified },
-            projects,
+            { projects, series },
         ),
     });
 

@@ -3,7 +3,8 @@ import { chip } from "~/components/chip";
 import { cloudflareContext } from "~/context";
 import { postHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
-import type { ArcSection } from "~/lib/series-arc";
+import { breadcrumbList, creativeWorkSeries, HOME_CRUMB } from "~/lib/seo/structured-data";
+import { readingOrder, type ArcSection } from "~/lib/series-arc";
 import { cn } from "~/lib/utils";
 import { findSeriesArc, findSeriesBySlug } from "~/models/series.server";
 import type { Route } from "./+types/_$series-slug";
@@ -65,7 +66,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  const { title, description, slug } = loaderData;
+  const { title, description, slug, sections } = loaderData;
   const pageTitle = `${title} | Paul Osorio Schuler`;
 
   return [
@@ -80,6 +81,27 @@ export function meta({ loaderData }: Route.MetaArgs) {
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
     { property: "og:url", content: `${SITE}/series/${slug}` },
+    {
+      "script:ld+json": creativeWorkSeries({
+        slug,
+        title,
+        description,
+        // The arc flattened into reading order — which is the order that makes
+        // a position mean anything. A planned Section contributes nothing,
+        // because it holds nothing to contribute.
+        parts: readingOrder(sections).map(({ part }) => ({
+          slug: part.slug,
+          title: part.title,
+        })),
+      }),
+    },
+    {
+      "script:ld+json": breadcrumbList([
+        HOME_CRUMB,
+        { name: "Series", path: "/series" },
+        { name: title, path: `/series/${slug}` },
+      ]),
+    },
   ];
 }
 

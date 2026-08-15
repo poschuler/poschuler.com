@@ -3,6 +3,7 @@ import type { Route } from "./+types/_$blog-slug";
 import { cloudflareContext } from "~/context";
 import { PostArticle } from "~/components/post-article";
 import { postHref } from "~/lib/hrefs";
+import { blogPosting, breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
 import { validateRevisions } from "~/lib/revisions";
 import { findPostBySlug } from "~/models/content.server";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
@@ -79,6 +80,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
         title: attributes.title,
         description: attributes.description,
         publishedAt: new Date(attributes.publishedAt).toLocaleDateString(),
+        // The same date, unformatted. What a reader sees is written for their
+        // locale; what a crawler is told has to stay `YYYY-MM-DD`.
+        datePublished: attributes.publishedAt,
         html,
         slug: blogSlug,
         repository: attributes.repository,
@@ -92,7 +96,8 @@ export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export function meta({ loaderData }: Route.MetaArgs) {
 
-    const { title, description, slug } = loaderData;
+    const { title, description, slug, datePublished, revisions } = loaderData;
+    const path = `/blog/${slug}`;
 
     return [
         { title: `${title} | Paul Osorio Schuler` },
@@ -106,6 +111,26 @@ export function meta({ loaderData }: Route.MetaArgs) {
         { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
         { property: "og:type", content: "article" },
         { property: "og:url", content: `https://poschuler.com/blog/${slug}` },
+        {
+            "script:ld+json": blogPosting({
+                path,
+                title,
+                description,
+                datePublished,
+                // Newest first, guaranteed by `validateRevisions`.
+                dateRevised: revisions[0]?.date,
+                // A standalone Post has no Container, and saying otherwise
+                // would invent a continuity that does not exist.
+                seriesSlug: null,
+            }),
+        },
+        {
+            "script:ld+json": breadcrumbList([
+                HOME_CRUMB,
+                { name: "Blog", path: "/blog" },
+                { name: title, path },
+            ]),
+        },
     ];
 }
 
