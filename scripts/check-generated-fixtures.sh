@@ -25,11 +25,13 @@ set -euo pipefail
 # table to decide which Posts to render, so against an empty database it
 # silently produces nothing. See ADR 0001.
 #
-# The schema is the only step that objects to already existing — the runner has
-# no database at all, a developer's has one already.
+# Rebuilt rather than applied over. The runner has no database and a developer's
+# has one already, and this used to paper over the difference by ignoring the
+# failure — which also ignored a database left on an older shape, whose real
+# symptom arrived two steps below as a generator reading a column that is not
+# there. See the script; the local KV namespace is untouched.
 echo "==> Seeding the local D1 so the generators have something to read"
-pnpm exec wrangler d1 execute poschuler --file ./seed/d1/schema.sql --local >/dev/null 2>&1 ||
-	echo "    (schema already applied)"
+pnpm run d1:reset:local >/dev/null
 
 echo "==> Regenerating"
 pnpm run d1:generate >/dev/null

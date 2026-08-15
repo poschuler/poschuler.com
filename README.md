@@ -138,6 +138,7 @@ The filename is the Slug, and it never changes once published — it is the URL.
 | `pnpm run test:coverage` | Coverage over the modules the suite is meant to cover      |
 | `pnpm run smoke`         | Build, then serve it with nothing configured and check it answers |
 | `pnpm run deploy`        | Build and ship in one step                                 |
+| `pnpm run d1:reset:local` | Rebuild the local D1 from `schema.sql` (KV is left alone)  |
 | `pnpm run d1:seed:local` | Regenerate `seed.sql` and apply it locally                 |
 | `pnpm run kv:seed:local` | Regenerate KV payloads and upload them locally             |
 | `pnpm run verify:stores:local` | Read D1 and KV back and check they match the repo    |

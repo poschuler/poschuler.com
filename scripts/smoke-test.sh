@@ -72,11 +72,14 @@ trap cleanup EXIT INT TERM
 
 # Both stores are filled from files that are in git, applied locally — no
 # network, no Cloudflare credentials, nothing touching the deployed resources.
-# `seed.sql` deletes and re-inserts, so running this repeatedly is safe; the
-# schema is the only step that objects to already existing.
+# `seed.sql` deletes and re-inserts, so running this repeatedly is safe.
+#
+# The schema is rebuilt rather than applied over, because applying a bare
+# `CREATE TABLE` to a database that already exists fails, and ignoring that
+# failure — which is what this did — also ignores a database sitting on an older
+# shape. A cold start check that passes against a stale store proves nothing.
 echo "==> Seeding the local D1 and KV from the committed fixtures"
-pnpm exec wrangler d1 execute poschuler --file ./seed/d1/schema.sql --local >/dev/null 2>&1 ||
-	echo "    (schema already applied)"
+pnpm run d1:reset:local >/dev/null
 pnpm exec wrangler d1 execute poschuler --file ./seed/d1/seed.sql --local >/dev/null
 pnpm run kv:upload:local >/dev/null
 

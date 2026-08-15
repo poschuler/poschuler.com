@@ -25,6 +25,7 @@
 		"d1:upsert:remote": "wrangler d1 execute poschuler --file ./seed/d1/seed.sql --remote",
 		"d1:seed:local": "pnpm run d1:generate && pnpm run d1:upsert:local",
 		"d1:seed:remote": "pnpm run d1:generate && pnpm run d1:upsert:remote",
+		"d1:reset:local": "node ./seed/reset-local-d1.ts",
 		"d1:migrate:remote": "wrangler d1 migrations apply poschuler --remote",
 		"verify:stores:local": "node ./seed/verify-stores.ts local",
 		"verify:stores:remote": "node ./seed/verify-stores.ts remote",
