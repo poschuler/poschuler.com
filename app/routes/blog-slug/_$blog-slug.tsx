@@ -12,7 +12,13 @@ import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 interface PostAttributes {
     title: string;
     description: string;
-    tags: string[];
+    /**
+     * Optional, because this is front matter as written and a Post is free to
+     * carry none. What the build guarantees is that whatever is here is a Tag
+     * from the closed vocabulary, written as its own slug — not that there is
+     * one.
+     */
+    tags?: string[];
     publishedAt: string;
     repository?: string;
     /**
@@ -78,11 +84,17 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 
     const revisions = validateRevisions(attributes.updates);
 
-    // Deliberately not returning `attributes.tags`: nothing renders them, and a
-    // loader's return value ships twice — once in the HTML, once in hydration.
+    // `tags` used to be dropped here, and the reason was recorded: a loader's
+    // return value ships twice — once in the HTML, once in hydration — and
+    // nothing rendered them. That reasoning still holds; what changed is the
+    // other side of it. The chips are links to a page that now exists, so the
+    // bytes buy the reader a way out sideways, and this is the payload that
+    // already carries them: the front matter travelled here verbatim, so
+    // returning them costs no second query on either Post route.
     return {
         title: attributes.title,
         description: attributes.description,
+        tags: attributes.tags ?? [],
         publishedAt: new Date(attributes.publishedAt).toLocaleDateString(),
         // The same date, unformatted. What a reader sees is written for their
         // locale; what a crawler is told has to stay `YYYY-MM-DD`.
@@ -139,13 +151,14 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function BlogSlug() {
-    const { html, publishedAt, title, repository, revisions } = useLoaderData<typeof loader>();
+    const { html, publishedAt, tags, title, repository, revisions } = useLoaderData<typeof loader>();
 
     return (
         <main className="flex-1 gap-4 p-4 md:gap-8 md:p-10 font-mono bg-ui">
             <PostArticle
                 title={title}
                 publishedAt={publishedAt}
+                tags={tags}
                 repository={repository}
                 revisions={revisions}
                 html={html}

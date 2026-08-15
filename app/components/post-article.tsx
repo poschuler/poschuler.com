@@ -1,7 +1,39 @@
 import { Link } from "react-router";
+import { chip } from "~/components/chip";
 import { RevisionHistory, RevisionLine } from "~/components/revisions";
 import { GitHubIcon } from "~/components/ui/brand-icons";
+import { tagHref } from "~/lib/hrefs";
 import type { Revision } from "~/lib/revisions";
+import { cn } from "~/lib/utils";
+
+/**
+ * What a link rendered in the low tone does under the cursor.
+ *
+ * Both links in this article are one — the repository link and each Tag chip —
+ * and the listing rows make the same one-step move from where they start. A
+ * chip is inert everywhere else on the site and is a link here, so it says so
+ * in the site's own interaction language rather than in a new one.
+ */
+const lowToneLink = "transition-colors duration-200 hover:text-default";
+
+/** The Post's Tags, each a link to its page. */
+function TagChips({ tags }: { tags: string[] }) {
+  if (tags.length === 0) {
+    return null;
+  }
+
+  return (
+    <ul className="flex flex-wrap gap-2">
+      {tags.map((tag) => (
+        <li key={tag}>
+          <Link to={tagHref(tag)} className={cn(chip, lowToneLink)}>
+            {tag}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 /**
  * A Post, rendered.
@@ -19,12 +51,20 @@ import type { Revision } from "~/lib/revisions";
 export function PostArticle({
   title,
   publishedAt,
+  tags,
   repository,
   revisions,
   html,
 }: {
   title: string;
   publishedAt: string;
+  /**
+   * The subjects this Post covers, from the front matter that travels in KV.
+   * Both Post routes have that payload in hand already — the Series Part route
+   * never fetches the content row at all, so reading them from D1 there would
+   * mean a new query for something the reader has already been sent.
+   */
+  tags: string[];
   repository?: string;
   revisions: Revision[];
   html: string;
@@ -40,15 +80,31 @@ export function PostArticle({
             to={repository}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-lg text-low no-underline transition-colors duration-200 hover:text-default"
+            className={cn("flex items-center gap-2 text-lg text-low no-underline", lowToneLink)}
           >
             View Github Repository
           </Link>
         </p>
       )}
 
-      <div className="not-prose my-4">
+      {/* Above the rule, beside the date, and inside the block that already
+        * opts out of the prose styles — a Tag is metadata of subject the way the
+        * date is metadata of time, so they read as one line of metadata rather
+        * than as two things stacked.
+        *
+        * Not below the body, where the general argument would put them: three of
+        * the site's four Posts are Parts of a Series, and below a Part sit its
+        * revision history and the link to the next Part. Losing a reader to a
+        * Tag before they have read anything is the risk; competing with the arc
+        * on the majority of the site's pages is the larger one.
+        *
+        * Aligned on the baseline rather than centred, because *beside the date*
+        * has to keep meaning that. The revision line is one line only while no
+        * Post carries an `updates:` block; the first one that does makes it two
+        * or three, and centring would drift the chips down the middle of it. */}
+      <div className="not-prose my-4 flex flex-wrap items-baseline gap-x-4 gap-y-2">
         <RevisionLine publishedAt={publishedAt} revisions={revisions} />
+        <TagChips tags={tags} />
       </div>
 
       <hr className="mt-7 mb-7" />

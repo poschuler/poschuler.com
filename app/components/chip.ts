@@ -27,6 +27,12 @@
  * scale, so a filled chip on one reads as recessed into the page rather than
  * as a label sitting on top of it.
  *
+ * **A chip is inert, except in one place.** The Tags on a Post render this
+ * string on an `<a>`, and the hover that says so is composed at the call site
+ * like the rest of the context. It stays out of here on purpose: a hover
+ * carried by the string itself would promise an interaction every other chip
+ * on the site cannot honour.
+ *
  * Compose position and context at the call site — `cn(chip, "not-prose mb-4")`
  * — and keep this string to what every chip is.
  */

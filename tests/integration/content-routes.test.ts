@@ -183,14 +183,25 @@ describe("/blog/:blogSlug", () => {
   });
 
   /**
-   * A loader's return value ships twice — once in the rendered HTML, once again
-   * in the hydration payload beneath it. `tags` is dropped on purpose because
-   * nothing renders it; putting it back costs every visitor bytes for nothing.
+   * **A reversal, rewritten rather than deleted.** This assertion used to read
+   * `not.toHaveProperty("tags")`, and the reason was sound: a loader's return
+   * value ships twice — once in the rendered HTML, once again in the hydration
+   * payload beneath it — and nothing rendered Tags, so shipping them cost every
+   * visitor bytes for nothing.
+   *
+   * The cost has not changed and the argument was never wrong. What changed is
+   * the other side of it: a Tag now has a page, so the chips are a way out
+   * sideways for a reader who just finished the article. This payload is also
+   * the cheapest place to take them from — the front matter travelled here
+   * verbatim in KV, so neither Post route pays a query for them.
+   *
+   * `attributes` stays out: what the page renders are the fields picked out of
+   * the front matter, never the raw block.
    */
-  it("drops the front matter nothing renders", async () => {
+  it("returns the front matter the page renders, Tags now included", async () => {
     const payload = await blogSlugLoader(args(postSlug));
 
-    expect(payload).not.toHaveProperty("tags");
+    expect(payload.tags.length).toBeGreaterThan(0);
     expect(payload).not.toHaveProperty("attributes");
   });
 
@@ -408,6 +419,18 @@ describe("/series/:seriesSlug/:partSlug — a Part", () => {
     expect(payload.orientation.section.parts.some((part) => part.slug === partSlug)).toBe(true);
   });
 
+  /**
+   * The other half of the same reversal. A Part is an ordinary Post here too:
+   * its Tags are its own and say nothing about the Series holding it, and they
+   * come out of the payload above rather than from a row this route never reads
+   * — the arc is the only thing it queries.
+   */
+  it("returns its own Tags, out of the payload it already fetched", async () => {
+    const payload = await seriesPartLoader(args(seriesSlug, partSlug));
+
+    expect(payload.tags.length).toBeGreaterThan(0);
+  });
+
   /** The body is an ordinary Post's, under the prefix every Post body uses. */
   it("reads the body from the blog: key space", async () => {
     const keys: string[] = [];
@@ -509,6 +532,48 @@ describe("/tags/:tag", () => {
 
   it("404s on a Tag that was never declared", async () => {
     await expect(tagLoader(args("no-such-tag"))).rejects.toMatchObject({ status: 404 });
+  });
+
+  /**
+   * What makes a chip on a Post a link worth rendering: every Tag a Post
+   * returns has a page, and that page lists the Post the chip was clicked from.
+   *
+   * It holds by construction — a Tag a Post carries is carried by at least that
+   * Post — which is exactly why it is worth pinning. The two sides read from
+   * different stores: the chips come from the front matter in KV and the page
+   * from `content_tag` in D1, so the day one narrows without the other, a Post
+   * starts offering links to a 404.
+   *
+   * Both Post routes, because a Part is where this would break first: it is
+   * served from a Slug the Series holds, and a Tag page that filtered Parts out
+   * would leave three of the site's four Posts pointing at pages missing them.
+   */
+  it("lists the Post behind every chip either Post route renders", async () => {
+    const post = await blogSlugLoader(
+      routeArgs<ArgsOf<typeof blogSlugLoader>>(platform, get(`/blog/${postSlug}`), {
+        blogSlug: postSlug,
+      }),
+    );
+    const part = await seriesPartLoader(
+      routeArgs<ArgsOf<typeof seriesPartLoader>>(
+        platform,
+        get(`/series/${seriesSlug}/${partSlug}`),
+        { seriesSlug, partSlug },
+      ),
+    );
+
+    for (const { slug, tags } of [
+      { slug: postSlug, tags: post.tags },
+      { slug: partSlug, tags: part.tags },
+    ]) {
+      expect(tags.length).toBeGreaterThan(0);
+
+      for (const tag of tags) {
+        const page = await tagLoader(args(tag));
+
+        expect(page.posts.some((listed) => listed.slug === slug)).toBe(true);
+      }
+    }
   });
 });
 

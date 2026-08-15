@@ -15,6 +15,8 @@ interface PartAttributes {
   title: string;
   description: string;
   publishedAt: string;
+  /** The subjects, as written. A Part's Tags are its own, not the Series'. */
+  tags?: string[];
   repository?: string;
   /** Front matter as written; `validateRevisions` is what turns it into a list. */
   updates?: unknown;
@@ -76,6 +78,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     seriesTitle: series.title,
     title: attributes.title,
     description: attributes.description,
+    // Out of the payload above. This route reads the arc and never the content
+    // row, so D1 would be a new query for what KV has just handed over.
+    tags: attributes.tags ?? [],
     publishedAt: new Date(attributes.publishedAt).toLocaleDateString(),
     // The same date, unformatted. What a reader sees is written for their
     // locale; what a crawler is told has to stay `YYYY-MM-DD`.
@@ -142,6 +147,7 @@ export default function SeriesPart() {
     seriesTitle,
     title,
     publishedAt,
+    tags,
     repository,
     revisions,
     html,
@@ -170,6 +176,7 @@ export default function SeriesPart() {
       <PostArticle
         title={title}
         publishedAt={publishedAt}
+        tags={tags}
         repository={repository}
         revisions={revisions}
         html={html}
