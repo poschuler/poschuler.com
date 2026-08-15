@@ -15,7 +15,7 @@ updates:
 
 You are reading it, which makes this the one project on the site you can check while you read about it.
 
-It is a personal site, and personal sites are the most common project there is. What makes this one worth a page is not the site — it is that the decisions behind it are written down, in the repository, as ADRs. Three of them predate this page. Here are the ones worth arguing about.
+It is a personal site, and personal sites are the most common project there is. What makes this one worth a page is not the site — it is that the decisions behind it are written down, in the repository, as ADRs. Here are the ones worth arguing about.
 
 ## Markdown is the source; the stores are derived
 
@@ -25,13 +25,17 @@ Serving a post is therefore one KV read, and listing everything is one indexed q
 
 The obvious alternative was to read the Markdown at request time; the files are already in the bundle. It puts a parse on every request, and it makes *"everything published, newest first"* a question you can only answer by opening every file.
 
-## No ORM, and no migration tool
+## No ORM, and a reversal on migrations
 
 Data access is hand-written SQL through a helper thin enough to read in one sitting. One table that matters, four read queries, no joins.
 
-An ORM's value is relationship mapping, migrations and query composition — and there is nothing here for any of the three to work on, while the costs are real: bundle size inside a Worker, and a schema definition that duplicates the one in `schema.sql` and is free to disagree with it.
+An ORM's value is relationship mapping, migrations and query composition — and there is nothing here for any of the three to work on, while the costs are real: bundle size inside a Worker, and a schema definition that duplicates the one in `schema.sql` and is free to disagree with it. That half still holds.
 
-The price of that choice is honest and worth stating: schema changes are applied by hand, there is no migration history, and there is no rollback. What makes it survivable is that forgetting the remote half is no longer silent — a check compares the deployed schema against the file as the first step of every publication and refuses to seed when they differ. It blocks; it does not migrate. The applying is still mine.
+The same decision ruled out a migration tool in the same sentence, and that half did not survive. Every argument above is about what ships inside a Worker, and a CLI ships nothing — so migrations had been rejected by association rather than on their merits. What applying the schema by hand actually cost was a two-hundred-line script whose only job was to notice that the remote half had been forgotten: a drift detector written by hand for a problem migrations do not have. Adopting them removed the last manual step against production and left less machinery behind, not more.
+
+`schema.sql` stayed, because it is where the schema is explained rather than merely stated, and every database that does not exist yet is still built from it in one step. The migrations move the only one that already does. So the shape is written twice — and what makes that safe is a check that applies the chain from zero to a throwaway database and requires it to arrive at exactly the declared shape, on every push, before the deployed one has seen anything.
+
+There are still no down migrations, and none are wanted. A migration that did the wrong thing is corrected by another migration and a seed, and nothing is lost in between, because nothing in this database is original.
 
 ## The publication is one ordered operation
 

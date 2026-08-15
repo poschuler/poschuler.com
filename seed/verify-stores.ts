@@ -3,7 +3,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import fm from "front-matter";
 
-import { kvKeyFor } from "./kv/kv-keys.ts";
+import { KV_PREFIXES, kvKeyFor } from "./kv/kv-keys.ts";
 import { listPayloadFiles } from "./kv/payload-files.ts";
 
 /**
@@ -125,6 +125,7 @@ async function verify(mode: string): Promise<boolean> {
     console.log(`==> KV (${mode})`);
 
     const payloads = await listPayloadFiles(PAYLOAD_DIR);
+    const derivedKeys = new Set<string>();
     let identical = 0;
 
     for (const filename of payloads) {
@@ -137,6 +138,8 @@ async function verify(mode: string): Promise<boolean> {
             passed = report(filename, false, "no key could be derived from this payload") && passed;
             continue;
         }
+
+        derivedKeys.add(key);
 
         const local = await fsPromise.readFile(path.join(PAYLOAD_DIR, filename), "utf-8");
         let stored = "";
@@ -177,14 +180,26 @@ async function verify(mode: string): Promise<boolean> {
     passed = report("payloads byte-identical", identical === payloads.length,
         `${identical}/${payloads.length}`) && passed;
 
-    const listed = JSON.parse(
-        wrangler(["kv", "key", "list", "--binding", KV_BINDING, "--prefix", "blog:"], wranglerArgs)
-    ) as Array<{ name: string }>;
+    // One pass per prefix this repository writes, taken from the same constant
+    // `kv-bulk-upload.ts` prunes with. This used to list `blog:` alone and
+    // compare its length against every payload but the sitemap — which counted
+    // the Projects under `project:` and failed on a namespace that was correct
+    // the moment Phase 1a added a second prefix. A hardcoded `"blog:"` was the
+    // last copy of a layout `kv-keys.ts` exists to hold once.
+    //
+    // Names rather than counts: two wrong keys cancel out in a total, and the
+    // orphan is the thing worth naming when this fails. Keys that are *missing*
+    // are already reported above, one line each.
+    for (const prefix of KV_PREFIXES) {
+        const listed = JSON.parse(
+            wrangler(["kv", "key", "list", "--binding", KV_BINDING, "--prefix", `${prefix}:`], wranglerArgs)
+        ) as Array<{ name: string }>;
 
-    const expectedKeys = payloads.filter((file) => file !== "sitemap.json").length;
+        const orphans = listed.map((key) => key.name).filter((name) => !derivedKeys.has(name));
 
-    passed = report("no orphaned blog: keys", listed.length === expectedKeys,
-        `${listed.length} keys, ${expectedKeys} expected`) && passed;
+        passed = report(`no orphaned ${prefix}: keys`, orphans.length === 0,
+            orphans.length === 0 ? `${listed.length} keys` : `unexpected: ${orphans.join(", ")}`) && passed;
+    }
 
     return passed;
 }

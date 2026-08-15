@@ -25,9 +25,11 @@
 		"d1:upsert:remote": "wrangler d1 execute poschuler --file ./seed/d1/seed.sql --remote",
 		"d1:seed:local": "pnpm run d1:generate && pnpm run d1:upsert:local",
 		"d1:seed:remote": "pnpm run d1:generate && pnpm run d1:upsert:remote",
+		"d1:migrate:remote": "wrangler d1 migrations apply poschuler --remote",
 		"verify:stores:local": "node ./seed/verify-stores.ts local",
 		"verify:stores:remote": "node ./seed/verify-stores.ts remote",
-		"verify:schema:remote": "node ./seed/verify-schema.ts",
+		"verify:schema:local": "node ./seed/verify-schema.ts local",
+		"verify:schema:remote": "node ./seed/verify-schema.ts remote",
 		"check:fixtures": "bash ./scripts/check-generated-fixtures.sh"
 	},
 	"dependencies": {

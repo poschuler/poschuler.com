@@ -30,7 +30,14 @@
 			"binding": "POSCHULER_BD",
 			"database_name": "poschuler",
 			"database_id": "14a5668b-d6c8-454c-bdca-b6cd3eeea27c",
-			"remote": false
+			"remote": false,
+			/**
+			 * Not wrangler's default `./migrations`. Everything describing this
+			 * database — the declared shape in `schema.sql`, the generated rows
+			 * in `seed.sql`, and the path the deployed one takes to get there —
+			 * belongs in one directory. See ADR 0006.
+			 */
+			"migrations_dir": "./seed/d1/migrations"
 		}
 	],
 	"kv_namespaces": [
