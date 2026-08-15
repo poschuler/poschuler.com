@@ -241,7 +241,7 @@ The check uses `git status`, not `git diff`. A Post whose payload has never been
 
 **The smoke test stays.** It boots the *built* Worker with an empty environment, which no Vitest run reproduces. The two do not overlap: it proves the Worker starts, these prove it answers correctly.
 
-**`pnpm test:coverage` measures a deliberately narrow set of files**, listed in `vitest.config.ts`: the sanitiser, the cookie, the SEO renderers, the data layer, the resource routes, the seed generators' logic and the security headers. Within that scope it sits at 99% of statements and 100% of branches — the remainder is the 404 route's React component, kept in the list rather than excluded so the number stays honest.
+**`pnpm test:coverage` measures a deliberately narrow set of files**, listed in `vitest.config.ts`: the sanitiser, the cookie, the SEO renderers, the data layer, the resource routes, the seed generators' logic and the security headers. Within that scope it sits at about 98% of statements — the remainder is the 404 page's React component, kept in the list rather than excluded so the number stays honest. It is the one component measured, and it is measured because it moved out of the route: a route that matches and then finds nothing behind the address renders it from its own `ErrorBoundary`, and leaving it out of the list would have raised the percentage by relocating uncovered lines rather than by covering them.
 
 Measured across all of `app/`, `seed/` and `workers/` instead it reads about 33%, and the difference is React components and the scripts' I/O — code no test here claims to exercise. A figure that counts work nobody signed up for is a figure nobody acts on, which is why the scope is pinned in the config rather than left at the default.
 

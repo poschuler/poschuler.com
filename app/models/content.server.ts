@@ -6,8 +6,14 @@ import { dbQuery } from "~/db.server";
  *
  * This is a fixed fragment, not a value: nothing user-supplied is ever
  * interpolated into a statement. Values still go through `.bind()`.
+ *
+ * Exported because `tag.server.ts` selects Content Items too and a second copy
+ * of this list is a column added here and missing there. It stays unqualified,
+ * which is what keeps it reusable: a query that puts `content` beside a table
+ * carrying columns of the same name correlates in a subquery rather than
+ * joining in the `from`.
  */
-const CONTENT_COLUMNS = `
+export const CONTENT_COLUMNS = `
       id_content as "idContent",
       slug as "slug",
       lang as "lang",

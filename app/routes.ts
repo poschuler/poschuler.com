@@ -23,6 +23,11 @@ export default [
         route("/series/:seriesSlug", "routes/series-slug/_$series-slug.tsx"),
         route("/series/:seriesSlug/:partSlug", "routes/series-part/_$series-part.tsx"),
 
+        // Destinations first, then the page that links to them: the index at
+        // `/tags` arrives next and closes this namespace, which until then has
+        // a hole where a page should be.
+        route("/tags/:tag", "routes/tag/_$tag.tsx"),
+
         // Inside the layout on purpose: a visitor who lands here still gets the
         // header, and a way out.
         route("*", "routes/$.tsx"),

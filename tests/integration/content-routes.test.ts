@@ -9,6 +9,7 @@ import { loader as projectsLoader } from "~/routes/projects/_projects";
 import { loader as seriesPartLoader } from "~/routes/series-part/_$series-part";
 import { loader as seriesLandingLoader } from "~/routes/series-slug/_$series-slug";
 import { loader as seriesLoader } from "~/routes/series/_series";
+import { loader as tagLoader } from "~/routes/tag/_$tag";
 import { loader as timelineLoader } from "~/routes/timeline/_timeline";
 
 import {
@@ -438,6 +439,40 @@ describe("/series/:seriesSlug/:partSlug — a Part", () => {
     await expect(seriesPartLoader(args(seriesSlug, postSlug))).rejects.toMatchObject({
       status: 404,
     });
+  });
+});
+
+/**
+ * A Tag page is reachable by URL alone until the index arrives: destinations
+ * first, then the page that links to them.
+ */
+describe("/tags/:tag", () => {
+  const args = (tag: string) =>
+    routeArgs<ArgsOf<typeof tagLoader>>(platform, get(`/tags/${tag}`), { tag });
+
+  it("returns the Posts carrying the Tag, newest first", async () => {
+    const { tag, posts } = await tagLoader(args("nodejs"));
+
+    expect(tag).toBe("nodejs");
+    expect(posts.length).toBeGreaterThan(1);
+    expect(posts.every((post) => post.type === "post")).toBe(true);
+
+    const dates = posts.map((post) => post.publishedAt);
+    expect(dates).toEqual([...dates].sort().reverse());
+  });
+
+  /**
+   * The vocabulary declares what may be written; the content decides what
+   * exists. `webdev` is declared and carried by Bookmarks alone, so its page
+   * does not exist — an empty list rendered inside a frame would be a page
+   * pretending to be a result.
+   */
+  it("404s on a declared Tag that only Bookmarks carry", async () => {
+    await expect(tagLoader(args("webdev"))).rejects.toMatchObject({ status: 404 });
+  });
+
+  it("404s on a Tag that was never declared", async () => {
+    await expect(tagLoader(args("no-such-tag"))).rejects.toMatchObject({ status: 404 });
   });
 });
 

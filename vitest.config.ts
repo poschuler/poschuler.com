@@ -35,6 +35,12 @@ export default defineConfig({
      * `$.tsx` is in the list and will not reach 100%: its loader and `meta` are
      * covered, its React component is not. The honest number is better than
      * excluding the file to make the total look round.
+     *
+     * `not-found.tsx` is the one component here, and it is in the list for that
+     * same reason: the 404 page moved out of `$.tsx` so a route that finds
+     * nothing behind a matching address can render it from its own boundary,
+     * and leaving it behind would have raised the percentage by relocating the
+     * uncovered lines rather than by covering them.
      */
     coverage: {
       provider: "v8",
@@ -44,6 +50,7 @@ export default defineConfig({
         "seed/kv/markdown.ts",
         "seed/kv/sitemap-routes.ts",
         "app/color-scheme-cookie.ts",
+        "app/components/not-found.tsx",
         "app/db.server.ts",
         "app/lib/revalidation.ts",
         "app/lib/seo/**",

@@ -79,6 +79,45 @@ POST_SLUG="${LOOSE_POST_SLUGS[0]}"
 
 ROUTES=(/ /blog /bookmarks /resume /robots.txt /sitemap.xml "/blog/${POST_SLUG}")
 
+# A Tag page, probed with a Tag some Post actually carries — read from the Post
+# payloads, which is the only place that guarantees it. A hardcoded Tag would
+# answer 404 the day it left the front matter, and this route answers 404 *by
+# design* for a Tag no Post carries: the failure would look like the feature.
+#
+# The Post is carried alongside the Tag, so the content check below can assert
+# that this Post is on that page rather than trusting a 200 over an empty list.
+# One line, `<slug>\t<tag>`, as the Series pair above.
+IFS=$'\t' read -r TAG_POST_SLUG TAG < <(
+	node --input-type=module -e '
+		import { readdir, readFile } from "node:fs/promises";
+
+		const directory = "seed/kv/kv_payloads/blog";
+
+		for (const file of (await readdir(directory).catch(() => [])).sort()) {
+			const { attributes } = JSON.parse(await readFile(`${directory}/${file}`, "utf-8"));
+			const [tag] = attributes.tags ?? [];
+
+			if (tag) {
+				console.log(`${file.replace(/\.[^.]+\.json$/, "")}\t${tag}`);
+				break;
+			}
+		}
+	'
+) || true
+
+# Loud rather than skipped. Every Post on this site carries Tags — the seed
+# generator checks each one against the declared vocabulary — so no pair here
+# means either the payloads are stale or Tags have stopped being written, and
+# both are worth failing over. Silently dropping the probe is how a gate ends up
+# passing while covering nothing.
+if [[ -z "${TAG:-}" ]]; then
+	echo "error: no Post payload under seed/kv/kv_payloads/blog carries a Tag." >&2
+	echo "       Regenerate the payloads, or edit this check on purpose." >&2
+	exit 1
+fi
+
+ROUTES+=("/tags/${TAG}")
+
 # The Series namespace, when there is one to probe. All three read a store —
 # the landing and a Part read *both*, D1 for the arc and KV for the body — so
 # they are the routes most likely to be the ones a missing binding takes down,
@@ -194,6 +233,18 @@ for route in /blog "/blog/${POST_SLUG}"; do
 		failed=1
 	fi
 done
+
+# The Tag page answers 404 for a Tag no Post carries, so a 200 already says the
+# query found something — but not that the row reached the page. The Post the
+# Tag was read from is the one that must be listed.
+tag_body=$(curl -s "${BASE}/tags/${TAG}")
+
+if grep -qF "${TAG_POST_SLUG}" <<<"${tag_body}"; then
+	printf '    ok   %-24s mentions %s\n' "/tags/${TAG}" "${TAG_POST_SLUG}"
+else
+	printf '    FAIL %-24s does not mention %s\n' "/tags/${TAG}" "${TAG_POST_SLUG}"
+	failed=1
+fi
 
 # The home page is asked for any Post, not that one. It carries a short excerpt
 # of the most recent Posts, so the Slug that happens to sort first need not be
