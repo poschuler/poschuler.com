@@ -116,7 +116,7 @@ if [[ -z "${TAG:-}" ]]; then
 	exit 1
 fi
 
-ROUTES+=("/tags/${TAG}")
+ROUTES+=(/tags "/tags/${TAG}")
 
 # The Series namespace, when there is one to probe. All three read a store —
 # the landing and a Part read *both*, D1 for the arc and KV for the body — so
@@ -217,34 +217,44 @@ done
 # A 200 holding an empty page would pass everything above. Matching on the Slug
 # rather than on a title keeps this free of HTML-escaping guesswork.
 #
-# These two must name this exact Slug: `/blog` lists every Post, and the Post's
-# own page is that Post.
-echo "==> Those pages carry content, not just a status code"
-for route in /blog "/blog/${POST_SLUG}"; do
+# One function rather than a fourth copy of the same six lines. Every caller
+# below asks the same question — *did this page carry the row the store holds* —
+# and the answers were drifting: two of them printed a different failure line for
+# the same failure.
+expect_mention() {
+	local route="$1" needle="$2" body
+
 	# Held in a variable rather than piped into grep: under `pipefail`, grep -q
 	# exits on the first match and curl dies of SIGPIPE, failing the pipeline
 	# precisely when the check succeeds.
 	body=$(curl -s "${BASE}${route}")
 
-	if grep -qF "${POST_SLUG}" <<<"${body}"; then
-		printf '    ok   %-24s mentions %s\n' "${route}" "${POST_SLUG}"
+	if grep -qF "${needle}" <<<"${body}"; then
+		printf '    ok   %-24s mentions %s\n' "${route}" "${needle}"
 	else
-		printf '    FAIL %-24s does not mention %s\n' "${route}" "${POST_SLUG}"
+		printf '    FAIL %-24s does not mention %s\n' "${route}" "${needle}"
 		failed=1
 	fi
-done
+}
+
+echo "==> Those pages carry content, not just a status code"
+
+# These two must name this exact Slug: `/blog` lists every Post, and the Post's
+# own page is that Post.
+expect_mention /blog "${POST_SLUG}"
+expect_mention "/blog/${POST_SLUG}" "${POST_SLUG}"
 
 # The Tag page answers 404 for a Tag no Post carries, so a 200 already says the
 # query found something — but not that the row reached the page. The Post the
 # Tag was read from is the one that must be listed.
-tag_body=$(curl -s "${BASE}/tags/${TAG}")
+expect_mention "/tags/${TAG}" "${TAG_POST_SLUG}"
 
-if grep -qF "${TAG_POST_SLUG}" <<<"${tag_body}"; then
-	printf '    ok   %-24s mentions %s\n' "/tags/${TAG}" "${TAG_POST_SLUG}"
-else
-	printf '    FAIL %-24s does not mention %s\n' "/tags/${TAG}" "${TAG_POST_SLUG}"
-	failed=1
-fi
+# The index, which reads a different query against the same table. A 200 here
+# survives an empty list — every entry comes from `content_tag`, and the whole
+# page is those entries — so it is asked for the one Tag known to be on it. The
+# page's own description names its subjects in prose (`Node.js`), never as
+# slugs, so this cannot match on anything but an entry.
+expect_mention /tags "${TAG}"
 
 # The home page is asked for any Post, not that one. It carries a short excerpt
 # of the most recent Posts, so the Slug that happens to sort first need not be

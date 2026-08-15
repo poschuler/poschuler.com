@@ -23,9 +23,10 @@ export default [
         route("/series/:seriesSlug", "routes/series-slug/_$series-slug.tsx"),
         route("/series/:seriesSlug/:partSlug", "routes/series-part/_$series-part.tsx"),
 
-        // Destinations first, then the page that links to them: the index at
-        // `/tags` arrives next and closes this namespace, which until then has
-        // a hole where a page should be.
+        // The whole `/tags` namespace, closed the way `/series` is: the index
+        // lists every Tag some Post carries, and a Tag no Post carries is a 404
+        // one level down rather than an entry here that leads to one.
+        route("/tags", "routes/tags/_tags.tsx"),
         route("/tags/:tag", "routes/tag/_$tag.tsx"),
 
         // Inside the layout on purpose: a visitor who lands here still gets the

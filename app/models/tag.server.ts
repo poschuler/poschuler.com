@@ -8,7 +8,9 @@ import { CONTENT_COLUMNS, type PostRowType } from "~/models/content.server";
  * Content Item carries it, and `content_tag` holds one row per Tag per item.
  * That is why there is nothing here that finds *a Tag* — what a page asks is
  * always about the items behind it, and a Tag no item backs is simply an empty
- * answer.
+ * answer. Even the index below asks a question about Posts and gets Tags out of
+ * the answer; it never reads the vocabulary, which is a declaration of what may
+ * be written rather than a record of what exists.
  *
  * Its own module rather than a fourth function in `content.server.ts`, the
  * shape `series.server.ts` established: the table is new, the join is the whole
@@ -18,6 +20,63 @@ import { CONTENT_COLUMNS, type PostRowType } from "~/models/content.server";
  * Every fragment below is fixed text supplied by this module; values go through
  * `.bind()`.
  */
+
+/**
+ * One row of the index: a Tag, and how many Posts carry it.
+ *
+ * `posts` rather than `count`, because the number is a quantity of Posts and
+ * nothing else — the same word the page renders beside it.
+ */
+export type TagCountRowType = {
+  tag: string;
+  posts: number;
+};
+
+/**
+ * Every Tag some Post carries, heaviest first.
+ *
+ * **What the vocabulary declares is not what this returns.** `tags.json` says
+ * what may be written; the rows say what exists. Twelve of the declared Tags sit
+ * on Bookmarks alone today, and listing them would be an index whose entries
+ * lead to the 404 the route serves for a Tag no Post carries.
+ *
+ * Posts only, for the reason `findPostsByTag` is: the count on this page has to
+ * be the number of rows the page behind the link holds, and that page is
+ * Posts-only. A count including Bookmarks would be a promise the destination
+ * does not keep.
+ *
+ * A join rather than the `exists` above: the question is about the Tags, so
+ * `content_tag` is what is grouped and `content` is what filters it. Only three
+ * columns are named and each is qualified, so the two tables sharing `slug` and
+ * `lang` costs nothing here.
+ *
+ * The join on `lang` also carries the Bookmarks out on its own — theirs is NULL
+ * in both tables and SQLite matches no NULL to another — but `type = 'post'` is
+ * what says so out loud, and it is what would still be true if a Bookmark ever
+ * gained a Locale.
+ *
+ * **Ordered by count descending, then by the Tag.** Read straight down, the list
+ * is a profile of the subjects this site covers, which is the whole reason the
+ * page is worth having. The alphabetical tie-break is not cosmetic: without it
+ * the order of two equal Tags is whatever SQLite happened to scan, and CI
+ * compares the generated payloads byte for byte.
+ */
+export function findTagsWithPostCounts(db: D1Database, lang = "en") {
+  return dbQuery<TagCountRowType>(
+    db,
+    `select content_tag.tag as tag, count(*) as posts
+      from content_tag
+      join content
+        on content.slug = content_tag.slug
+       and content.lang = content_tag.lang
+      where content.type = 'post'
+        and content.lang = ?
+      group by content_tag.tag
+      order by posts desc, content_tag.tag asc
+    `,
+    [lang],
+  );
+}
 
 /**
  * The Posts carrying a Tag, newest first.

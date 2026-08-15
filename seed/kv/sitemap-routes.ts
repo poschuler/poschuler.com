@@ -88,22 +88,39 @@ export type SitemapSeries = {
 };
 
 /**
- * The two collections that are not Content Items.
+ * A Tag some Post carries — one entry on the index at `/tags`.
  *
- * An object rather than two positional parameters: both are arrays of objects
- * with a `slug`, so `SitemapProject[]` satisfies `SitemapSeries[]` structurally
- * and transposing them would type-check while publishing every Project under
- * `/series/`. Named fields make that mistake unrepresentable.
+ * Only the Tags **Posts** carry, which is what the index lists and therefore
+ * what decides whether the index has anything on it. The table holds Bookmark
+ * rows too and they back no page.
+ *
+ * It arrives whole rather than as a count, even though nothing below reads the
+ * string. The list is what makes *no URL per Tag* a decision this module can be
+ * held to: given the Tags, a test can assert that none of them became a route.
+ * A number could only ever assert that a page appeared.
+ */
+export type SitemapTag = {
+  tag: string;
+};
+
+/**
+ * The three collections that are not Content Items.
+ *
+ * An object rather than positional parameters: `SitemapProject[]` satisfies
+ * `SitemapSeries[]` structurally, so transposing those two would type-check
+ * while publishing every Project under `/series/`. Named fields make that
+ * mistake unrepresentable.
  */
 export type SitemapCollections = {
   projects?: SitemapProject[];
   series?: SitemapSeries[];
+  tags?: SitemapTag[];
 };
 
 export function buildSitemapRoutes(
   items: SitemapContentItem[],
   { fallbackLastmod, resumeLastmod }: SitemapDates,
-  { projects = [], series = [] }: SitemapCollections = {},
+  { projects = [], series = [], tags = [] }: SitemapCollections = {},
 ): SitemapRoute[] {
   const posts = items.filter((item) => item.type === "post");
   const bookmarks = items.filter((item) => item.type === "link");
@@ -186,6 +203,28 @@ export function buildSitemapRoutes(
         ]
       : [];
 
+  /**
+   * The index and nothing under it.
+   *
+   * **No URL per Tag, deliberately.** Every individual Tag page declares
+   * `noindex, follow`, and a sitemap advertising a page that asks not to be
+   * indexed is the site contradicting itself in the two files a crawler reads
+   * first. The index is the one document in that namespace with something of
+   * its own to say, so it is the one that appears here.
+   *
+   * Dated from the newest Post, like `/blog`: what changes this page is that a
+   * Post arrived carrying Tags, and a Post is the only thing that can change a
+   * count on it — Bookmark Tags back no page.
+   *
+   * Nothing at all when no Post carries a Tag, the rule `/projects` and
+   * `/series` already follow: an index advertising nothing is worse than no
+   * index.
+   */
+  const tagRoutes: SitemapRoute[] =
+    tags.length > 0
+      ? [{ url: "/tags", lastmod: lastModOf(posts), changefreq: "monthly", priority: 0.5 }]
+      : [];
+
   return [
     { url: "/", lastmod: lastModOf(items), changefreq: "monthly", priority: 1.0 },
     { url: "/resume", lastmod: resumeLastmod, changefreq: "monthly", priority: 0.8 },
@@ -196,6 +235,7 @@ export function buildSitemapRoutes(
     { url: "/timeline", lastmod: lastModOf(items), changefreq: "monthly", priority: 0.5 },
     ...projectRoutes,
     ...seriesRoutes,
+    ...tagRoutes,
     ...loosePosts.map((post) => ({
       url: `/blog/${post.slug}`,
       lastmod: revisedAt(post, post.publishedStringDate),

@@ -5,6 +5,7 @@ import {
   type SitemapContentItem,
   type SitemapProject,
   type SitemapSeries,
+  type SitemapTag,
 } from "../../../seed/kv/sitemap-routes";
 
 /**
@@ -42,7 +43,8 @@ const routesFor = (
   resumeLastmod = RESUME_LASTMOD,
   projects: SitemapProject[] = [],
   series: SitemapSeries[] = [],
-) => buildSitemapRoutes(items, { fallbackLastmod, resumeLastmod }, { projects, series });
+  tags: SitemapTag[] = [],
+) => buildSitemapRoutes(items, { fallbackLastmod, resumeLastmod }, { projects, series, tags });
 
 /** A Part: a Post whose Container says where it is served from. */
 const part = (
@@ -279,5 +281,53 @@ describe("a Series in the sitemap", () => {
 
     expect(urls).not.toContain("/series");
     expect(urls.some((url) => url.startsWith("/series/"))).toBe(false);
+  });
+});
+
+/**
+ * The `/tags` namespace is the one place where the sitemap and the routes
+ * disagree on purpose: the index is advertised, and the ten pages it links to
+ * are not. Each of those declares `noindex, follow`, and a sitemap must never
+ * advertise a page that asks not to be indexed — the two would be a site
+ * contradicting itself in the two files a crawler reads first.
+ *
+ * The Tags are passed in whole rather than as a count, so this can assert what
+ * did *not* happen to them.
+ */
+describe("the Tag index in the sitemap", () => {
+  const tags: SitemapTag[] = [{ tag: "nodejs" }, { tag: "typescript" }];
+
+  const withTags = (items: SitemapContentItem[], carried: SitemapTag[] = tags) =>
+    routesFor(items, FALLBACK, RESUME_LASTMOD, [], [], carried);
+
+  it("advertises the index", () => {
+    expect(urlsOf(withTags(items))).toContain("/tags");
+  });
+
+  it("advertises no individual Tag page, however many Tags there are", () => {
+    const urls = urlsOf(withTags(items));
+
+    expect(urls).not.toContain("/tags/nodejs");
+    expect(urls.some((url) => url.startsWith("/tags/"))).toBe(false);
+  });
+
+  /**
+   * Dated like `/blog`, from the newest Post — what changes this page is that a
+   * Post arrived carrying Tags, and a Post is the only thing that can change a
+   * count on it. A Bookmark cannot: its Tags back no page here.
+   */
+  it("dates the index from the newest Post", () => {
+    const routes = withTags(items);
+
+    expect(routes.find((route) => route.url === "/tags")?.lastmod).toBe("2026-05-01");
+  });
+
+  /**
+   * The same rule `/projects` and `/series` follow. Ten of the twenty-two
+   * declared Tags reach a Post today, but a repository whose Posts carry none
+   * would be advertising an index of nothing.
+   */
+  it("advertises no index at all when no Post carries a Tag", () => {
+    expect(urlsOf(withTags(items, []))).not.toContain("/tags");
   });
 });

@@ -10,6 +10,7 @@ import { loader as seriesPartLoader } from "~/routes/series-part/_$series-part";
 import { loader as seriesLandingLoader } from "~/routes/series-slug/_$series-slug";
 import { loader as seriesLoader } from "~/routes/series/_series";
 import { loader as tagLoader } from "~/routes/tag/_$tag";
+import { loader as tagsLoader } from "~/routes/tags/_tags";
 import { loader as timelineLoader } from "~/routes/timeline/_timeline";
 
 import {
@@ -443,7 +444,42 @@ describe("/series/:seriesSlug/:partSlug — a Part", () => {
 });
 
 /**
- * A Tag page is reachable by URL alone until the index arrives: destinations
+ * The index closes the namespace: the bare path was a 404 in the middle of a
+ * live address space, which is the first place a crawler goes after a Tag page.
+ */
+describe("/tags — the index", () => {
+  const load = () => tagsLoader(routeArgs<ArgsOf<typeof tagsLoader>>(platform, get("/tags")));
+
+  it("returns every Tag some Post carries, heaviest first", async () => {
+    const { tags } = await load();
+
+    expect(tags.length).toBeGreaterThan(1);
+
+    const counts = tags.map((tag) => tag.posts);
+    expect(counts).toEqual([...counts].sort((a, b) => b - a));
+  });
+
+  /**
+   * The one defect an index of links can have. Every entry is followed through
+   * the loader that serves it, which throws a 404 for a Tag no Post carries —
+   * so a stale or over-generous list fails here rather than in production.
+   */
+  it("offers no entry that leads to a 404", async () => {
+    const { tags } = await load();
+
+    for (const { tag, posts } of tags) {
+      const page = await tagLoader(
+        routeArgs<ArgsOf<typeof tagLoader>>(platform, get(`/tags/${tag}`), { tag }),
+      );
+
+      expect(page.posts.length).toBe(posts);
+    }
+  });
+});
+
+/**
+ * The other half of the namespace, and the destination every entry above leads
+ * to. It was reachable by URL alone before the index existed: destinations
  * first, then the page that links to them.
  */
 describe("/tags/:tag", () => {

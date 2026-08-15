@@ -8,6 +8,7 @@ import {
     buildSitemapRoutes,
     type SitemapContentItem,
     type SitemapProject,
+    type SitemapTag,
 } from "./sitemap-routes.ts";
 import resume from "../../app/routes/resume/resume.json" with { type: "json" };
 
@@ -123,6 +124,32 @@ function fetchAllSeries(): SeriesRowType[] {
 }
 
 /**
+ * The Tags that reach a page — the entries the index at `/tags` lists.
+ *
+ * Read from `content_tag` rather than from the `tags` column selected above:
+ * that column has no reader left and is scheduled for removal, and the sitemap
+ * would be the one thing keeping it alive.
+ *
+ * **Posts only**, because a Tag page lists Posts only — the join on `lang` does
+ * that on its own (a Bookmark's is NULL in both tables and SQLite matches no
+ * NULL to another), and `type = 'post'` is what says so. A Tag carried by
+ * Bookmarks alone backs no page and is not an entry on the index.
+ *
+ * **No Locale filter, where the index's own query reads `en`.** Nothing in this
+ * pipeline names a Locale — the seed derives whatever the content declares —
+ * and this would be the first line to do it. The divergence is real and its
+ * consequence is bounded: a Post written only in Spanish would have this
+ * advertise `/tags` while the English index is empty. Whether a Spanish Tag
+ * page lists only Spanish Posts is a decision the phase deliberately deferred,
+ * and it is the decision that says what belongs here.
+ */
+function fetchTaggedPostTags(): SitemapTag[] {
+    return queryD1<SitemapTag>(
+        `select distinct content_tag.tag as "tag" from content_tag join content on content.slug = content_tag.slug and content.lang = content_tag.lang where content.type = 'post' order by content_tag.tag asc`,
+    );
+}
+
+/**
  * Renders one Markdown body into its payload.
  *
  * Throws rather than logging and carrying on, which is what this used to do: a
@@ -163,6 +190,7 @@ async function generateKvJsonFiles() {
     const posts = allContentItems.filter((item) => item.type === "post");
     const projects = fetchAllProjects();
     const series = fetchAllSeries();
+    const tags = fetchTaggedPostTags();
 
     await fs.rm(TEMP_JSON_DIR, { recursive: true, force: true });
     await fs.mkdir(TEMP_JSON_DIR, { recursive: true });
@@ -220,7 +248,7 @@ async function generateKvJsonFiles() {
         routes: buildSitemapRoutes(
             allContentItems,
             { fallbackLastmod, resumeLastmod: resume.meta.lastModified },
-            { projects, series },
+            { projects, series, tags },
         ),
     });
 

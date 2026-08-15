@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { dbQuery } from "~/db.server";
 import { findAllBookmarks, findAllPosts } from "~/models/content.server";
-import { findPostsByTag } from "~/models/tag.server";
+import { findPostsByTag, findTagsWithPostCounts } from "~/models/tag.server";
 
 import { openTestPlatform, type TestPlatform } from "../setup/platform";
 
@@ -103,5 +103,76 @@ describe("findPostsByTag", () => {
     const bookmarked = new Set(bookmarks.map((bookmark) => bookmark.slug));
     expect(crossing.every((row) => bookmarked.has(row.slug))).toBe(true);
     expect(tagged.some((post) => bookmarked.has(post.slug))).toBe(false);
+  });
+});
+
+/**
+ * What the index reads. Read straight down it is a profile of the subjects this
+ * site covers, so the order is as much the answer as the list is — and the
+ * counts have to be the counts a reader gets when they follow the link, or the
+ * page promises what it does not deliver.
+ */
+describe("findTagsWithPostCounts", () => {
+  it("lists every Tag some Post carries, and nothing a Post does not", async () => {
+    const counts = await findTagsWithPostCounts(platform.env.POSCHULER_BD);
+
+    expect(counts.length).toBeGreaterThan(0);
+    expect(counts.map((row) => row.tag)).not.toContain(BOOKMARK_ONLY_TAG);
+    // A `group by`, so a Tag cannot appear twice however many rows back it.
+    expect(new Set(counts.map((row) => row.tag)).size).toBe(counts.length);
+  });
+
+  /**
+   * The one that would make the index lie, and the one that proves every entry
+   * goes somewhere real: a count is checked against the page it links to rather
+   * than against a number written here, and that page 404s on an empty result.
+   * The two come from different queries, so only their agreeing is worth
+   * anything.
+   */
+  it("counts the Posts the Tag's own page lists", async () => {
+    const counts = await findTagsWithPostCounts(platform.env.POSCHULER_BD);
+
+    const listed = await Promise.all(
+      counts.map(async ({ tag, posts }) => ({
+        tag,
+        posts,
+        onThePage: (await findPostsByTag(platform.env.POSCHULER_BD, tag)).length,
+      })),
+    );
+
+    for (const row of listed) {
+      expect(row.onThePage).toBe(row.posts);
+    }
+  });
+
+  it("orders them by Post count, heaviest first", async () => {
+    const counts = await findTagsWithPostCounts(platform.env.POSCHULER_BD);
+    const numbers = counts.map((row) => row.posts);
+
+    expect(numbers.length).toBeGreaterThan(1);
+    expect(numbers).toEqual([...numbers].sort((a, b) => b - a));
+  });
+
+  /**
+   * The tie-break, which is not cosmetic: the counts alone leave the order of
+   * two equal Tags to whatever SQLite happened to scan, and CI compares the
+   * generated payloads byte for byte.
+   *
+   * The ties are found rather than named — `nodejs` and `typescript` hold four
+   * Posts each today and `backend` and `express` three, but which Tags tie is
+   * content and moves. What is asserted first is that at least one tie exists,
+   * so this cannot go on passing while covering nothing.
+   */
+  it("breaks a tie alphabetically", async () => {
+    const counts = await findTagsWithPostCounts(platform.env.POSCHULER_BD);
+
+    const ties = counts.filter((row, index) => index > 0 && counts[index - 1].posts === row.posts);
+
+    expect(ties.length).toBeGreaterThan(0);
+
+    for (const tie of ties) {
+      const previous = counts[counts.indexOf(tie) - 1];
+      expect(previous.tag < tie.tag).toBe(true);
+    }
   });
 });

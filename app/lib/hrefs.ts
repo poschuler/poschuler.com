@@ -20,6 +20,16 @@ export function seriesHref(seriesSlug: string): string {
   return `/series/${seriesSlug}`;
 }
 
+/**
+ * A Tag's page. The segment is the Tag verbatim: a Tag *is* its Slug, checked
+ * against a closed vocabulary by the seed generator, so there is nothing to
+ * encode and nothing to derive — a Tag that needed escaping here would have
+ * failed the build.
+ */
+export function tagHref(tag: string): string {
+  return `/tags/${tag}`;
+}
+
 /** A Post, wherever it is served: a Part under its Series, or `/blog`. */
 export function postHref(post: { slug: string; seriesSlug: string | null }): string {
   return post.seriesSlug ? `${seriesHref(post.seriesSlug)}/${post.slug}` : `/blog/${post.slug}`;

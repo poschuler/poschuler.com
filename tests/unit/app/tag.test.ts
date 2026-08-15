@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { NotFound } from "~/components/not-found";
 import { ErrorBoundary as TagErrorBoundary, meta as tagMeta } from "~/routes/tag/_$tag";
+import { meta as tagsMeta } from "~/routes/tags/_tags";
 
 /**
  * A Tag page exists for the reader and for internal linking, not to compete in
@@ -37,6 +38,27 @@ describe("the Tag page's meta", () => {
     expect(description).toEqual({
       name: "description",
       content: "Everything Paul Osorio Schuler has written on zod: 1 article, newest first.",
+    });
+  });
+});
+
+/**
+ * The index is the half of the pair that *is* indexed. It is a page of the
+ * site's own subjects rather than a list of links to one Post, and it is what
+ * the sitemap advertises — so the absence of a robots directive here is as
+ * load-bearing as its presence one route over, and just as easy to break with a
+ * line copied between two files that look alike.
+ */
+describe("the Tag index's meta", () => {
+  it("carries no robots directive at all", () => {
+    expect(tagsMeta({} as never)).not.toContainEqual(expect.objectContaining({ name: "robots" }));
+  });
+
+  it("declares itself canonical at the bare path", () => {
+    expect(tagsMeta({} as never)).toContainEqual({
+      tagName: "link",
+      rel: "canonical",
+      href: "https://poschuler.com/tags",
     });
   });
 });

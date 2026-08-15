@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { postHref, seriesHref } from "../../../app/lib/hrefs";
+import { postHref, seriesHref, tagHref } from "../../../app/lib/hrefs";
 
 /**
  * Four lines with a test, because the rule they hold is the one that used to
@@ -26,5 +26,16 @@ describe("postHref", () => {
 describe("seriesHref", () => {
   it("points at the landing", () => {
     expect(seriesHref("pragmatic-nodejs-api")).toBe("/series/pragmatic-nodejs-api");
+  });
+});
+
+/**
+ * The index builds one of these per entry and the chips on a Post will build
+ * one each, so the rule lives in the same place the other two do rather than
+ * inline at both call sites.
+ */
+describe("tagHref", () => {
+  it("carries the Tag through verbatim, because a Tag is its Slug", () => {
+    expect(tagHref("software-architecture")).toBe("/tags/software-architecture");
   });
 });
