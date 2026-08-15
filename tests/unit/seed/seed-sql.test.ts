@@ -11,12 +11,26 @@ import {
   type FrontMatterAttributes,
   type SeededRow,
 } from "../../../seed/d1/seed-sql";
+import type { TagVocabulary } from "../../../seed/d1/tag-vocabulary";
 
 /**
  * What ends up in production D1. The seed runs unattended in CI against the one
  * live database, so the rules below are not formatting preferences — a wrong
  * `DELETE` here empties the Timeline.
  */
+
+/**
+ * Stands in for `app/content/tags.json`, which the generator reads off the disk
+ * and hands in. Built here rather than parsed, because what turns a file into a
+ * vocabulary is `tag-vocabulary.test.ts`'s business; this file is about what a
+ * Content Item is measured against.
+ */
+const VOCABULARY: TagVocabulary = new Set([
+  "backend",
+  "ddd",
+  "nodejs",
+  "software-architecture",
+]);
 
 const post = (overrides: Partial<FrontMatterAttributes> = {}): FrontMatterAttributes => ({
   type: "post",
@@ -88,7 +102,7 @@ describe("parseContentFilename", () => {
 
 describe("contentRowFor — Posts", () => {
   it("emits an upsert keyed by (Slug, Locale)", () => {
-    const result = contentRowFor("blog/value-objects/value-objects.en.md", post());
+    const result = contentRowFor("blog/value-objects/value-objects.en.md", post(), VOCABULARY);
 
     expect(isSkipped(result)).toBe(false);
 
@@ -103,14 +117,22 @@ describe("contentRowFor — Posts", () => {
    * indexes. Losing it would turn a re-seed into duplicate rows.
    */
   it("upserts rather than inserting, so re-running the seed is a no-op", () => {
-    const row = contentRowFor("blog/value-objects/value-objects.en.md", post()) as SeededRow;
+    const row = contentRowFor(
+      "blog/value-objects/value-objects.en.md",
+      post(),
+      VOCABULARY,
+    ) as SeededRow;
 
     expect(row.statement).toMatch(/INSERT OR REPLACE/);
     expect(row.statement).not.toMatch(/^\s*INSERT INTO/m);
   });
 
   it("carries the columns a Post has and none of the Bookmark ones", () => {
-    const row = contentRowFor("blog/value-objects/value-objects.en.md", post()) as SeededRow;
+    const row = contentRowFor(
+      "blog/value-objects/value-objects.en.md",
+      post(),
+      VOCABULARY,
+    ) as SeededRow;
 
     expect(row.statement).toContain("(slug, lang, type, title, description, published_at, tags, repository, updates, series_slug, series_section, section_order, updated_at)");
     expect(row.statement).not.toContain("external_url");
@@ -123,13 +145,21 @@ describe("contentRowFor — Posts", () => {
    * of one.
    */
   it("writes a loose Post with no Container rather than with none of the columns", () => {
-    const row = contentRowFor("blog/value-objects/value-objects.en.md", post()) as SeededRow;
+    const row = contentRowFor(
+      "blog/value-objects/value-objects.en.md",
+      post(),
+      VOCABULARY,
+    ) as SeededRow;
 
     expect(row.statement).toContain("'[]', NULL, NULL, NULL, CURRENT_TIMESTAMP)");
   });
 
   it("serialises absent tags as an empty JSON array, not as NULL", () => {
-    const row = contentRowFor("blog/x/x.en.md", post({ tags: undefined })) as SeededRow;
+    const row = contentRowFor(
+      "blog/x/x.en.md",
+      post({ tags: undefined }),
+      VOCABULARY,
+    ) as SeededRow;
 
     expect(row.statement).toContain(`'[]'`);
   });
@@ -141,7 +171,11 @@ describe("contentRowFor — Posts", () => {
    * nobody reads.
    */
   it("skips a Post whose filename carries no recognised Locale", () => {
-    const result = contentRowFor("blog/setup-project/setup-project.en-old.md", post());
+    const result = contentRowFor(
+      "blog/setup-project/setup-project.en-old.md",
+      post(),
+      VOCABULARY,
+    );
 
     expect(isSkipped(result)).toBe(true);
     expect((result as { reason: string }).reason).toMatch(/must have a language/);
@@ -150,14 +184,18 @@ describe("contentRowFor — Posts", () => {
 
 describe("contentRowFor — Bookmarks", () => {
   it("emits an upsert keyed by Slug alone, with a null Locale", () => {
-    const row = contentRowFor("bookmarks/how-i-would-do-auth.md", bookmark()) as SeededRow;
+    const row = contentRowFor(
+      "bookmarks/how-i-would-do-auth.md",
+      bookmark(),
+      VOCABULARY,
+    ) as SeededRow;
 
     expect(row.key).toBe("how-i-would-do-auth:");
     expect(row.statement).toContain("'how-i-would-do-auth', NULL, 'link'");
   });
 
   it("carries the Source and external URL a Bookmark has", () => {
-    const row = contentRowFor("bookmarks/a.md", bookmark()) as SeededRow;
+    const row = contentRowFor("bookmarks/a.md", bookmark(), VOCABULARY) as SeededRow;
 
     expect(row.statement).toContain("(slug, lang, type, title, external_url, source, published_at, tags, updated_at)");
     expect(row.statement).toContain("'https://example.com/a', 'Example'");
@@ -174,7 +212,7 @@ describe("contentRowFor — Parts of a Series", () => {
   const placement = { seriesSlug: "pragmatic-nodejs-api", section: "fundamentals", order: 1 };
 
   it("writes the Container the manifest supplies", () => {
-    const row = contentRowFor(partPath, post(), placement) as SeededRow;
+    const row = contentRowFor(partPath, post(), VOCABULARY, placement) as SeededRow;
 
     expect(row.key).toBe("project-setup:en");
     expect(row.statement).toContain("'pragmatic-nodejs-api', 'fundamentals', 1, CURRENT_TIMESTAMP)");
@@ -182,7 +220,10 @@ describe("contentRowFor — Parts of a Series", () => {
 
   /** Zero is a position, and a falsy one. It must survive the round trip. */
   it("writes the first Part's position rather than dropping it", () => {
-    const row = contentRowFor(partPath, post(), { ...placement, order: 0 }) as SeededRow;
+    const row = contentRowFor(partPath, post(), VOCABULARY, {
+      ...placement,
+      order: 0,
+    }) as SeededRow;
 
     expect(row.statement).toContain("'fundamentals', 0, CURRENT_TIMESTAMP)");
   });
@@ -192,7 +233,7 @@ describe("contentRowFor — Parts of a Series", () => {
    * would be seeded with no Container, so no listing could link to it.
    */
   it("fails a Part its manifest does not list", () => {
-    const result = contentRowFor(partPath, post());
+    const result = contentRowFor(partPath, post(), VOCABULARY);
 
     expect(isInvalid(result)).toBe(true);
     expect((result as { error: string }).error).toMatch(/not listed in the pragmatic-nodejs-api manifest/);
@@ -207,6 +248,7 @@ describe("contentRowFor — Parts of a Series", () => {
     const result = contentRowFor(
       "series/pragmatic-nodejs-api/project-setup/project-setup.en-old.md",
       post(),
+      VOCABULARY,
     );
 
     expect(isSkipped(result)).toBe(true);
@@ -214,7 +256,12 @@ describe("contentRowFor — Parts of a Series", () => {
   });
 
   it("fails a Part declaring itself the Series it belongs to", () => {
-    const result = contentRowFor(partPath, { ...post(), type: "series" as never }, placement);
+    const result = contentRowFor(
+      partPath,
+      { ...post(), type: "series" as never },
+      VOCABULARY,
+      placement,
+    );
 
     expect(isInvalid(result)).toBe(true);
   });
@@ -223,6 +270,7 @@ describe("contentRowFor — Parts of a Series", () => {
     const result = contentRowFor(
       "series/pragmatic-nodejs-api/pragmatic-nodejs-api.en.md",
       post(),
+      VOCABULARY,
     );
 
     expect(isInvalid(result)).toBe(true);
@@ -232,7 +280,7 @@ describe("contentRowFor — Parts of a Series", () => {
 
 describe("contentRowFor — anything else", () => {
   it("skips a filename it cannot parse at all", () => {
-    const result = contentRowFor("blog/x/not-markdown.txt", post());
+    const result = contentRowFor("blog/x/not-markdown.txt", post(), VOCABULARY);
 
     expect(isSkipped(result)).toBe(true);
     expect((result as { reason: string }).reason).toMatch(/could not parse/);
@@ -245,37 +293,125 @@ describe("contentRowFor — anything else", () => {
  */
 describe("contentRowFor — the tree and the front matter must agree", () => {
   it("fails a Post filed under bookmarks, which used to seed a row with no body", () => {
-    const result = contentRowFor("bookmarks/value-objects.en.md", post());
+    const result = contentRowFor("bookmarks/value-objects.en.md", post(), VOCABULARY);
 
     expect(isInvalid(result)).toBe(true);
     expect((result as { error: string }).error).toMatch(/in the bookmarks tree says 'link'/);
   });
 
   it("fails a file declaring a type no tree holds", () => {
-    const result = contentRowFor("blog/x/x.en.md", { ...post(), type: "note" as never });
+    const result = contentRowFor(
+      "blog/x/x.en.md",
+      { ...post(), type: "note" as never },
+      VOCABULARY,
+    );
 
     expect(isInvalid(result)).toBe(true);
   });
 
   /** Invisible rather than misfiled: nothing would read it and nothing would say so. */
   it("fails a file under a directory no generator claims", () => {
-    const result = contentRowFor("drafts/x.en.md", post());
+    const result = contentRowFor("drafts/x.en.md", post(), VOCABULARY);
 
     expect(isInvalid(result)).toBe(true);
     expect((result as { error: string }).error).toMatch(/not under a content tree/);
   });
 
   it("fails a Project handed to the content generator", () => {
-    const result = contentRowFor("projects/chekalo/chekalo.en.md", post());
+    const result = contentRowFor("projects/chekalo/chekalo.en.md", post(), VOCABULARY);
 
     expect(isInvalid(result)).toBe(true);
     expect((result as { error: string }).error).toMatch(/does not belong in the content table/);
   });
 });
 
+/**
+ * The vocabulary arrives the way a Part's placement does — as a value the
+ * generator read off the disk — so an undeclared Tag fails in the shape every
+ * other front-matter mistake already fails in. What these assert is that it is a
+ * failure at all: a warning printed by a run that already prints skip notices on
+ * every pass is a warning nobody reads.
+ */
+describe("contentRowFor — Tags are drawn from the declared vocabulary", () => {
+  it("seeds a Post whose Tags are all declared", () => {
+    const result = contentRowFor(
+      "blog/a/a.en.md",
+      post({ tags: ["nodejs", "software-architecture"] }),
+      VOCABULARY,
+    );
+
+    expect(isInvalid(result)).toBe(false);
+    expect((result as SeededRow).statement).toContain(`'["nodejs","software-architecture"]'`);
+  });
+
+  /**
+   * The defect this closes: `architecture` and `software-architecture` are both
+   * well-formed slugs, so no rule about shape rejects either, and the site
+   * carried one subject under two words.
+   */
+  it("fails an undeclared Tag, naming the file, the Tag and where to declare it", () => {
+    const result = contentRowFor(
+      "blog/a/a.en.md",
+      post({ tags: ["nodejs", "architecture"] }),
+      VOCABULARY,
+    );
+
+    expect(isInvalid(result)).toBe(true);
+
+    const { error } = result as { error: string };
+    expect(error).toContain("blog/a/a.en.md");
+    expect(error).toContain("architecture");
+    expect(error).toContain("app/content/tags.json");
+  });
+
+  /** Two mistakes, two messages: one is a rewrite, the other is a decision. */
+  it("fails a Tag that is not a slug with a different message from an undeclared one", () => {
+    const notASlug = contentRowFor(
+      "blog/a/a.en.md",
+      post({ tags: ["Software Architecture"] }),
+      VOCABULARY,
+    ) as { error: string };
+    const undeclared = contentRowFor(
+      "blog/a/a.en.md",
+      post({ tags: ["architecture"] }),
+      VOCABULARY,
+    ) as { error: string };
+
+    expect(notASlug.error).toMatch(/is not a slug/);
+    expect(undeclared.error).toMatch(/does not declare/);
+  });
+
+  /** The vocabulary covers Bookmarks too, though no Tag page lists them. */
+  it("fails an undeclared Tag on a Bookmark", () => {
+    const result = contentRowFor(
+      "bookmarks/a.md",
+      bookmark({ tags: ["UX"] }),
+      VOCABULARY,
+    );
+
+    expect(isInvalid(result)).toBe(true);
+  });
+
+  /**
+   * The one file no check can see. `project-setup.en-old.md` carries the
+   * pre-vocabulary spellings and is skipped for its filename before its Tags are
+   * ever read — so it stays invalid and unchecked, and becomes a build failure
+   * the moment anyone renames it.
+   */
+  it("skips a draft carrying pre-vocabulary Tags rather than failing on them", () => {
+    const result = contentRowFor(
+      "series/pragmatic-nodejs-api/project-setup/project-setup.en-old.md",
+      post({ tags: ["Nodejs", "TypeScript"] }),
+      VOCABULARY,
+    );
+
+    expect(isSkipped(result)).toBe(true);
+  });
+});
+
 describe("contentRowFor — revisions", () => {
   it("stores an absent list as an empty array, not as NULL", () => {
-    const row = contentRowFor("blog/a/a.en.md", post()) as SeededRow;
+    const row = contentRowFor("blog/a/a.en.md", post(), VOCABULARY) as SeededRow;
 
     expect(row.statement).toContain("updates, series_slug");
     expect(row.statement).toContain(`'[]'`);
@@ -290,6 +426,7 @@ describe("contentRowFor — revisions", () => {
           { date: "2027-08-14", note: "Second revision." },
         ],
       }),
+      VOCABULARY,
     ) as SeededRow;
 
     expect(row.statement).toContain(
@@ -298,7 +435,11 @@ describe("contentRowFor — revisions", () => {
   });
 
   it("fails a malformed list rather than dating the page by its publication", () => {
-    const result = contentRowFor("blog/a/a.en.md", post({ updates: [{ note: "No date." }] }));
+    const result = contentRowFor(
+      "blog/a/a.en.md",
+      post({ updates: [{ note: "No date." }] }),
+      VOCABULARY,
+    );
 
     expect(isInvalid(result)).toBe(true);
   });
@@ -308,6 +449,7 @@ describe("contentRowFor — revisions", () => {
     const result = contentRowFor(
       "bookmarks/a.md",
       bookmark({ updates: [{ date: "2026-01-01", note: "x" }] }),
+      VOCABULARY,
     );
 
     expect(isInvalid(result)).toBe(true);
@@ -340,8 +482,8 @@ describe("duplicateKeys", () => {
 
 describe("buildSeedSql", () => {
   const rows = (): SeededRow[] => [
-    contentRowFor("blog/a/a.en.md", post()) as SeededRow,
-    contentRowFor("bookmarks/b.md", bookmark()) as SeededRow,
+    contentRowFor("blog/a/a.en.md", post(), VOCABULARY) as SeededRow,
+    contentRowFor("bookmarks/b.md", bookmark(), VOCABULARY) as SeededRow,
   ];
 
   /**

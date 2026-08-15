@@ -2,7 +2,7 @@
 type: 'post'
 title: 'Schema Validation and Global Error Handling'
 description: 'Standardize your API integrity by implementing Zod for type-safe validation and a centralized error-handling middleware.'
-tags: ['Nodejs', 'TypeScript', 'Express', 'Backend', 'Zod', 'Error Handling']
+tags: ['nodejs', 'typescript', 'express', 'backend', 'zod', 'error-handling']
 publishedAt: '2025-12-27'
 repository: 'https://github.com/poschuler/pragmatic-nodejs-api/tree/feature/validation-error-handling'
 ---

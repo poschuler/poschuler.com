@@ -10,6 +10,7 @@
 
 import { validateRevisions } from "../../app/lib/revisions.ts";
 import { basenameOf, declaredTypeMatches, isMisplaced, placementOf } from "./content-tree.ts";
+import { tagError, type TagVocabulary } from "./tag-vocabulary.ts";
 
 export interface FrontMatterAttributes {
   type: "post" | "link";
@@ -114,6 +115,11 @@ export function parseContentFilename(
  * Container, and the filename gives its Slug (ADR 0004). Those are separate
  * readings of the same path, and before this only the last one happened.
  *
+ * `vocabulary` arrives the same way a Part's placement does — as a value the
+ * caller read off the disk — so a Tag this site has not declared fails in the
+ * shape every other front-matter mistake already fails in, rather than in a path
+ * of its own.
+ *
  * `part` is supplied by the caller for a Post that lives inside a Series,
  * because only the manifest knows where it sits. A nested Post without one is a
  * Part nothing indexes, which is a failure rather than a loose Post.
@@ -121,6 +127,7 @@ export function parseContentFilename(
 export function contentRowFor(
   relativePath: string,
   attributes: FrontMatterAttributes,
+  vocabulary: TagVocabulary,
   part?: PartPlacement,
 ): ContentFileResult {
   const placed = placementOf(relativePath);
@@ -159,6 +166,17 @@ export function contentRowFor(
       return { reason: `post ${filename} must have a language in its filename` };
     }
 
+    // Also after the Locale check, and for the same reason: a draft is never
+    // seeded, so it is never measured against the vocabulary either. That is
+    // what leaves `project-setup.en-old.md` holding the pre-vocabulary
+    // spellings without stopping the build — and what turns renaming it into a
+    // build failure, which is the honest outcome.
+    const badTag = tagError(relativePath, attributes.tags, vocabulary);
+
+    if (badTag) {
+      return { error: badTag };
+    }
+
     // After the Locale check, deliberately: a draft that carries no Locale is
     // not seeded at all, so the manifest has no reason to list it.
     if (placed.container !== null && !part) {
@@ -194,6 +212,17 @@ VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attrib
   // rather than ignoring, because ignoring it looks identical to working.
   if (attributes.updates !== undefined) {
     return { error: `${relativePath} is a Bookmark and cannot carry updates — the body is not here` };
+  }
+
+  // Checked here rather than above the branch, because a Bookmark has no draft
+  // state to step around: it is a single file with no Locale, so every one of
+  // them is seeded and every one of them is measured. The vocabulary covers
+  // Bookmarks even though no Tag page lists them, so the day that question is
+  // reopened there is nothing to clean up first.
+  const badTag = tagError(relativePath, attributes.tags, vocabulary);
+
+  if (badTag) {
+    return { error: badTag };
   }
 
   return {

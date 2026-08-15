@@ -160,6 +160,12 @@ export function placementOf(relativePath: string): PlacementResult {
  *
  * Takes the names rather than reading the directory so the rule stays testable
  * and stays here, beside the trees it is checking against.
+ *
+ * Directory names only, which is what lets `tags.json` sit loose at the root of
+ * `app/content` without being a fifth tree. It is not one: a tree holds Content
+ * Items and that file holds none — it declares the Tags they may carry. So it is
+ * read by name, not walked, and `placementOf` still refuses every *Markdown*
+ * file at that level.
  */
 export function unclaimedTrees(directoryNames: string[]): string[] {
   return directoryNames.filter((name) => !(name in CONTENT_TREES));

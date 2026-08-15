@@ -23,6 +23,12 @@ import {
 } from "./content-tree.ts";
 import { buildProjectSeedSql, projectRowFor, type ProjectFrontMatter } from "./project-sql.ts";
 import {
+    isMalformedVocabulary,
+    tagVocabularyFrom,
+    TAG_VOCABULARY_FILE,
+    type TagVocabulary,
+} from "./tag-vocabulary.ts";
+import {
     buildSeriesSeedSql,
     isInvalidSeries,
     seriesRowsFor,
@@ -187,7 +193,7 @@ async function readSeriesFolders(): Promise<Map<string, SeriesFolder>> {
  * Part sits — see ADR 0007 — so a Part's row cannot be written until its
  * Series has been validated and its lists turned into positions.
  */
-async function collectSeriesRows(): Promise<{
+async function collectSeriesRows(vocabulary: TagVocabulary): Promise<{
     series: SeededRow[];
     sections: SeededRow[];
     content: SeededRow[];
@@ -254,7 +260,7 @@ async function collectSeriesRows(): Promise<{
                 ? placements.get(`${parsed.slug}:${parsed.lang}`)
                 : undefined;
 
-            const result = contentRowFor(file.relativePath, file.attributes, placement);
+            const result = contentRowFor(file.relativePath, file.attributes, vocabulary, placement);
 
             if (isInvalid(result)) {
                 throw new Error(result.error);
@@ -289,10 +295,44 @@ async function assertEveryTreeIsClaimed(contentDir: string): Promise<void> {
     }
 }
 
+/**
+ * Reads the declared vocabulary; the rules it is held to live in
+ * `tag-vocabulary.ts`, beside the check every Post and Bookmark is measured by.
+ *
+ * A missing or unparseable file stops the build rather than defaulting to an
+ * empty set: an empty vocabulary would reject every Tag on the site, and a
+ * default that accepts everything would be the check quietly turning itself off.
+ */
+async function readTagVocabulary(): Promise<TagVocabulary> {
+    const filePath = path.join(process.cwd(), TAG_VOCABULARY_FILE);
+    let declared: unknown;
+
+    try {
+        declared = JSON.parse(await fs.readFile(filePath, "utf-8"));
+    } catch (cause) {
+        throw new Error(
+            `${TAG_VOCABULARY_FILE} could not be read as JSON — it declares every Tag this site may use, ` +
+            `and no Tag can be checked without it: ${(cause as Error).message}`,
+        );
+    }
+
+    const result = tagVocabularyFrom(declared);
+
+    if (isMalformedVocabulary(result)) {
+        throw new Error(result.error);
+    }
+
+    return result.vocabulary;
+}
+
 async function generateSqlSeed() {
     console.log("🌱 Starting content analysis for SQL generation...");
 
     await assertEveryTreeIsClaimed(CONTENT_DIR);
+
+    const vocabulary = await readTagVocabulary();
+
+    console.log(`Read ${vocabulary.size} declared Tags from ${TAG_VOCABULARY_FILE}.`);
 
     // Only the trees whose rows land in `content`. Projects have their own
     // table and their own generator — see ADR 0004.
@@ -313,7 +353,7 @@ async function generateSqlSeed() {
         const fileContent = await fs.readFile(filePath, "utf-8");
         const { attributes } = fm<FrontMatterAttributes>(fileContent);
 
-        const result = contentRowFor(relativePath, attributes);
+        const result = contentRowFor(relativePath, attributes, vocabulary);
 
         if (isInvalid(result)) {
             throw new Error(result.error);
@@ -329,7 +369,7 @@ async function generateSqlSeed() {
     }
 
     const projectRows = await collectProjectRows();
-    const seriesRows = await collectSeriesRows();
+    const seriesRows = await collectSeriesRows(vocabulary);
 
     rows.push(...seriesRows.content);
 
