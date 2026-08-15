@@ -12,6 +12,18 @@ import { dbQuery } from "~/db.server";
  * which is what keeps it reusable: a query that puts `content` beside a table
  * carrying columns of the same name correlates in a subquery rather than
  * joining in the `from`.
+ *
+ * **`tags` is deliberately absent, and the column still exists.** The seed still
+ * writes it; what stopped is this Worker reading it, and the gap between those
+ * two is the whole point. The publish job applies migrations before it deploys
+ * the Worker, so a single deploy that dropped the column *and* removed it from
+ * this list would leave the **previous** Worker — still asking for it — answering
+ * `no such column` on every listing query, for the length of the seed, the build
+ * and the deploy. Stopping the read is one deploy; dropping the column is the
+ * next. This is the first of the two.
+ *
+ * Tags are read from `content_tag`; a Post's own chips render from the front
+ * matter that travels verbatim in KV. Nothing needs this copy.
  */
 export const CONTENT_COLUMNS = `
       id_content as "idContent",
@@ -24,7 +36,6 @@ export const CONTENT_COLUMNS = `
       description as "description",
       external_url as "externalUrl",
       source as "source",
-      tags as "tags",
       series_slug as "seriesSlug"`;
 
 type ContentRowBase = {
@@ -34,17 +45,6 @@ type ContentRowBase = {
   publishedAt: string;
   /** `publishedAt` truncated to `YYYY-MM-DD`, the form the UI renders. */
   publishedStringDate: string;
-  /**
-   * A JSON array as stored, **not** parsed, and **not** the place to read Tags
-   * from. `content_tag` holds one row per Tag per Content Item, which is what a
-   * query reaches for; a Post's own chips render from the front matter that
-   * travels verbatim in KV. Nothing renders this copy — it is still *selected*,
-   * here and by the KV generator, which is the only reason it cannot go yet:
-   * migrations run before the Worker, so the column and both selections are
-   * dropped in a later deploy than the one that stopped reading them. Do not
-   * build on it.
-   */
-  tags: string;
 };
 
 /** A Post: identified by `(Slug, Locale)`, written by Paul, body lives in KV. */

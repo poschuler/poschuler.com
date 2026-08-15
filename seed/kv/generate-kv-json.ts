@@ -49,7 +49,6 @@ type ContentRowType = SitemapContentItem & {
     description: string;
     externalUrl: string;
     source: string;
-    tags: string[];
     /**
      * The Container, when the Post has one. It is what says where the Markdown
      * is: a Part lives under its Series, not under `blog/`.
@@ -88,8 +87,14 @@ function fetchAll(): ContentRowType[] {
     // collapses them and SQLite reads the aliases as bare identifiers. It works
     // by accident. Fixing it means single-quoting the aliases, not adding
     // backslashes.
+    //
+    // No `tags`, for the reason `CONTENT_COLUMNS` states at length: the column
+    // is still written and no longer read, so that dropping it is a deploy of
+    // its own rather than one that strands the Worker already serving. Nothing
+    // here ever used it — a payload's Tags come from the front matter below,
+    // verbatim, and the index at `/tags` is built from `content_tag`.
     const rows = queryD1<ContentRowType>(
-        `select id_content as "idContent", slug as "slug", lang as "lang", type as "type", title as "title", published_at as "publishedAt", strftime('%Y-%m-%d', published_at) AS "publishedStringDate", description as "description", external_url as "externalUrl", source as "source", tags as "tags", updates as "updates", series_slug as "seriesSlug" from content order by published_at desc`,
+        `select id_content as "idContent", slug as "slug", lang as "lang", type as "type", title as "title", published_at as "publishedAt", strftime('%Y-%m-%d', published_at) AS "publishedStringDate", description as "description", external_url as "externalUrl", source as "source", updates as "updates", series_slug as "seriesSlug" from content order by published_at desc`,
     );
 
     if (!rows.length) {
