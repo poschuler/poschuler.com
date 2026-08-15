@@ -203,7 +203,6 @@ export function contentRowFor(
   }
 
   const { slug, lang } = parsed;
-  const tagsJson = escapeSql(JSON.stringify(attributes.tags || []));
   const escapedSlug = escapeSql(slug);
   const publishedAt = escapeSql(attributes.publishedAt);
   const title = escapeSql(attributes.title);
@@ -247,8 +246,8 @@ export function contentRowFor(
 
     return {
       statement: `
-INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, tags, repository, updates, series_slug, series_section, section_order, updated_at)
-VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attributes.description)}, ${publishedAt}, ${tagsJson}, ${escapeSql(attributes.repository)}, ${escapeSql(JSON.stringify(revisions.revisions))}, ${container}, CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, section_order, updated_at)
+VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attributes.description)}, ${publishedAt}, ${escapeSql(attributes.repository)}, ${escapeSql(JSON.stringify(revisions.revisions))}, ${container}, CURRENT_TIMESTAMP);
 `,
       key: `${slug}:${lang}`,
       tags: tagRowsFor(slug, lang, attributes.tags),
@@ -275,8 +274,8 @@ VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attrib
 
   return {
     statement: `
-INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, tags, updated_at)
-VALUES (${escapedSlug}, NULL, 'link', ${title}, ${escapeSql(attributes.externalUrl)}, ${escapeSql(attributes.source)}, ${publishedAt}, ${tagsJson}, CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, updated_at)
+VALUES (${escapedSlug}, NULL, 'link', ${title}, ${escapeSql(attributes.externalUrl)}, ${escapeSql(attributes.source)}, ${publishedAt}, CURRENT_TIMESTAMP);
 `,
     key: `${slug}:`,
     tags: tagRowsFor(slug, null, attributes.tags),

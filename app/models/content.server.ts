@@ -13,17 +13,10 @@ import { dbQuery } from "~/db.server";
  * carrying columns of the same name correlates in a subquery rather than
  * joining in the `from`.
  *
- * **`tags` is deliberately absent, and the column still exists.** The seed still
- * writes it; what stopped is this Worker reading it, and the gap between those
- * two is the whole point. The publish job applies migrations before it deploys
- * the Worker, so a single deploy that dropped the column *and* removed it from
- * this list would leave the **previous** Worker — still asking for it — answering
- * `no such column` on every listing query, for the length of the seed, the build
- * and the deploy. Stopping the read is one deploy; dropping the column is the
- * next. This is the first of the two.
- *
- * Tags are read from `content_tag`; a Post's own chips render from the front
- * matter that travels verbatim in KV. Nothing needs this copy.
+ * **There is no `tags` column to select.** `content` carried a JSON copy of
+ * them until migration 0005 dropped it. Tags are read from `content_tag`, one
+ * row per Tag per Content Item; a Post's own chips render from the front matter
+ * that travels verbatim in KV.
  */
 export const CONTENT_COLUMNS = `
       id_content as "idContent",

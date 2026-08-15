@@ -111,7 +111,7 @@ The primary key is `(slug, lang, tag)`, plus a partial unique index on `(slug, t
 
 Rows exist for both kinds, and which of them a page lists is a policy of the page: `app/models/tag.server.ts` filters to `type = 'post'` in both queries, so a Tag page and its count on the index describe the same set. Deciding at render is what lets that policy change without a migration.
 
-`content.tags` is the JSON string the front matter used to be seeded into, and it now has **no reader** — the queries use `content_tag`, and the chips on a Post render from the front matter that travels in KV. It is still selected by a Worker that is already deployed, so it is dropped in a later publication than the one that stopped reading it; `schema.sql` says so at the column, and ADR 0006's amendment says why.
+`content` used to carry a JSON `tags` column, seeded from the front matter and read by nothing once `content_tag` arrived. Migration `0005` dropped it, in the publication *after* the one that stopped selecting it — ADR 0006's amendment says why that order is not optional, and this column is its worked example.
 
 The row types encode the same split as the indexes: `ContentRowType` is `PostRowType | BookmarkRowType`, discriminated on `type`, so the columns a kind does not carry are typed `null` rather than `string`.
 

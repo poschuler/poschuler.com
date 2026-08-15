@@ -135,7 +135,7 @@ describe("contentRowFor — Posts", () => {
       VOCABULARY,
     ) as SeededRow;
 
-    expect(row.statement).toContain("(slug, lang, type, title, description, published_at, tags, repository, updates, series_slug, series_section, section_order, updated_at)");
+    expect(row.statement).toContain("(slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, section_order, updated_at)");
     expect(row.statement).not.toContain("external_url");
   });
 
@@ -153,16 +153,6 @@ describe("contentRowFor — Posts", () => {
     ) as SeededRow;
 
     expect(row.statement).toContain("'[]', NULL, NULL, NULL, CURRENT_TIMESTAMP)");
-  });
-
-  it("serialises absent tags as an empty JSON array, not as NULL", () => {
-    const row = contentRowFor(
-      "blog/x/x.en.md",
-      post({ tags: undefined }),
-      VOCABULARY,
-    ) as SeededRow;
-
-    expect(row.statement).toContain(`'[]'`);
   });
 
   /**
@@ -198,7 +188,7 @@ describe("contentRowFor — Bookmarks", () => {
   it("carries the Source and external URL a Bookmark has", () => {
     const row = contentRowFor("bookmarks/a.md", bookmark(), VOCABULARY) as SeededRow;
 
-    expect(row.statement).toContain("(slug, lang, type, title, external_url, source, published_at, tags, updated_at)");
+    expect(row.statement).toContain("(slug, lang, type, title, external_url, source, published_at, updated_at)");
     expect(row.statement).toContain("'https://example.com/a', 'Example'");
   });
 });
@@ -342,7 +332,13 @@ describe("contentRowFor — Tags are drawn from the declared vocabulary", () => 
     );
 
     expect(isInvalid(result)).toBe(false);
-    expect((result as SeededRow).statement).toContain(`'["nodejs","software-architecture"]'`);
+    // Against the rows, because the rows are where a declared Tag now lands.
+    // This used to read the JSON copy on `content`, which said the same thing
+    // about a column nothing queried.
+    expect((result as ContentRow).tags.map((tag) => tag.key)).toEqual([
+      "a:en:nodejs",
+      "a:en:software-architecture",
+    ]);
   });
 
   /**

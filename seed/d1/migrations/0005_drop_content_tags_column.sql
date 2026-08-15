@@ -1,0 +1,28 @@
+-- Phase 2b, contract half: the JSON `tags` column on `content` goes.
+--
+-- This is the third step of an expand-and-contract, and the order of the three
+-- is the whole point:
+--
+--   0004  expand   — `content_tag` arrives; the column stays and is still read.
+--   e62bff5        — the Worker and the KV generator stop reading the column;
+--                    it stays, and the seed keeps writing it. Deployed on its
+--                    own, which is what makes this file safe.
+--   0005  contract — the column goes, now that nothing deployed asks for it.
+--
+-- The middle step could not be folded in here. This job applies migrations
+-- before it deploys the Worker (`ci.yml`), so a single deploy that dropped the
+-- column *and* stopped selecting it would leave the previous Worker — still
+-- asking — answering `no such column` on every listing query, through the seed,
+-- the build and the deploy. The Worker serving as this runs is the one from
+-- e62bff5, and it does not select `tags`.
+--
+-- Nothing is lost that is not derived: the Tags of every Content Item live in
+-- `content_tag`, rebuilt from the Markdown on every seed run, and a Post's own
+-- chips render from the front matter that travels verbatim in KV. The Markdown
+-- is the source of truth for both (ADR 0001).
+--
+-- `DROP COLUMN` is available because the column is in no index, no primary key
+-- and no CHECK — SQLite refuses it otherwise. The partial unique indexes on
+-- `content` are over `(slug, lang)` and `(slug)`, and the one CHECK is over
+-- `type` and `lang`, so none of them names this column.
+ALTER TABLE content DROP COLUMN tags;

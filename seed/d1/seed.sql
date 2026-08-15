@@ -1,39 +1,39 @@
 
-INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, tags, repository, updates, series_slug, series_section, section_order, updated_at)
-VALUES ('implementing-value-objects-in-nodejs', 'en', 'post', 'Implementing Value Objects in Node.js', 'A practical guide to implementing Value Objects in TypeScript and Node.js to create more robust and expressive domain models, inspired by Domain-Driven Design principles.', '2025-11-02', '["nodejs","typescript","ddd","software-architecture","value-object"]', 'https://github.com/poschuler/nodejs-ddd-value-objects', '[]', NULL, NULL, NULL, CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, section_order, updated_at)
+VALUES ('implementing-value-objects-in-nodejs', 'en', 'post', 'Implementing Value Objects in Node.js', 'A practical guide to implementing Value Objects in TypeScript and Node.js to create more robust and expressive domain models, inspired by Domain-Driven Design principles.', '2025-11-02', 'https://github.com/poschuler/nodejs-ddd-value-objects', '[]', NULL, NULL, NULL, CURRENT_TIMESTAMP);
 
-INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, tags, updated_at)
-VALUES ('how-i-would-do-auth', NULL, 'link', 'How I would do auth', 'https://pilcrowonpaper.com/blog/how-i-would-do-auth/', 'pilcrow', '2024-07-31', '["auth","security","webdev"]', CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, updated_at)
+VALUES ('how-i-would-do-auth', NULL, 'link', 'How I would do auth', 'https://pilcrowonpaper.com/blog/how-i-would-do-auth/', 'pilcrow', '2024-07-31', CURRENT_TIMESTAMP);
 
-INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, tags, updated_at)
-VALUES ('let-me-be', NULL, 'link', 'Let me be', 'https://www.epicweb.dev/talks/let-me-be', 'Epic Web', '2024-05-04', '["javascript","typescript","webdev"]', CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, updated_at)
+VALUES ('let-me-be', NULL, 'link', 'Let me be', 'https://www.epicweb.dev/talks/let-me-be', 'Epic Web', '2024-05-04', CURRENT_TIMESTAMP);
 
-INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, tags, updated_at)
-VALUES ('making-sense-of-typescript-generics', NULL, 'link', 'Making Sense of TypeScript Generics', 'https://kettanaito.com/blog/making-sense-of-typescript-generics', 'kettanaito', '2024-05-31', '["typescript","generics","webdev"]', CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, updated_at)
+VALUES ('making-sense-of-typescript-generics', NULL, 'link', 'Making Sense of TypeScript Generics', 'https://kettanaito.com/blog/making-sense-of-typescript-generics', 'kettanaito', '2024-05-31', CURRENT_TIMESTAMP);
 
-INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, tags, updated_at)
-VALUES ('migrating-from-radix-to-react-aria-improving-accessibility-and-ux', NULL, 'link', 'Migrating from Radix to React Aria: Improving Accessibility and UX', 'https://argos-ci.com/blog/react-aria-migration', 'argos CI', '2024-05-28', '["react-aria","radix","accessibility","webdev","ux"]', CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, updated_at)
+VALUES ('migrating-from-radix-to-react-aria-improving-accessibility-and-ux', NULL, 'link', 'Migrating from Radix to React Aria: Improving Accessibility and UX', 'https://argos-ci.com/blog/react-aria-migration', 'argos CI', '2024-05-28', CURRENT_TIMESTAMP);
 
-INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, tags, updated_at)
-VALUES ('navigating-the-future-of-frontend', NULL, 'link', 'Navigating the future of frontend', 'https://frontendmastery.com/posts/navigating-the-future-of-frontend/', 'Frontend Mastery', '2024-04-23', '["frontend","javascript","typescript","webdev"]', CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, updated_at)
+VALUES ('navigating-the-future-of-frontend', NULL, 'link', 'Navigating the future of frontend', 'https://frontendmastery.com/posts/navigating-the-future-of-frontend/', 'Frontend Mastery', '2024-04-23', CURRENT_TIMESTAMP);
 
-INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, tags, updated_at)
-VALUES ('oops-i-accidentally-made-our-website-faster-by-switching-to-remix', NULL, 'link', 'Oops, I accidentally made our website faster by switching to Remix', 'https://echobind.com/post/oops-i-accidentally-made-our-website-faster-by-switching-to-remix', 'Echobind', '2024-09-03', '["remix","performance","webdev"]', CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, updated_at)
+VALUES ('oops-i-accidentally-made-our-website-faster-by-switching-to-remix', NULL, 'link', 'Oops, I accidentally made our website faster by switching to Remix', 'https://echobind.com/post/oops-i-accidentally-made-our-website-faster-by-switching-to-remix', 'Echobind', '2024-09-03', CURRENT_TIMESTAMP);
 
-INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, tags, updated_at)
-VALUES ('stop-lying-to-your-users', NULL, 'link', 'Stop Lying to Your Users', 'https://www.epicweb.dev/stop-lying-to-your-users', 'Epic Web', '2024-04-24', '["javascript","typescript","webdev"]', CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, updated_at)
+VALUES ('stop-lying-to-your-users', NULL, 'link', 'Stop Lying to Your Users', 'https://www.epicweb.dev/stop-lying-to-your-users', 'Epic Web', '2024-04-24', CURRENT_TIMESTAMP);
 
-INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, tags, updated_at)
-VALUES ('the-copenhagen-book', NULL, 'link', 'The Copenhagen Book', 'https://thecopenhagenbook.com/', 'pilcrow', '2024-07-30', '["auth","security","webdev"]', CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, updated_at)
+VALUES ('the-copenhagen-book', NULL, 'link', 'The Copenhagen Book', 'https://thecopenhagenbook.com/', 'pilcrow', '2024-07-30', CURRENT_TIMESTAMP);
 
-INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, tags, repository, updates, series_slug, series_section, section_order, updated_at)
-VALUES ('project-setup', 'en', 'post', 'Setup Node.js, Express & TypeScript Project in 2026', 'The definitive starting point for your next project. Learn to setup Node.js, Express, and TypeScript using a professional, class-based architecture designed for long-term maintainability and scale.', '2025-12-25', '["nodejs","typescript","express","backend"]', 'https://github.com/poschuler/pragmatic-nodejs-api/tree/feature/initial-project-setup', '[]', 'pragmatic-nodejs-api', 'fundamentals', 0, CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, section_order, updated_at)
+VALUES ('project-setup', 'en', 'post', 'Setup Node.js, Express & TypeScript Project in 2026', 'The definitive starting point for your next project. Learn to setup Node.js, Express, and TypeScript using a professional, class-based architecture designed for long-term maintainability and scale.', '2025-12-25', 'https://github.com/poschuler/pragmatic-nodejs-api/tree/feature/initial-project-setup', '[]', 'pragmatic-nodejs-api', 'fundamentals', 0, CURRENT_TIMESTAMP);
 
-INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, tags, repository, updates, series_slug, series_section, section_order, updated_at)
-VALUES ('schema-validation-and-error-handling', 'en', 'post', 'Schema Validation and Global Error Handling', 'Standardize your API integrity by implementing Zod for type-safe validation and a centralized error-handling middleware.', '2025-12-27', '["nodejs","typescript","express","backend","zod","error-handling"]', 'https://github.com/poschuler/pragmatic-nodejs-api/tree/feature/validation-error-handling', '[]', 'pragmatic-nodejs-api', 'fundamentals', 1, CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, section_order, updated_at)
+VALUES ('schema-validation-and-error-handling', 'en', 'post', 'Schema Validation and Global Error Handling', 'Standardize your API integrity by implementing Zod for type-safe validation and a centralized error-handling middleware.', '2025-12-27', 'https://github.com/poschuler/pragmatic-nodejs-api/tree/feature/validation-error-handling', '[]', 'pragmatic-nodejs-api', 'fundamentals', 1, CURRENT_TIMESTAMP);
 
-INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, tags, repository, updates, series_slug, series_section, section_order, updated_at)
-VALUES ('vertical-slices-and-domain-logic', 'en', 'post', 'Vertical Slices Architecture and Domain Logic', 'Organize your Node.js API using Vertical Slices to encapsulate features and maintain a clear separation of concerns, enhancing maintainability and scalability.', '2026-02-20', '["nodejs","typescript","express","backend","vertical-slices","software-architecture"]', 'https://github.com/poschuler/pragmatic-nodejs-api/tree/feature/vertical-slices-and-domain-logic', '[]', 'pragmatic-nodejs-api', 'fundamentals', 2, CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, section_order, updated_at)
+VALUES ('vertical-slices-and-domain-logic', 'en', 'post', 'Vertical Slices Architecture and Domain Logic', 'Organize your Node.js API using Vertical Slices to encapsulate features and maintain a clear separation of concerns, enhancing maintainability and scalability.', '2026-02-20', 'https://github.com/poschuler/pragmatic-nodejs-api/tree/feature/vertical-slices-and-domain-logic', '[]', 'pragmatic-nodejs-api', 'fundamentals', 2, CURRENT_TIMESTAMP);
 
 INSERT OR REPLACE INTO content_tag (slug, lang, tag)
 VALUES ('implementing-value-objects-in-nodejs', 'en', 'nodejs');

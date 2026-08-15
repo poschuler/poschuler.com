@@ -17,15 +17,10 @@ CREATE TABLE content (
     external_url TEXT,
     source TEXT,
 
-    -- The Tags as they were written, a JSON array, and nothing renders it:
-    -- `content_tag` below is what a query reaches for, and the chips on a Post
-    -- render from the front matter that travels verbatim in KV. It is kept
-    -- because the Worker's shared column list and the KV generator still select
-    -- it, and migrations run before the Worker — dropping it here would leave
-    -- the previous Worker asking for a column that is gone, which is 500s on
-    -- every listing page. The column and both selections go together, in a
-    -- later deploy. Do not build on it.
-    tags TEXT,
+    -- No Tags here, deliberately. `content_tag` below holds one row per Tag per
+    -- Content Item and is what a query reaches for; a Post's own chips render
+    -- from the front matter that travels verbatim in KV. A JSON copy on this
+    -- row existed until 0005 and had no reader by the end.
 
     -- The Container, when this Post has one. All three are written by the
     -- generator from the Series manifest and never appear in front matter: a

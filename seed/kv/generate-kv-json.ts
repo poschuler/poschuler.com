@@ -88,9 +88,7 @@ function fetchAll(): ContentRowType[] {
     // by accident. Fixing it means single-quoting the aliases, not adding
     // backslashes.
     //
-    // No `tags`, for the reason `CONTENT_COLUMNS` states at length: the column
-    // is still written and no longer read, so that dropping it is a deploy of
-    // its own rather than one that strands the Worker already serving. Nothing
+    // No `tags`: `content` has no such column since migration 0005. Nothing
     // here ever used it — a payload's Tags come from the front matter below,
     // verbatim, and the index at `/tags` is built from `content_tag`.
     const rows = queryD1<ContentRowType>(
@@ -131,9 +129,9 @@ function fetchAllSeries(): SeriesRowType[] {
 /**
  * The Tags that reach a page — the entries the index at `/tags` lists.
  *
- * Read from `content_tag` rather than from the `tags` column selected above:
- * that column has no reader left and is scheduled for removal, and the sitemap
- * would be the one thing keeping it alive.
+ * Read from `content_tag`, which is where a Tag lives. `content` carried a JSON
+ * copy until migration 0005; had the sitemap read that instead, it would have
+ * been the one thing keeping a column with no other reader alive.
  *
  * **Posts only**, because a Tag page lists Posts only — the join on `lang` does
  * that on its own (a Bookmark's is NULL in both tables and SQLite matches no
