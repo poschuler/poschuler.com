@@ -142,7 +142,13 @@ The filename is the Slug, and it never changes once published — it is the URL.
 | `pnpm run kv:seed:local` | Regenerate KV payloads and upload them locally             |
 | `pnpm run verify:stores:local` | Read D1 and KV back and check they match the repo    |
 | `pnpm run check:fixtures` | Regenerate the fixtures and fail if anything changed       |
-| `pnpm run verify:schema:remote` | Check the deployed D1 still matches `schema.sql`     |
+| `pnpm run verify:schema:local` | Check the migration chain arrives at `schema.sql`     |
+| `pnpm run verify:schema:remote` | Check the deployed D1 arrives at `schema.sql`        |
+| `pnpm run d1:migrate:remote` | Apply pending migrations to the deployed D1 (CI does this) |
+
+Changing the schema is two files, not one: edit `seed/d1/schema.sql`, then add a
+migration under `seed/d1/migrations/` making the same change. `verify:schema:local`
+fails the build if they disagree, so neither can be forgotten. See ADR 0006.
 
 The generated `worker-configuration.d.ts` and `.react-router/` are gitignored, so a fresh clone must install before it type-checks.
 

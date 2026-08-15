@@ -65,7 +65,11 @@ pnpm run kv:seed:local    # generate JSON payloads, then wrangler kv key put --l
 
 ### D1 — `POSCHULER_BD`
 
-SQLite at the edge, queried with hand-written SQL through a single thin helper in `app/db.server.ts` (`dbQuery`). No ORM, no query builder, no migration tool: `seed/d1/schema.sql` is applied by hand and `seed.sql` is regenerated wholesale. Applying it is still manual; forgetting to is not silent, because `seed/verify-schema.ts` blocks a publication when the deployed schema and this file disagree. There is no write helper because no request writes — content reaches D1 through the seed pipeline. `dbQueryRow` and `dbExecute` existed, were never called, and were deleted; add them back the day a route needs one.
+SQLite at the edge, queried with hand-written SQL through a single thin helper in `app/db.server.ts` (`dbQuery`). No ORM and no query builder (ADR 0002); `seed.sql` is regenerated wholesale rather than migrated. There is no write helper because no request writes — content reaches D1 through the seed pipeline. `dbQueryRow` and `dbExecute` existed, were never called, and were deleted; add them back the day a route needs one.
+
+The schema is **not** applied by hand. `seed/d1/schema.sql` is the declared shape and every database that does not exist yet is built from it in one step — the test setup, `check:fixtures`, the smoke test. The deployed one already exists, so it is moved forward by the migrations in `seed/d1/migrations/`, applied by the publication job (ADR 0006). Only a database that already exists needs a path.
+
+Changing the schema is therefore: edit `schema.sql`, add a migration that makes the same change, and push. `verify:schema:local` applies the chain from zero and fails the `verify` job if the two disagree — so the duplication cannot reach production, and neither can a migration nobody wrote.
 
 The `content` table holds every Content Item. `type` discriminates `'post'` from `'link'` — note that `'link'` is the persisted spelling of what the domain calls a **Bookmark**; `CONTEXT.md` is the authority on the name, the column is legacy spelling. Identity is enforced by two partial unique indexes:
 
@@ -222,19 +226,22 @@ Measured across all of `app/`, `seed/` and `workers/` instead it reads about 33%
 
 A second job, `publish`, runs only on a push to `main` and only after `verify` passes. It owns the whole Publication, in this order and in one workspace:
 
-1. **`seed/verify-schema.ts`** — the deployed D1 has the shape `seed/d1/schema.sql` describes, or the run stops before anything is written.
-2. **Seed D1, then KV** from the committed fixtures.
-3. **`seed/verify-stores.ts`** — read both stores back.
-4. **`pnpm run deploy`** — build, then `wrangler deploy`.
-5. **`scripts/verify-deployment.sh`** — the version just uploaded is the one serving, at 100%.
+1. **`wrangler d1 migrations apply --remote`** — the only step that writes to production before the seed, and the only one that can. Migrations already recorded are skipped, so a publication carrying no schema change is a no-op here.
+2. **`seed/verify-schema.ts`** — the deployed D1 has the shape `seed/d1/schema.sql` describes, or the run stops before any *content* is written. It confirms what step 1 produced rather than guarding against a step somebody forgot; there is no longer a step to forget.
+3. **Seed D1, then KV** from the committed fixtures.
+4. **`seed/verify-stores.ts`** — read both stores back.
+5. **`pnpm run deploy`** — build, then `wrangler deploy`.
+6. **`scripts/verify-deployment.sh`** — the version just uploaded is the one serving, at 100%.
 
 Its credentials, `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, are secrets of the `production` environment rather than of the repository, and that environment only accepts deployments from `main`. Repository secrets are readable by every workflow in the repo; environment secrets reach only a job that declares `environment: production`, and only from an allowed branch — so the restriction holds even if this file is edited badly. The token needs `D1:Edit`, `Workers KV Storage:Edit` and `Workers Scripts:Edit`, and nothing else.
 
 **One job, not three, and not by preference.** `wrangler deploy` locates the built Worker through `.wrangler/deploy/config.json`, a gitignored artefact `@cloudflare/vite-plugin` writes at build time. A separate deploy job would not have it, and wrangler would silently fall back to the root `wrangler.jsonc` — whose `main` is the unbuilt entry point and which declares no `assets`. That run is green and ships the wrong Worker with no static files. Passing `build/` between jobs does not fix it either; the redirect lives outside that directory.
 
-**Why the schema is checked and not applied.** There is no migration tool here on purpose (ADR 0002), so a commit that changes the table's shape can arrive with the deployed table still on the old one — the one failure that is a broken page rather than a degraded one. The check builds its expectation by applying `schema.sql` to a throwaway local database instead of parsing it, so there is no second description of the schema to drift from the first.
+**Why the schema is applied *and* checked.** The migration does the work; the check says it added up. Those are different questions, and a migration can succeed while leaving a shape the repository does not declare — which is exactly the risk of writing the shape twice, once whole in `schema.sql` and once as a path. The check builds its expectation by applying `schema.sql` to a throwaway local database instead of parsing it, so there is no third description to drift from the other two.
 
-Two things it had to learn the hard way. Comparing the stored DDL as text does not work: the same table comes back with its comments intact from the deployed database and stripped from a local one, because the two were created through different paths. So columns are compared through `pragma_table_info`, which reports shape rather than wording. Indexes stay as text, because a partial index's `WHERE` clause is not exposed by any pragma — and that clause is the entire reason `INSERT OR REPLACE` behaves as an upsert here. And `sqlite_sequence` and Cloudflare's `_cf_KV` are filtered out: they exist in every deployed D1 and in no local one, so leaving them in would fail every run forever.
+The same script runs in `verify` as `verify:schema:local`, where it compares the migration chain applied from zero against the declared shape. That one matters more than it sounds: without it, the deployed database would be the only place those migration files ever ran.
+
+Four things it had to learn the hard way. Comparing the stored DDL as text does not work: SQLite keeps a deployed table's comments and drops them from one rewritten by `ALTER`, and `ALTER TABLE … ADD COLUMN` appends rather than inserting, so the column order differs too. So columns are compared through `pragma_table_info`, which reports shape rather than wording. But a pragma reports no constraints, so named `CHECK`s are parsed out of the stored statement and compared alongside — this schema keeps its `tier` and `status` value lists there, and a migration that recreated a table without them would otherwise read as identical. Indexes stay as text, because a partial index's `WHERE` clause is not exposed by any pragma — and that clause is the entire reason `INSERT OR REPLACE` behaves as an upsert here; `IF NOT EXISTS` is normalised away with the whitespace, since the baseline migration is guarded and `schema.sql` is not. And `sqlite_sequence`, Cloudflare's `_cf_KV` and wrangler's `d1_migrations` are filtered out: they belong to the engines, not to this repository, so leaving them in would fail every run forever.
 
 **A successful upload is not a live deployment.** `wrangler deploy` exiting 0 means the version was accepted; it does not mean that version is serving. Step 5 reads that back and refuses anything that is not this run's version at 100%, which also catches a gradual rollout nobody meant to configure.
 

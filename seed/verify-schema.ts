@@ -120,6 +120,52 @@ function normalise(sql: string): string {
         .trim();
 }
 
+/**
+ * The named table constraints, as sorted `name(expression)` pairs.
+ *
+ * `pragma_table_info` reports columns and nothing else, so a `CHECK` is
+ * invisible to the comparison — and this schema keeps in `CHECK`s the rules a
+ * column type cannot express: which `tier` values exist, which `status` values,
+ * and that a Post must carry a Locale. A migration that recreated a table
+ * without them, or with a different value list, would otherwise read as
+ * identical, and the gate that makes writing the shape twice safe would pass
+ * on a database the repository does not describe.
+ *
+ * Parsed out of the stored `CREATE TABLE`, because SQLite exposes no pragma for
+ * them, and the whole statement still cannot be compared as text: SQLite keeps
+ * a deployed table's comments and drops them from one that has been rewritten
+ * by `ALTER`, and the column order differs for the same reason.
+ *
+ * Parentheses are counted rather than matched with a pattern, because
+ * `CHECK (tier IN ('a', 'b'))` nests. A paren inside a string literal would
+ * fool the count — and would fool it identically on both sides, which is all
+ * this has to be: deterministic, not a SQL parser.
+ */
+function checkConstraints(sql: string): string {
+    const constraints: string[] = [];
+    const opening = /CONSTRAINT\s+(\w+)\s+CHECK\s*\(/gi;
+    let match: RegExpExecArray | null;
+
+    while ((match = opening.exec(sql)) !== null) {
+        let depth = 1;
+        let index = opening.lastIndex;
+
+        while (index < sql.length && depth > 0) {
+            if (sql[index] === "(") {
+                depth++;
+            } else if (sql[index] === ")") {
+                depth--;
+            }
+
+            index++;
+        }
+
+        constraints.push(`${match[1]}(${normalise(sql.slice(opening.lastIndex, index - 1))})`);
+    }
+
+    return constraints.sort().join(" | ");
+}
+
 function describeColumns(table: string, wranglerArgs: string[]): string {
     const columns = d1Query<Column>(
         `select name, type, "notnull", dflt_value, pk from pragma_table_info('${table}') order by name`,
@@ -144,7 +190,10 @@ function readShape(wranglerArgs: string[]): Shape {
 
     for (const object of objects) {
         if (object.type === "table") {
-            tables.set(object.name, describeColumns(object.name, wranglerArgs));
+            const columns = describeColumns(object.name, wranglerArgs);
+            const constraints = checkConstraints(object.sql ?? "");
+
+            tables.set(object.name, constraints ? `${columns} || ${constraints}` : columns);
         } else if (object.type === "index" && object.sql) {
             // A `sql` of null is an index SQLite made itself to back a UNIQUE
             // constraint. It is a consequence of the table's shape, which is
