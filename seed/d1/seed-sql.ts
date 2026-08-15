@@ -240,13 +240,20 @@ export function contentRowFor(
     // Written here or written as NULL, never read from front matter. The three
     // always travel together, which is why the invariant that they are all
     // present or all absent is not checked anywhere: it is not representable.
+    //
+    // The position is written twice, once per order column: `container_order`
+    // is the one every query reads, and `section_order` is written beside it,
+    // unread, only because the previously deployed Worker still asks for it by
+    // that name during this publication's migrate-then-deploy window (ADR
+    // 0006's amendment). Dropped, and this duplication with it, once that
+    // publication is confirmed live.
     const container = part
-      ? `${escapeSql(part.seriesSlug)}, ${escapeSql(part.section)}, ${part.order}`
-      : "NULL, NULL, NULL";
+      ? `${escapeSql(part.seriesSlug)}, ${escapeSql(part.section)}, ${part.order}, ${part.order}`
+      : "NULL, NULL, NULL, NULL";
 
     return {
       statement: `
-INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, section_order, updated_at)
+INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, section_order, container_order, updated_at)
 VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attributes.description)}, ${publishedAt}, ${escapeSql(attributes.repository)}, ${escapeSql(JSON.stringify(revisions.revisions))}, ${container}, CURRENT_TIMESTAMP);
 `,
       key: `${slug}:${lang}`,

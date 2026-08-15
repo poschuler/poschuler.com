@@ -135,13 +135,13 @@ describe("contentRowFor — Posts", () => {
       VOCABULARY,
     ) as SeededRow;
 
-    expect(row.statement).toContain("(slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, section_order, updated_at)");
+    expect(row.statement).toContain("(slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, section_order, container_order, updated_at)");
     expect(row.statement).not.toContain("external_url");
   });
 
   /**
    * The Container columns travel together or not at all, which is why nothing
-   * checks that they do: a loose Post is written with three NULLs rather than
+   * checks that they do: a loose Post is written with four NULLs rather than
    * with the columns omitted, so a Post that leaves a Series cannot keep half
    * of one.
    */
@@ -152,7 +152,7 @@ describe("contentRowFor — Posts", () => {
       VOCABULARY,
     ) as SeededRow;
 
-    expect(row.statement).toContain("'[]', NULL, NULL, NULL, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'[]', NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP)");
   });
 
   /**
@@ -206,7 +206,7 @@ describe("contentRowFor — Parts of a Series", () => {
     const row = contentRowFor(partPath, post(), VOCABULARY, placement) as SeededRow;
 
     expect(row.key).toBe("project-setup:en");
-    expect(row.statement).toContain("'pragmatic-nodejs-api', 'fundamentals', 1, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'pragmatic-nodejs-api', 'fundamentals', 1, 1, CURRENT_TIMESTAMP)");
   });
 
   /** Zero is a position, and a falsy one. It must survive the round trip. */
@@ -216,7 +216,23 @@ describe("contentRowFor — Parts of a Series", () => {
       order: 0,
     }) as SeededRow;
 
-    expect(row.statement).toContain("'fundamentals', 0, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'fundamentals', 0, 0, CURRENT_TIMESTAMP)");
+  });
+
+  /**
+   * `container_order` is what every query reads now; `section_order` stays
+   * only for the previously deployed Worker, still asking for it by that name
+   * during this publication's migrate-then-deploy window. Both have to carry
+   * the same position, or that Worker and the one about to replace it would
+   * disagree about where a Part sits.
+   */
+  it("writes both order columns with the same value", () => {
+    const row = contentRowFor(partPath, post(), VOCABULARY, {
+      ...placement,
+      order: 3,
+    }) as SeededRow;
+
+    expect(row.statement).toContain("'fundamentals', 3, 3, CURRENT_TIMESTAMP)");
   });
 
   /**

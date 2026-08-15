@@ -155,10 +155,11 @@ type ArcJoinRow = {
  *
  * One query rather than one per section, and the same one for all three pages
  * that need it — the landing lists it whole, a Part shows its own section above
- * the article, and previous/next are positions inside it. Ordering is entirely
- * `section_order` on both tables: the position of a section in the manifest's
- * list, and the position of a Part in that section's. Neither number appears in
- * any content file.
+ * the article, and previous/next are positions inside it. Ordering is
+ * `series_section.section_order` — the position of a section in the
+ * manifest's list — and `content.container_order` — the position of a Part in
+ * that section's. Two different columns now, not one name meaning both: see
+ * `schema.sql` and migration 0006. Neither number appears in any content file.
  *
  * The `left join` is what keeps a planned section in the result. It renders on
  * the landing with its summary and no list, and it is what a finished section
@@ -185,7 +186,7 @@ export async function findSeriesArc(
         and c.lang = ss.lang
         and c.series_section = ss.slug
       where ss.series_slug = ? and ss.lang = ?
-      order by ss.section_order asc, c.section_order asc
+      order by ss.section_order asc, c.container_order asc
     `,
     [seriesSlug, lang],
   );
