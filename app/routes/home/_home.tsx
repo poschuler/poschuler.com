@@ -7,6 +7,7 @@ import type { Route } from "./+types/_home";
 import { cloudflareContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { CONTACT_LINKS, LOCATION } from "~/lib/contact";
+import { PERSON_CORE } from "~/lib/seo/person";
 
 /**
  * Enough to show that the writing exists and is current, without turning the
@@ -46,21 +47,13 @@ export const shouldRevalidate = skipRevalidationOnThemeChange;
  * the same one behind those profiles — otherwise the site, the GitHub account
  * and the LinkedIn profile are three pages that happen to share a name.
  *
- * `sameAs` is derived from the links the page already renders so the two cannot
- * drift; `mailto:` is not a profile and is dropped.
+ * The identity comes from `PERSON_CORE`, which carries the `@id` every article
+ * and the Resume also point at. What is added here is what he works on: the
+ * credentials belong on the Resume, and a second copy of them would be a second
+ * thing to keep in step.
  */
 const PERSON = {
-  "@context": "https://schema.org",
-  "@type": "Person",
-  name: "Paul Osorio Schuler",
-  url: "https://poschuler.com",
-  image: "https://poschuler.com/paul-osorio-schuler.webp",
-  jobTitle: "Senior Backend Engineer",
-  address: {
-    "@type": "PostalAddress",
-    addressLocality: "Lima",
-    addressCountry: "PE",
-  },
+  ...PERSON_CORE,
   knowsAbout: [
     "TypeScript",
     "Node.js",
@@ -69,9 +62,6 @@ const PERSON = {
     "Redis",
     "Software architecture",
   ],
-  sameAs: CONTACT_LINKS.filter(({ href }) => !href.startsWith("mailto:")).map(
-    ({ href }) => href,
-  ),
 };
 
 const HOME_TITLE = "Paul Osorio Schuler | Senior Backend Engineer | TypeScript • Node.js";

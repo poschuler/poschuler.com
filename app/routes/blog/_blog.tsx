@@ -1,15 +1,53 @@
 import { useLoaderData, type MetaFunction } from "react-router";
-import { findAllPosts } from "~/models/content.server";
+import { findLoosePosts, type PostRowType } from "~/models/content.server";
+import { findAllSeries, type SeriesListingRowType } from "~/models/series.server";
 import { ContentItem } from "~/components/content-item";
+import { SeriesItem } from "~/components/series-item";
 import type { Route } from "./+types/_blog";
 import { cloudflareContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 
+/** One row on this page: a loose Post, or a whole Series as a single entry. */
+type BlogEntry =
+  | { kind: "post"; post: PostRowType }
+  | { kind: "series"; series: SeriesListingRowType };
+
+/**
+ * `/blog` answers *what has this person written*, and a series is one thing
+ * written — not fifteen. So it lists **loose Posts plus each Series as a single
+ * entry**, linking to its landing. Publishing part nine updates a row here
+ * instead of lengthening the page.
+ *
+ * The alternative — loose Posts only, with series exclusively at `/series` — is
+ * cleaner as a model and worse as a site: this page would hold one row while
+ * most of the writing lived elsewhere, and `/blog` is the address a reader
+ * guesses.
+ *
+ * A Series has no Published At, so it sorts by its **most recent** Part. Its
+ * first would sink an actively-written series to the bottom. One with nothing
+ * published yet is left out entirely: it is announced, not written, and
+ * `/series` is the page that answers what is running.
+ */
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
-  const posts = await findAllPosts(env.POSCHULER_BD);
+  const [posts, series] = await Promise.all([
+    findLoosePosts(env.POSCHULER_BD),
+    findAllSeries(env.POSCHULER_BD),
+  ]);
 
-  return { posts };
+  const entries: BlogEntry[] = [
+    ...posts.map((post): BlogEntry => ({ kind: "post", post })),
+    ...series
+      .filter((one) => one.publishedAt !== null)
+      .map((one): BlogEntry => ({ kind: "series", series: one })),
+  ];
+
+  const dateOf = (entry: BlogEntry) =>
+    entry.kind === "post" ? entry.post.publishedAt : (entry.series.publishedAt ?? "");
+
+  entries.sort((left, right) => dateOf(right).localeCompare(dateOf(left)));
+
+  return { entries };
 }
 
 export const shouldRevalidate = skipRevalidationOnThemeChange;
@@ -31,7 +69,7 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Blog() {
-  const { posts } = useLoaderData<typeof loader>();
+  const { entries } = useLoaderData<typeof loader>();
 
   return (
     <main className="flex flex-col flex-1 gap-4 p-4 md:gap-8 md:p-10 font-mono bg-ui">
@@ -50,11 +88,17 @@ export default function Blog() {
         </div>
       </section>
 
+      {/* `showKind` on the Series rows: this list interleaves two units, so a
+        * row that is a whole series has to say so before the reader clicks it
+        * expecting one article. */}
       <section className="mx-auto w-full max-w-measure">
-        {posts &&
-          posts.map((post) => {
-            return <ContentItem key={post.idContent} item={post} />;
-          })}
+        {entries.map((entry) =>
+          entry.kind === "post" ? (
+            <ContentItem key={`post:${entry.post.idContent}`} item={entry.post} />
+          ) : (
+            <SeriesItem key={`series:${entry.series.idSeries}`} series={entry.series} showKind />
+          ),
+        )}
       </section>
     </main>
   );

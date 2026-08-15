@@ -20,6 +20,23 @@ So a migration in this repository is `CREATE`, `ALTER` and `DROP`, and never `UP
 - **Rebuild the database on every publication.** Tempting, because the data is derived and 15 rows deep. Rejected because the seed is deliberately written to have no moment where a published Post is missing — it writes before it deletes, for both stores — and dropping the tables introduces exactly that moment in production.
 - **Drop `schema.sql` and let the migrations be the only description.** Saves the duplication outright. Rejected on two counts: three of the file's four consumers want a whole shape rather than a path, and the file is where the schema is explained — why `updates` is distinct from `updated_at`, why `'experiment'` is accepted from the first day when nothing is one. Split across migration files, those notes are ordered by date instead of sitting next to the column they describe.
 
+## Amendment (Phase 2b): a column is dropped a deploy later than its last reader
+
+The order above has a consequence nothing had needed yet: **the publication job applies migrations before it deploys the Worker.** Step 1 writes to the deployed database; step 5 ships the code. Between them — a seed, two verifications and a build, so minutes rather than seconds — the *previous* Worker is still serving every request against the *new* shape.
+
+Adding a column is safe in that window, because nothing selects a column it does not know about. Dropping one is not: the running Worker's shared column list still names it, so every listing query answers `no such column`, and `/`, `/blog`, `/timeline` and `/bookmarks` return 500 through the seed, the build and the deploy. Minutes, not seconds.
+
+**So a column is removed in two publications, not one — expand, then contract.**
+
+1. The publication that stops reading the column ships the code that no longer selects it, and leaves the column in place.
+2. A later publication drops it: the migration, the shared column list, the `INSERT` in the generator, any query in the KV pipeline, and the tests. By then no deployed Worker asks for it, so the same job order is safe.
+
+`content.tags` is the first instance and is currently between the two steps: `content_tag` is what every query reaches for, the chips on a Post render from the front matter that travels in KV, and the column is kept solely because a Worker that is already deployed still selects it. `schema.sql` says so at the column, in the imperative — *do not build on it* — because a column with no reader and no note is indistinguishable from one whose reader has not been written yet.
+
+**The second step is scheduled, not assumed.** A "we will drop it later" that nobody writes down is how a schema accumulates columns nobody dares remove; this one is tracked as its own piece of work.
+
+This is a fact about how this repository changes schemas rather than about any particular column, and it will recur — which is why it amends this ADR instead of becoming one of its own. It does not touch the DDL-never-a-backfill rule above: both steps are `ALTER` and `DROP`, and the reconciling seed still fills whatever shape the migration leaves.
+
 ## Consequences
 
 - **The shape is written twice** — once in `seed/d1/schema.sql`, once in a migration. The migration is usually a line or two; the file is where a reader looks. What makes the duplication safe is that drift between them cannot be published: `verify:schema:local` applies the migration chain from zero to a throwaway database, applies `schema.sql` to a second one, and requires the two shapes to be identical. It runs in the `verify` job on every push, with no credentials, before production has seen anything.

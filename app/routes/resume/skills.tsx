@@ -1,3 +1,4 @@
+import { chip } from "~/components/chip";
 import { Section } from "./section";
 import { skills } from "./resume.json";
 
@@ -16,10 +17,7 @@ export function Skills() {
 
             <ul className="mt-1 flex flex-wrap gap-1">
               {group.items.map((item) => (
-                <li
-                  key={item}
-                  className="inline-flex items-center rounded-md border border-default px-2 py-0.5 font-semibold text-low text-xs"
-                >
+                <li key={item} className={chip}>
                   {item}
                 </li>
               ))}

@@ -2,7 +2,7 @@
 # Ralph cleanup: tear down the worktree + branch for one or more finished ralph
 # features — but ONLY when it is safe to do so.
 #
-# Ralph (scripts/ralph.sh) creates a throwaway worktree at
+# Ralph (ralph/ralph.sh) creates a throwaway worktree at
 # .claude/worktrees/ralph-<slug> on branch "<RALPH_BRANCH_PREFIX><slug>" per
 # feature, opens a draft PR back to RALPH_BASE_REF, and never cleans up — that
 # is left to you so logs survive and nothing is deleted out from under you.
@@ -15,13 +15,13 @@
 #   * a branch with commits not yet in RALPH_BASE_REF is left untouched.
 #
 # Base ref, branch prefix, and the worktree path convention are read from
-# scripts/ralph.config.sh so this stays in lockstep with ralph.sh.
+# ralph/ralph.config.sh so this stays in lockstep with ralph.sh.
 #
 # Usage:
-#   scripts/ralph-clean.sh [slug ...]   Clean the named feature(s).
-#   scripts/ralph-clean.sh              Scan & clean every safe ralph/* feature.
-#   scripts/ralph-clean.sh --dry-run    Report what would happen; change nothing.
-#   scripts/ralph-clean.sh --force ...  Override the safety checks (explicit).
+#   ralph/ralph-clean.sh [slug ...]   Clean the named feature(s).
+#   ralph/ralph-clean.sh              Scan & clean every safe ralph/* feature.
+#   ralph/ralph-clean.sh --dry-run    Report what would happen; change nothing.
+#   ralph/ralph-clean.sh --force ...  Override the safety checks (explicit).
 
 set -euo pipefail
 
@@ -34,8 +34,8 @@ usage() {
 Ralph cleanup — safely tear down finished ralph feature worktrees + branches.
 
 Usage:
-  scripts/ralph-clean.sh [slug ...]   Clean the named feature(s).
-  scripts/ralph-clean.sh              Scan & clean every safe ralph/* feature.
+  ralph/ralph-clean.sh [slug ...]   Clean the named feature(s).
+  ralph/ralph-clean.sh              Scan & clean every safe ralph/* feature.
 
   --dry-run   Show what would be removed without touching anything.
   --force     Remove even dirty worktrees / unmerged branches (use with care).

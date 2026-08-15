@@ -18,15 +18,24 @@
 
 import { pathSegments } from "../d1/content-tree.ts";
 
-/** Payload directory → key prefix. */
+/**
+ * Payload directory → key prefix.
+ *
+ * A Part's body is under `blog:` like every other Post body, because it *is* a
+ * Post body — the Container it has does not change what kind of document it is.
+ * `series:` holds the landings, which are a different kind, the way `project:`
+ * is.
+ */
 const PREFIXES: Record<string, string> = {
   blog: "blog",
   projects: "project",
+  series: "series",
 };
 
 /**
  * `blog/<slug>.<locale>.json` → `blog:<slug>:<locale>`,
- * `projects/<slug>.<locale>.json` → `project:<slug>:<locale>`.
+ * `projects/<slug>.<locale>.json` → `project:<slug>:<locale>`,
+ * `series/<slug>.<locale>.json` → `series:<slug>:<locale>`.
  * The sitemap stands alone at the root.
  *
  * Takes the path relative to `kv_payloads/`, on either separator.

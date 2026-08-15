@@ -27,6 +27,31 @@ interface ContentRow {
     type: string;
 }
 
+interface ContentTagRow {
+    slug: string;
+    lang: string | null;
+    tag: string;
+}
+
+interface SeriesRow {
+    slug: string;
+    lang: string;
+}
+
+interface SeriesSectionRow {
+    series_slug: string;
+    lang: string;
+    slug: string;
+}
+
+/** What the Markdown says each table should hold, keyed by identity. */
+interface Expectation {
+    content: Set<string>;
+    contentTags: Set<string>;
+    series: Set<string>;
+    sections: Set<string>;
+}
+
 function wrangler(args: string[], wranglerArgs: string[]): string {
     return execFileSync("pnpm", ["exec", "wrangler", ...args, ...wranglerArgs], {
         encoding: "utf-8",
@@ -58,8 +83,20 @@ function d1Query<T>(sql: string, wranglerArgs: string[]): T[] {
  * Post whose filename carries no Locale is not seeded, so it is not expected
  * here either. `…​.en-old.md` is one such file.
  */
-async function expectedContentKeys(): Promise<Set<string>> {
-    const keys = new Set<string>();
+async function expectedFromMarkdown(): Promise<Expectation> {
+    const expectation: Expectation = {
+        content: new Set<string>(),
+        contentTags: new Set<string>(),
+        series: new Set<string>(),
+        sections: new Set<string>(),
+    };
+
+    /** Keyed as the prune keys it: the Content Item's identity plus the Tag. */
+    const addTags = (slug: string, locale: string, tags: unknown) => {
+        for (const tag of Array.isArray(tags) ? tags : []) {
+            expectation.contentTags.add(`${slug}:${locale}:${tag}`);
+        }
+    };
 
     async function walk(dir: string) {
         for (const entry of await fsPromise.readdir(dir, { withFileTypes: true })) {
@@ -81,25 +118,42 @@ async function expectedContentKeys(): Promise<Set<string>> {
             }
 
             const [, slug, locale] = match;
-            const { attributes } = fm<{ type?: string }>(await fsPromise.readFile(full, "utf-8"));
+            const { attributes } = fm<{
+                type?: string;
+                tags?: unknown;
+                sections?: Array<{ slug: string }>;
+            }>(await fsPromise.readFile(full, "utf-8"));
 
             if (attributes.type === "post") {
+                // A Post with no Locale in its filename is a draft: no row, and
+                // so no Tag rows either. The rule is the generator's, mirrored.
                 if (locale) {
-                    keys.add(`${slug}:${locale}`);
+                    expectation.content.add(`${slug}:${locale}`);
+                    addTags(slug, locale, attributes.tags);
                 }
             } else if (attributes.type === "link") {
-                keys.add(`${slug}:`);
+                expectation.content.add(`${slug}:`);
+                addTags(slug, "", attributes.tags);
+            } else if (attributes.type === "series" && locale) {
+                expectation.series.add(`${slug}:${locale}`);
+
+                // The sections are read straight off the manifest, not off the
+                // generated SQL, for the reason above: a generator that dropped
+                // one would otherwise agree with itself.
+                for (const section of attributes.sections ?? []) {
+                    expectation.sections.add(`${slug}:${locale}:${section.slug}`);
+                }
             }
         }
     }
 
     await walk(CONTENT_DIR);
 
-    return keys;
+    return expectation;
 }
 
 function report(label: string, ok: boolean, detail: string): boolean {
-    console.log(`    ${ok ? "ok  " : "FAIL"} ${label.padEnd(28)} ${detail}`);
+    console.log(`    ${ok ? "ok  " : "FAIL"} ${label.padEnd(30)} ${detail}`);
 
     return ok;
 }
@@ -110,17 +164,40 @@ async function verify(mode: string): Promise<boolean> {
 
     console.log(`==> D1 (${mode})`);
 
-    const rows = d1Query<ContentRow>("select slug, lang, type from content", wranglerArgs);
-    const present = new Set(rows.map((row) => `${row.slug}:${row.lang ?? ""}`));
-    const expected = await expectedContentKeys();
+    const expected = await expectedFromMarkdown();
 
-    const missing = [...expected].filter((key) => !present.has(key));
-    const extra = [...present].filter((key) => !expected.has(key));
+    const contentRows = d1Query<ContentRow>("select slug, lang, type from content", wranglerArgs);
+    const tagRows = d1Query<ContentTagRow>("select slug, lang, tag from content_tag", wranglerArgs);
+    const seriesRows = d1Query<SeriesRow>("select slug, lang from series", wranglerArgs);
+    const sectionRows = d1Query<SeriesSectionRow>(
+        "select series_slug, lang, slug from series_section",
+        wranglerArgs,
+    );
 
-    passed = report("every Content Item present", missing.length === 0,
-        missing.length === 0 ? `${expected.size} rows` : `missing: ${missing.join(", ")}`) && passed;
-    passed = report("no rows left behind", extra.length === 0,
-        extra.length === 0 ? "none" : `unexpected: ${extra.join(", ")}`) && passed;
+    /**
+     * Both directions, per table: a row the Markdown does not back is as wrong
+     * as one it backs and the store is missing. The second is the one a prune
+     * exists to prevent — a section dropped from a manifest keeps rendering on
+     * the landing until something notices it is still there.
+     */
+    const compareKeys = (noun: string, expectedKeys: Set<string>, presentKeys: Set<string>) => {
+        const missing = [...expectedKeys].filter((key) => !presentKeys.has(key));
+        const extra = [...presentKeys].filter((key) => !expectedKeys.has(key));
+
+        passed = report(`every ${noun} present`, missing.length === 0,
+            missing.length === 0 ? `${expectedKeys.size} rows` : `missing: ${missing.join(", ")}`) && passed;
+        passed = report(`no ${noun} left behind`, extra.length === 0,
+            extra.length === 0 ? "none" : `unexpected: ${extra.join(", ")}`) && passed;
+    };
+
+    compareKeys("Content Item", expected.content,
+        new Set(contentRows.map((row) => `${row.slug}:${row.lang ?? ""}`)));
+    compareKeys("Tag row", expected.contentTags,
+        new Set(tagRows.map((row) => `${row.slug}:${row.lang ?? ""}:${row.tag}`)));
+    compareKeys("Series", expected.series,
+        new Set(seriesRows.map((row) => `${row.slug}:${row.lang}`)));
+    compareKeys("Series Section", expected.sections,
+        new Set(sectionRows.map((row) => `${row.series_slug}:${row.lang}:${row.slug}`)));
 
     console.log(`==> KV (${mode})`);
 

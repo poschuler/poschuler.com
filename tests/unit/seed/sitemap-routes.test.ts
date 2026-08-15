@@ -4,6 +4,8 @@ import {
   buildSitemapRoutes,
   type SitemapContentItem,
   type SitemapProject,
+  type SitemapSeries,
+  type SitemapTag,
 } from "../../../seed/kv/sitemap-routes";
 
 /**
@@ -40,7 +42,16 @@ const routesFor = (
   fallbackLastmod = FALLBACK,
   resumeLastmod = RESUME_LASTMOD,
   projects: SitemapProject[] = [],
-) => buildSitemapRoutes(items, { fallbackLastmod, resumeLastmod }, projects);
+  series: SitemapSeries[] = [],
+  tags: SitemapTag[] = [],
+) => buildSitemapRoutes(items, { fallbackLastmod, resumeLastmod }, { projects, series, tags });
+
+/** A Part: a Post whose Container says where it is served from. */
+const part = (
+  slug: string,
+  seriesSlug: string,
+  publishedStringDate: string,
+): SitemapContentItem => ({ slug, type: "post", publishedStringDate, seriesSlug });
 
 /** `updates` arrives as the stored JSON string, the form the column holds. */
 const project = (slug: string, ...dates: string[]): SitemapProject => ({
@@ -176,5 +187,147 @@ describe("buildSitemapRoutes", () => {
     expect(priorityOf("/resume")).toBe(0.8);
     expect(priorityOf("/blog/newest-post")).toBe(0.7);
     expect(priorityOf("/bookmarks")).toBe(0.5);
+  });
+});
+
+/**
+ * A Part is a Post with a Container, and the Container decides its address.
+ * Listing it under `/blog/<slug>` is not merely stale now that the route
+ * redirects — it hands a crawler a URL that answers 301, which is the one thing
+ * a sitemap must never contain.
+ */
+describe("a Series in the sitemap", () => {
+  const withParts = [
+    part("vertical-slices", "pragmatic-nodejs-api", "2026-02-01"),
+    item("a-loose-post", "post", "2026-01-15"),
+    part("project-setup", "pragmatic-nodejs-api", "2025-12-25"),
+  ];
+
+  const series: SitemapSeries[] = [{ slug: "pragmatic-nodejs-api" }];
+
+  it("serves every Part under its Container, never under /blog", () => {
+    const urls = urlsOf(routesFor(withParts, FALLBACK, RESUME_LASTMOD, [], series));
+
+    expect(urls).toContain("/series/pragmatic-nodejs-api/project-setup");
+    expect(urls).not.toContain("/blog/project-setup");
+    expect(urls).toContain("/blog/a-loose-post");
+  });
+
+  it("lists the index and one URL per Series", () => {
+    const urls = urlsOf(routesFor(withParts, FALLBACK, RESUME_LASTMOD, [], series));
+
+    expect(urls).toContain("/series");
+    expect(urls).toContain("/series/pragmatic-nodejs-api");
+  });
+
+  /**
+   * The landing has no date of its own and gets no `updates` column: what
+   * changes on it is that a Part arrived, and that Part is already dated. So
+   * its currency is computed, and rises on its own with every Part published.
+   */
+  it("dates a landing by the newest date among its Parts", () => {
+    const routes = routesFor(withParts, FALLBACK, RESUME_LASTMOD, [], series);
+
+    expect(routes.find((route) => route.url === "/series/pragmatic-nodejs-api")?.lastmod).toBe(
+      "2026-02-01",
+    );
+  });
+
+  it("dates a Part by its latest revision, like any other Post", () => {
+    const revised: SitemapContentItem = {
+      ...part("project-setup", "pragmatic-nodejs-api", "2025-12-25"),
+      updates: JSON.stringify([{ date: "2026-06-01", note: "Updated for Node 24." }]),
+    };
+    const routes = routesFor([revised], FALLBACK, RESUME_LASTMOD, [], series);
+    const lastmodOf = (url: string) => routes.find((route) => route.url === url)?.lastmod;
+
+    expect(lastmodOf("/series/pragmatic-nodejs-api/project-setup")).toBe("2026-06-01");
+    // And the landing follows it: a revised Part is a changed landing.
+    expect(lastmodOf("/series/pragmatic-nodejs-api")).toBe("2026-06-01");
+  });
+
+  it("dates the index by the newest date across every Series", () => {
+    const routes = routesFor(
+      [...withParts, part("first-note", "volume-two", "2027-04-01")],
+      FALLBACK,
+      RESUME_LASTMOD,
+      [],
+      [...series, { slug: "volume-two" }],
+    );
+
+    expect(routes.find((route) => route.url === "/series")?.lastmod).toBe("2027-04-01");
+  });
+
+  /**
+   * A Series exists the moment it is announced — the arc is the point, not the
+   * word count — so its landing is a real page with nothing published behind it
+   * yet, and the only date the repository holds for it is the fallback.
+   */
+  it("still lists a Series that has published nothing", () => {
+    const routes = routesFor(
+      [item("a-loose-post", "post", "2026-01-15")],
+      FALLBACK,
+      RESUME_LASTMOD,
+      [],
+      [{ slug: "announced-only" }],
+    );
+
+    expect(urlsOf(routes)).toContain("/series/announced-only");
+    expect(routes.find((route) => route.url === "/series/announced-only")?.lastmod).toBe(FALLBACK);
+  });
+
+  it("advertises no series routes at all when there are none", () => {
+    const urls = urlsOf(routesFor(items));
+
+    expect(urls).not.toContain("/series");
+    expect(urls.some((url) => url.startsWith("/series/"))).toBe(false);
+  });
+});
+
+/**
+ * The `/tags` namespace is the one place where the sitemap and the routes
+ * disagree on purpose: the index is advertised, and the ten pages it links to
+ * are not. Each of those declares `noindex, follow`, and a sitemap must never
+ * advertise a page that asks not to be indexed — the two would be a site
+ * contradicting itself in the two files a crawler reads first.
+ *
+ * The Tags are passed in whole rather than as a count, so this can assert what
+ * did *not* happen to them.
+ */
+describe("the Tag index in the sitemap", () => {
+  const tags: SitemapTag[] = [{ tag: "nodejs" }, { tag: "typescript" }];
+
+  const withTags = (items: SitemapContentItem[], carried: SitemapTag[] = tags) =>
+    routesFor(items, FALLBACK, RESUME_LASTMOD, [], [], carried);
+
+  it("advertises the index", () => {
+    expect(urlsOf(withTags(items))).toContain("/tags");
+  });
+
+  it("advertises no individual Tag page, however many Tags there are", () => {
+    const urls = urlsOf(withTags(items));
+
+    expect(urls).not.toContain("/tags/nodejs");
+    expect(urls.some((url) => url.startsWith("/tags/"))).toBe(false);
+  });
+
+  /**
+   * Dated like `/blog`, from the newest Post — what changes this page is that a
+   * Post arrived carrying Tags, and a Post is the only thing that can change a
+   * count on it. A Bookmark cannot: its Tags back no page here.
+   */
+  it("dates the index from the newest Post", () => {
+    const routes = withTags(items);
+
+    expect(routes.find((route) => route.url === "/tags")?.lastmod).toBe("2026-05-01");
+  });
+
+  /**
+   * The same rule `/projects` and `/series` follow. Ten of the twenty-two
+   * declared Tags reach a Post today, but a repository whose Posts carry none
+   * would be advertising an index of nothing.
+   */
+  it("advertises no index at all when no Post carries a Tag", () => {
+    expect(urlsOf(withTags(items, []))).not.toContain("/tags");
   });
 });

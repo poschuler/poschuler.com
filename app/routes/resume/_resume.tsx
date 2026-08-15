@@ -6,36 +6,27 @@ import { Hero } from "~/routes/resume/hero";
 import { Skills } from "~/routes/resume/skills";
 import { KeyboardManager } from "~/routes/resume/keyboard-manager";
 import type { MetaFunction } from "react-router";
+import { PERSON_CORE, SITE } from "~/lib/seo/person";
 import { basics, certificates, education, languages } from "~/routes/resume/resume.json";
 
-const SITE = "https://poschuler.com";
-
 /**
- * Every field a reader can see on this page is read from `resume.json` rather
- * than restated, so the structured data cannot drift from the document it
- * describes. `jobTitle` is the one exception: `basics.label` carries the title
- * *and* the stack (`Senior Backend Engineer | TypeScript • Node.js`), and
- * schema.org wants the title alone — so it is stated here, and it is the one
- * string to change in two places when the title changes.
+ * The same person the home page and every article point at — `PERSON_CORE`
+ * carries the `@id`, so a crawler reading four pages finds one entity rather
+ * than four that share a name.
  *
- * Richer than the home page's `Person` because this is where the credentials
- * live, and `alumniOf` / `hasCredential` are what let a crawler treat "iSAQB"
- * and "Universidad Tecnológica del Perú" as entities rather than as text.
+ * Richer than the home page's, because this is where the credentials live:
+ * `alumniOf` and `hasCredential` are what let a crawler treat "iSAQB" and
+ * "Universidad Tecnológica del Perú" as entities rather than as text. Every
+ * field added here is read from `resume.json` rather than restated, so the
+ * structured data cannot drift from the document it describes.
+ *
+ * `sameAs` is not restated either: it comes from `PERSON_CORE`, which derives
+ * it from the same two profiles this page links to.
  */
 const PERSON = {
-  "@context": "https://schema.org",
-  "@type": "Person",
-  name: basics.name,
-  url: basics.url,
+  ...PERSON_CORE,
   mainEntityOfPage: `${SITE}/resume`,
-  image: `${SITE}${basics.image}`,
-  jobTitle: "Senior Backend Engineer",
   email: `mailto:${basics.email}`,
-  address: {
-    "@type": "PostalAddress",
-    addressLocality: basics.location.city,
-    addressCountry: basics.location.countryCode,
-  },
   knowsLanguage: languages.map(({ language }) => language),
   alumniOf: education.map(({ institution, url }) => ({
     "@type": "EducationalOrganization",
@@ -48,7 +39,6 @@ const PERSON = {
     url,
     recognizedBy: { "@type": "Organization", name: issuer },
   })),
-  sameAs: basics.profiles.map(({ url }) => url),
 };
 
 const RESUME_TITLE = "Resume | Paul Osorio Schuler";

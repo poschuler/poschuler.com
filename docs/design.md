@@ -117,10 +117,16 @@ Two layers, both canonical since the inherited component sets were deleted:
 | Layer                  | Use it for                                                     |
 | ---------------------- | -------------------------------------------------------------- |
 | Route-local components | Anything used by exactly one route — the first choice           |
-| `app/components/`      | Anything composing content, used by two or more routes          |
+| `app/components/`      | Anything shared by two or more routes, component or not         |
 | `app/components/ui/`   | Reusable, **variant-driven** primitives with no domain knowledge |
 
 **Prefer a route-local component over a shared one.** A component used by exactly one route belongs beside that route. `routes/resume/hero.tsx`, `experience.tsx`, `section.tsx` and `command-palette.tsx` are the model: each imports the slice of `resume.json` it renders, so no props need threading. When a route does have a loader, the same shape applies with `useLoaderData<typeof loader>()` and a type-only import of the parent's `loader`. Promote to `app/components/` only on the second consumer, and to `ui/` only when the second consumer wants a *different variant* of it.
+
+**Not everything shared is a component.** `components/chip.ts` exports a string of class names, not JSX, because the six places that render a chip render three different elements — `<li>` inside a list of them, `<span>` beside a heading, `<p>` inside an article. A `<Chip>` would have had to take the tag as a prop and would have named nothing the tag does not already name; the string names the one thing the six actually shared. Reach for this only when the shared thing is presentation with no markup of its own — anything with structure is a component.
+
+Extracting it was not tidying. Two of the six carried a `font-family` the `<main>` above them already set, and two had gone to an arbitrary 10px — noticed only because it looked wrong.
+
+**Not every difference between copies is drift, and the way to tell is to measure.** Two chips pinned their text to a single line and four did not, which reads as drift and is not: the two that pinned it are the short ones, where nothing would wrap anyway, and the four that did not include the longest chip on the site — about 280px, in a hero column a portrait leaves at about 200px on a phone. Unifying towards the class would have overflowed the Resume on every phone. It was caught by measuring the strings against the column, not by looking at the page, and the page is where it would have shipped from.
 
 `ui/` holds three files — `button`, `sheet`, `brand-icons` — and the bar for a fourth is high. It held six: a second button component, and a `dialog` and a `command` that between them were nine exported wrappers, each a single `className` around a Base UI part, each with exactly one caller. **A wrapper that names nothing the part does not already name is indirection with no reader.** They were folded back into the one route that used them, `routes/resume/command-palette.tsx`.
 

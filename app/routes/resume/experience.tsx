@@ -1,3 +1,4 @@
+import { chip } from "~/components/chip";
 import { Section } from "./section";
 import { work } from "./resume.json";
 
@@ -33,9 +34,7 @@ export function Experience() {
               {item.position}
             </h4>
             {item.location && (
-              <span className="inline-flex items-center text-nowrap rounded-md border border-default px-2 py-0.5 font-semibold text-low text-xs">
-                {item.location}
-              </span>
+              <span className={chip}>{item.location}</span>
             )}
           </div>
 

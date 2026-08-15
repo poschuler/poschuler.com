@@ -1,6 +1,5 @@
 /**
- * Which tree a content file sits in, and whether it declares the type that tree
- * holds.
+ * Where a content file sits, what that makes it, and which Container it is in.
  *
  * The rule is ADR 0004: the directory classifies, the front matter is checked
  * against it. Before this, `generate-seed-sql.ts` walked everything and
@@ -8,18 +7,44 @@
  * a Post filed under `bookmarks/` was seeded with no body rendered, and listed,
  * linked and indexed with an empty page while nothing failed.
  *
+ * Phase 2a generalises it to trees that hold a Container. One tree can now hold
+ * two types — `series/` holds the manifest *and* the Posts that are its Parts —
+ * and what tells them apart is already in the path:
+ *
+ *     bookmarks/how-i-would-do-auth.md                   depth 1
+ *     blog/<slug>/<slug>.en.md                           depth 2
+ *     projects/<project>/<project>.en.md                 depth 2
+ *     series/<series>/<series>.en.md                     depth 2
+ *     series/<series>/<part>/<part>.en.md                depth 3
+ *
+ * The file named after its folder *is* that folder; a subfolder is content
+ * living inside it. So depth 1 and 2 are the tree's own item, and depth 3 is
+ * content whose Container is the folder above.
+ *
  * Pure, and shared by both generators: a classification with two
  * implementations has two chances to drift, which is the shape of the defect
- * this replaces. It is also what a nested container would be read from, since a
- * file's parent directory is already in the path this receives.
+ * this replaces.
  */
 
-/** The top-level directories under `app/content`, and what each one holds. */
+/** What a Markdown file can declare itself to be. */
+export type ContentType = "post" | "link" | "project" | "series";
+
+/**
+ * The top-level directories under `app/content`: what each one holds, and what
+ * — if anything — may live nested inside one of its items.
+ *
+ * `nested: null` means *nothing nests here*. A subfolder under `blog/` fails
+ * the build rather than acquiring an invented meaning, and `projects/` says the
+ * same for now on purpose: a Field Note needs a `project_slug` on `content` to
+ * be linkable, and that column arrives in 1b. Accepting one today would seed a
+ * Post with no Container — the silent shape ADR 0004 exists to remove.
+ */
 export const CONTENT_TREES = {
-  blog: "post",
-  bookmarks: "link",
-  projects: "project",
-} as const;
+  blog: { item: "post", nested: null },
+  bookmarks: { item: "link", nested: null },
+  projects: { item: "project", nested: null },
+  series: { item: "series", nested: "post" },
+} as const satisfies Record<string, { item: ContentType; nested: ContentType | null }>;
 
 export type ContentTree = keyof typeof CONTENT_TREES;
 
@@ -62,6 +87,71 @@ export function treeOf(relativePath: string): ContentTree | null {
 }
 
 /**
+ * What the path says a file is: its tree, the type it must declare, and the
+ * Container it lives in — the folder above, or `null` when it is not nested.
+ */
+export interface Placement {
+  tree: ContentTree;
+  type: ContentType;
+  container: string | null;
+}
+
+/** A path that classifies as nothing, and the reason the build must stop. */
+export type PlacementResult = Placement | { error: string };
+
+export function isMisplaced(result: PlacementResult): result is { error: string } {
+  return "error" in result;
+}
+
+/**
+ * Reads a path relative to `app/content` into a placement.
+ *
+ * Every branch that returns an error is a file that would otherwise publish
+ * nothing and say nothing, which is the one outcome ADR 0004 refuses to
+ * tolerate.
+ */
+export function placementOf(relativePath: string): PlacementResult {
+  const segments = pathSegments(relativePath);
+  const [first, ...rest] = segments;
+
+  if (rest.length === 0) {
+    return {
+      error: `${relativePath} sits loose at the root of app/content — nothing would read it and nothing would say so`,
+    };
+  }
+
+  if (!(first in CONTENT_TREES)) {
+    return {
+      error: `${relativePath} is not under a content tree — nothing would read it and nothing would say so`,
+    };
+  }
+
+  const tree = first as ContentTree;
+  const { item, nested } = CONTENT_TREES[tree];
+
+  // Depth 1 is a loose item — bookmarks are the only tree written that way —
+  // and depth 2 is the folder-per-item convention every other tree follows.
+  // Both are the tree's own item, so neither has a Container.
+  if (rest.length <= 2) {
+    return { tree, type: item, container: null };
+  }
+
+  if (rest.length === 3) {
+    if (nested === null) {
+      return {
+        error: `${relativePath} is nested inside a ${item}, and nothing nests under ${tree}`,
+      };
+    }
+
+    return { tree, type: nested, container: rest[0] };
+  }
+
+  return {
+    error: `${relativePath} is nested deeper than a Container — the tree holds items, and items hold content, and that is all`,
+  };
+}
+
+/**
  * The top-level directories no generator walks.
  *
  * The one check no per-file rule can make, and the reason it exists: a file
@@ -70,21 +160,27 @@ export function treeOf(relativePath: string): ContentTree | null {
  *
  * Takes the names rather than reading the directory so the rule stays testable
  * and stays here, beside the trees it is checking against.
+ *
+ * Directory names only, which is what lets `tags.json` sit loose at the root of
+ * `app/content` without being a fifth tree. It is not one: a tree holds Content
+ * Items and that file holds none — it declares the Tags they may carry. So it is
+ * read by name, not walked, and `placementOf` still refuses every *Markdown*
+ * file at that level.
  */
 export function unclaimedTrees(directoryNames: string[]): string[] {
   return directoryNames.filter((name) => !(name in CONTENT_TREES));
 }
 
 /**
- * Whether the front matter's `type` is the one its tree holds.
+ * Whether the front matter's `type` is the one its placement calls for.
  *
  * Takes `string | undefined` rather than the narrowed union on purpose: the
  * input is a YAML field, so at this boundary it can be anything, and a missing
  * one must fail rather than default to whatever the directory implies.
  */
-export function declaredTypeMatchesTree(
+export function declaredTypeMatches(
   declaredType: string | undefined,
-  tree: ContentTree,
+  placement: Placement,
 ): boolean {
-  return declaredType === CONTENT_TREES[tree];
+  return declaredType === placement.type;
 }

@@ -12,7 +12,7 @@ import { basenameOf, treeOf } from "./content-tree.ts";
 import {
   escapeSql,
   parseContentFilename,
-  type ContentFileResult,
+  type FileResult,
   type SeededRow,
 } from "./seed-sql.ts";
 
@@ -49,7 +49,7 @@ function isOneOf<T extends readonly string[]>(
 export function projectRowFor(
   relativePath: string,
   attributes: ProjectFrontMatter,
-): ContentFileResult {
+): FileResult {
   if (treeOf(relativePath) !== "projects") {
     return { error: `${relativePath} is not in the projects tree` };
   }

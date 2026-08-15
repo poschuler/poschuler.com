@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ralph configuration — tells scripts/ralph.sh which GitHub issues to work, and
+# Ralph configuration — tells ralph/ralph.sh which GitHub issues to work, and
 # how. This file is *sourced* by ralph.sh. Set values only; don't add logic here.
 
 # ── What to work ────────────────────────────────────────────────────────────
@@ -48,6 +48,35 @@ RALPH_REVIEW=1
 RALPH_MODEL="claude-sonnet-5"          # step 1: implement
 RALPH_REVIEW_MODEL="claude-opus-4-8"   # step 2: code-review
 RALPH_PERMISSION_MODE="auto"
+
+# Where the skills come from. "plugin" reads them from an installed Claude Code
+# plugin, which is enabled per user and so resolves from inside a worktree with
+# no setup; RALPH_SKILL_PLUGIN names it and the slash command becomes
+# /<plugin>:<skill>. "directory" is the original behaviour: skills in this repo's
+# gitignored .claude/skills, which ralph symlinks into the worktree, invoked as
+# /<skill>. Ralph resolves both skills before spending a session either way.
+RALPH_SKILL_SOURCE="plugin"              # plugin | directory
+RALPH_SKILL_PLUGIN="mattpocock-skills"   # ignored when SOURCE=directory
+RALPH_SKILL="implement"                  # step 1
+RALPH_REVIEW_SKILL="code-review"         # step 2
+
+# What each session is actually told. Placeholders: {{SKILL}} is replaced by the
+# slash command (namespaced or bare, per RALPH_SKILL_SOURCE), {{N}} by the issue
+# number, {{BASE}} by the ref the reviewer diffs against. The implement prompt is
+# deliberately short and trusts the skill — see ralph/RALPH.md.
+RALPH_PROMPT="$(cat <<'PROMPT'
+/{{SKILL}} issue #{{N}}. When the implementation is done, verify every acceptance
+criterion is met; if so, close the issue and leave a comment summarizing the work
+and the criteria that were met. If this is the last open issue of its PRD, close
+the PRD too with a summary comment.
+PROMPT
+)"
+
+RALPH_REVIEW_PROMPT="$(cat <<'PROMPT'
+/{{SKILL}} {{BASE}}. Make sure every acceptance criterion of the issue is met, and
+if you find any errors you must fix them. Commit your fixes when you are done.
+PROMPT
+)"
 
 # Max issues to actually run per invocation (empty = unlimited). Skipped issues
 # (already closed / missing label) do NOT count. --max-iterations overrides this.

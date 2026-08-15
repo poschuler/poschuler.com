@@ -24,18 +24,109 @@ BASE="http://localhost:${PORT}"
 
 # Derived, not hardcoded: a Slug never changes once published, but which Posts
 # exist does.
+#
+# Two lists, because two questions. `/` shows the newest Posts whatever they
+# belong to, so it is asked about all of them. The Post probed by URL has to be
+# one with **no Container**: the `blog:` key space holds every
+# Post body, a Part of a Series included — the prefix says what kind of payload
+# it is, not which URL serves it — but a Part answers 301 at `/blog/<slug>` and
+# `/blog` collapses its whole Series into one row. Both checks below would fail
+# on correct code. Picking the first payload alphabetically works today only
+# because the one loose Post happens to sort first; the next Part published
+# under a slug starting `a`–`h` would break CI and point at nothing.
+#
+# Which slugs are Parts is read from the Series manifests, the same place the
+# generators read the arc from (ADR 0007).
+# Each line is `<series>\t<part>`, so the pair that probes a Part below can be
+# taken whole — a Part read from one manifest and a Series read from another
+# would produce a URL that correctly answers 404.
+mapfile -t SERIES_PARTS < <(
+	node --input-type=module -e '
+		import { readdir, readFile } from "node:fs/promises";
+
+		const directory = "seed/kv/kv_payloads/series";
+
+		for (const file of await readdir(directory).catch(() => [])) {
+			const { attributes } = JSON.parse(await readFile(`${directory}/${file}`, "utf-8"));
+			const series = file.replace(/\.[^.]+\.json$/, "");
+
+			for (const section of attributes.sections ?? []) {
+				for (const part of section.parts ?? []) console.log(`${series}\t${part}`);
+			}
+		}
+	'
+)
+
+mapfile -t PART_SLUGS < <(
+	if [[ "${#SERIES_PARTS[@]}" -gt 0 ]]; then printf '%s\n' "${SERIES_PARTS[@]}" | cut -f2; fi
+)
+
 mapfile -t POST_SLUGS < <(
 	find seed/kv/kv_payloads/blog -name '*.en.json' -exec basename {} .en.json \; | sort
 )
 
-if [[ "${#POST_SLUGS[@]}" -eq 0 ]]; then
-	echo "error: no Post payloads under seed/kv/kv_payloads/blog." >&2
+mapfile -t LOOSE_POST_SLUGS < <(
+	printf '%s\n' "${POST_SLUGS[@]}" |
+		{ if [[ "${#PART_SLUGS[@]}" -gt 0 ]]; then grep -vxF "$(printf '%s\n' "${PART_SLUGS[@]}")"; else cat; fi; }
+)
+
+if [[ "${#LOOSE_POST_SLUGS[@]}" -eq 0 ]]; then
+	echo "error: no payload under seed/kv/kv_payloads/blog for a Post outside a Series." >&2
 	exit 1
 fi
 
-POST_SLUG="${POST_SLUGS[0]}"
+POST_SLUG="${LOOSE_POST_SLUGS[0]}"
 
 ROUTES=(/ /blog /bookmarks /resume /robots.txt /sitemap.xml "/blog/${POST_SLUG}")
+
+# A Tag page, probed with a Tag some Post actually carries — read from the Post
+# payloads, which is the only place that guarantees it. A hardcoded Tag would
+# answer 404 the day it left the front matter, and this route answers 404 *by
+# design* for a Tag no Post carries: the failure would look like the feature.
+#
+# The Post is carried alongside the Tag, so the content check below can assert
+# that this Post is on that page rather than trusting a 200 over an empty list.
+# One line, `<slug>\t<tag>`, as the Series pair above.
+IFS=$'\t' read -r TAG_POST_SLUG TAG < <(
+	node --input-type=module -e '
+		import { readdir, readFile } from "node:fs/promises";
+
+		const directory = "seed/kv/kv_payloads/blog";
+
+		for (const file of (await readdir(directory).catch(() => [])).sort()) {
+			const { attributes } = JSON.parse(await readFile(`${directory}/${file}`, "utf-8"));
+			const [tag] = attributes.tags ?? [];
+
+			if (tag) {
+				console.log(`${file.replace(/\.[^.]+\.json$/, "")}\t${tag}`);
+				break;
+			}
+		}
+	'
+) || true
+
+# Loud rather than skipped. Every Post on this site carries Tags — the seed
+# generator checks each one against the declared vocabulary — so no pair here
+# means either the payloads are stale or Tags have stopped being written, and
+# both are worth failing over. Silently dropping the probe is how a gate ends up
+# passing while covering nothing.
+if [[ -z "${TAG:-}" ]]; then
+	echo "error: no Post payload under seed/kv/kv_payloads/blog carries a Tag." >&2
+	echo "       Regenerate the payloads, or edit this check on purpose." >&2
+	exit 1
+fi
+
+ROUTES+=(/tags "/tags/${TAG}")
+
+# The Series namespace, when there is one to probe. All three read a store —
+# the landing and a Part read *both*, D1 for the arc and KV for the body — so
+# they are the routes most likely to be the ones a missing binding takes down,
+# which is the failure this whole script exists for.
+if [[ "${#SERIES_PARTS[@]}" -gt 0 ]]; then
+	IFS=$'\t' read -r SERIES_SLUG PART_SLUG <<<"${SERIES_PARTS[0]}"
+
+	ROUTES+=(/series "/series/${SERIES_SLUG}" "/series/${SERIES_SLUG}/${PART_SLUG}")
+fi
 
 if [[ ! -d build/client ]]; then
 	echo "error: no build found. Run 'pnpm build' first." >&2
@@ -126,22 +217,44 @@ done
 # A 200 holding an empty page would pass everything above. Matching on the Slug
 # rather than on a title keeps this free of HTML-escaping guesswork.
 #
-# These two must name this exact Slug: `/blog` lists every Post, and the Post's
-# own page is that Post.
-echo "==> Those pages carry content, not just a status code"
-for route in /blog "/blog/${POST_SLUG}"; do
+# One function rather than a fourth copy of the same six lines. Every caller
+# below asks the same question — *did this page carry the row the store holds* —
+# and the answers were drifting: two of them printed a different failure line for
+# the same failure.
+expect_mention() {
+	local route="$1" needle="$2" body
+
 	# Held in a variable rather than piped into grep: under `pipefail`, grep -q
 	# exits on the first match and curl dies of SIGPIPE, failing the pipeline
 	# precisely when the check succeeds.
 	body=$(curl -s "${BASE}${route}")
 
-	if grep -qF "${POST_SLUG}" <<<"${body}"; then
-		printf '    ok   %-24s mentions %s\n' "${route}" "${POST_SLUG}"
+	if grep -qF "${needle}" <<<"${body}"; then
+		printf '    ok   %-24s mentions %s\n' "${route}" "${needle}"
 	else
-		printf '    FAIL %-24s does not mention %s\n' "${route}" "${POST_SLUG}"
+		printf '    FAIL %-24s does not mention %s\n' "${route}" "${needle}"
 		failed=1
 	fi
-done
+}
+
+echo "==> Those pages carry content, not just a status code"
+
+# These two must name this exact Slug: `/blog` lists every Post, and the Post's
+# own page is that Post.
+expect_mention /blog "${POST_SLUG}"
+expect_mention "/blog/${POST_SLUG}" "${POST_SLUG}"
+
+# The Tag page answers 404 for a Tag no Post carries, so a 200 already says the
+# query found something — but not that the row reached the page. The Post the
+# Tag was read from is the one that must be listed.
+expect_mention "/tags/${TAG}" "${TAG_POST_SLUG}"
+
+# The index, which reads a different query against the same table. A 200 here
+# survives an empty list — every entry comes from `content_tag`, and the whole
+# page is those entries — so it is asked for the one Tag known to be on it. The
+# page's own description names its subjects in prose (`Node.js`), never as
+# slugs, so this cannot match on anything but an entry.
+expect_mention /tags "${TAG}"
 
 # The home page is asked for any Post, not that one. It carries a short excerpt
 # of the most recent Posts, so the Slug that happens to sort first need not be

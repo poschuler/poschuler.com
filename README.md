@@ -6,14 +6,17 @@ The whole site is a single Cloudflare Worker. There is no separate API, no origi
 
 ## What's inside
 
-| Page         | What it shows                                                        |
-| ------------ | -------------------------------------------------------------------- |
-| `/`          | Landing page — who he is, the flagship project, the newest writing    |
-| `/projects`  | Software he built and runs, weighted by tier                          |
-| `/blog`      | Long-form articles, written here                                      |
-| `/bookmarks` | External articles worth endorsing, credited to their source           |
-| `/timeline`  | Posts and Bookmarks interleaved, newest first                         |
-| `/resume`    | Structured professional history, plus a PDF download                  |
+| Page          | What it shows                                                        |
+| ------------- | -------------------------------------------------------------------- |
+| `/`           | Landing page — who he is, the flagship project, the newest writing    |
+| `/projects`   | Software he built and runs, weighted by tier                          |
+| `/blog`       | Long-form articles and the series they belong to                      |
+| `/series`     | Subjects worked through in order — each with a contract and an arc     |
+| `/bookmarks`  | External articles worth endorsing, credited to their source           |
+| `/timeline`   | Posts and Bookmarks interleaved, newest first                         |
+| `/tags`       | Every subject some Post covers, heaviest first, with its count        |
+| `/tags/<tag>` | The Posts on one subject, newest first — `noindex, follow`            |
+| `/resume`     | Structured professional history, plus a PDF download                  |
 
 ## How content works
 
@@ -21,10 +24,13 @@ The whole site is a single Cloudflare Worker. There is no separate API, no origi
 
 ```
 app/content/<tree>/**/*.md     ← authored here, versioned in git
-   │                             the tree — blog, bookmarks, projects — says what it is
-   ├─ front matter ──▶ D1 (content, project)   metadata: title, dates, tags, source
-   └─ body ──────────▶ KV  (blog:… , project:…)   pre-rendered HTML
+   │                             the tree — blog, bookmarks, projects, series — says what it is
+   │                             and how deep it sits says whether it is the item or lives inside one
+   ├─ front matter ──▶ D1 (content, content_tag, project, series, series_section)
+   └─ body ──────────▶ KV  (blog:… , project:… , series:…)   pre-rendered HTML
 ```
+
+A key's prefix says what kind of payload it is, not which URL serves it: a Part of a series is an ordinary Post with a container, so its body lives under `blog:` and is served at `/series/<series>/<part>`.
 
 Serving a Post is therefore one KV read, and listing Content Items is one indexed D1 query — no Markdown parsing on the request path. That is why `front-matter` and `marked` are dependencies yet appear in no runtime import. See [ADR 0001](docs/adr/0001-markdown-as-source-of-truth-derived-into-d1-and-kv.md).
 
@@ -86,6 +92,8 @@ updates:                             # optional, newest first, curated
 ---
 ```
 
+`tags` is drawn from a closed vocabulary: `app/content/tags.json` lists every Tag this site may use, and one that is not declared there fails the build — as does one that is not a lower-case kebab-case slug, with a different message. A Tag is written exactly one way and that same string is its URL, so writing about a new subject means adding a line to that file first. Each Tag some Post carries gets a page at `/tags/<tag>` with no route to declare; a Tag no Post carries is a 404, and the index at `/tags` never lists it. See [ADR 0008](docs/adr/0008-a-tag-is-its-slug-and-the-vocabulary-is-declared.md).
+
 `updates` is what the author says changed, not a commit log — the fine-grained history is already in git. It never reorders the Timeline, and it does date the page in the sitemap. See [ADR 0005](docs/adr/0005-revisions-are-a-curated-list-in-the-content.md).
 
 A **Project** is a folder plus a locale-suffixed file, `app/content/projects/<slug>/<slug>.en.md`. It is not a Content Item — no publication date, no place in the Timeline — so it carries revisions instead, and needs at least one:
@@ -123,7 +131,31 @@ tags: ['auth', 'security', 'webdev']
 ---
 ```
 
-The filename is the Slug, and it never changes once published — it is the URL. Re-run both seed scripts after adding a file; the KV upload replaces every `blog:` key rather than merging.
+A **Series** is one manifest plus a folder per part. The manifest is `app/content/series/<slug>/<slug>.en.md`, and it declares the whole arc — every section in order, and inside each, the slugs of its parts in order:
+
+```yaml
+---
+type: 'series'
+title: 'Pragmatic Node.js API'
+description: 'The SEO meta description.'
+status: 'ongoing'                    # ongoing | complete — complete is the only declarable one
+startingPoint: 'What the reader is assumed to already be able to do.'
+destination: 'What they end up with. Immutable once the first part ships.'
+outOfScope: ['Microservices', 'Event sourcing']
+audience: 'Who this is for, and who it is not for.'
+sections:
+  - slug: 'fundamentals'
+    title: 'Fundamentals'
+    summary: 'One or two sentences. This is what the landing renders.'
+    parts:                           # omit entirely for a section not started yet
+      - 'project-setup'
+      - 'schema-validation-and-error-handling'
+---
+```
+
+A **part** is then an ordinary Post one level deeper, `app/content/series/<series>/<part>/<part>.en.md`, with the same front matter any Post has. It declares nothing about the series: its container is the folder it sits in, and its position is wherever the manifest lists it. A section with no parts is planned and a section with parts is in progress, so neither is ever written down. See [ADR 0007](docs/adr/0007-the-manifest-declares-the-arc-a-part-does-not-know-where-it-is.md).
+
+The filename is the Slug, and it never changes once published — it is the URL. If one has to move anyway, add the old address to `app/lib/redirects.ts`; a test walks that map against the database, so a redirect pointing at a page that no longer exists fails the build. Re-run both seed scripts after adding a file; the KV upload replaces every `blog:` key rather than merging.
 
 ## Commands
 
@@ -163,7 +195,8 @@ app/
   components/ui/  Shared Base UI primitives
   models/         Named domain queries over D1
   routes/         One folder per route, entry file prefixed with _
-  lib/seo/        Hand-rolled sitemap and robots.txt renderers
+  lib/seo/        Hand-rolled sitemap and robots.txt renderers, and the JSON-LD
+  lib/redirects.ts  URLs this site published and no longer serves
 seed/             Build-time generators for D1 and KV
 workers/app.ts    The Worker entry point
 tests/            Vitest — unit and integration, never beside the code
@@ -187,7 +220,7 @@ The order is the point: the seed, the deploy and the check are one sequence with
 
 ## Documentation
 
-- [`CONTEXT.md`](CONTEXT.md) — the domain vocabulary. What a Post, a Bookmark, a Slug and the Timeline mean here.
+- [`CONTEXT.md`](CONTEXT.md) — the domain vocabulary. What a Post, a Bookmark, a Series, a Part and the Timeline mean here.
 - [`docs/architecture.md`](docs/architecture.md) — runtime shape, the content pipeline, data stores, caching, known defects.
 - [`docs/design.md`](docs/design.md) — UI and module conventions: color, theming, component layers, data access.
 - [`docs/adr/`](docs/adr/) — the decisions worth recording, and why.

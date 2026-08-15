@@ -4,6 +4,8 @@
 	"type": "module",
 	"packageManager": "pnpm@11.13.1",
 	"scripts": {
+		"ralph": "bash ralph/ralph.sh",
+		"ralph:clean": "bash ralph/ralph-clean.sh",
 		"build": "react-router build",
 		"cf-typegen": "wrangler types",
 		"deploy": "pnpm run build && wrangler deploy",

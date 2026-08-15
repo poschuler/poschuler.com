@@ -1,16 +1,24 @@
-import { Link, useLoaderData } from "react-router";
+import { redirect, useLoaderData } from "react-router";
 import type { Route } from "./+types/_$blog-slug";
 import { cloudflareContext } from "~/context";
-import { GitHubIcon } from "~/components/ui/brand-icons";
-import { RevisionHistory, RevisionLine } from "~/components/revisions";
+import { PostArticle } from "~/components/post-article";
+import { postHref } from "~/lib/hrefs";
+import { blogPosting, breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
 import { validateRevisions } from "~/lib/revisions";
+import { findPostBySlug } from "~/models/content.server";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 
 
 interface PostAttributes {
     title: string;
     description: string;
-    tags: string[];
+    /**
+     * Optional, because this is front matter as written and a Post is free to
+     * carry none. What the build guarantees is that whatever is here is a Tag
+     * from the closed vocabulary, written as its own slug — not that there is
+     * one.
+     */
+    tags?: string[];
     publishedAt: string;
     repository?: string;
     /**
@@ -27,11 +35,38 @@ interface BlogContentPayload {
     html: string;
 }
 
-export async function loader({ params, context }: Route.LoaderArgs) {
+export async function loader({ params, request, context }: Route.LoaderArgs) {
 
     const blogSlug = params.blogSlug;
 
     const { env } = context.get(cloudflareContext);
+
+    /**
+     * The row before the body, for one reason: a Part is served under its
+     * Series, and its payload sits under the same `blog:` key as any other Post
+     * — the prefix says what kind of payload it is, not which URL serves it. So
+     * KV alone would answer this URL with a page that also exists at
+     * `/series/…`, and two addresses for one article is a canonical nobody
+     * declared.
+     *
+     * Not the historical redirects: those are a table of URLs that no longer
+     * exist and belong in `app/lib/redirects.ts`, consulted in the Worker. This
+     * is derived from the row itself.
+     */
+    const post = await findPostBySlug(env.POSCHULER_BD, blogSlug);
+
+    if (!post) {
+        throw new Response("Not Found", { status: 404 });
+    }
+
+    if (post.seriesSlug) {
+        // The query string travels, for the reason `app/lib/redirects.ts`
+        // states for the hop before this one: it is what tells the author the
+        // redirect is being used at all. The two land on the same page, so
+        // they cannot behave differently.
+        throw redirect(postHref(post) + new URL(request.url).search, 301);
+    }
+
     const BLOG_KV = env.BLOG_KV;
     const kv_key = `blog:${blogSlug}:en`;
     const contentPayload = await BLOG_KV.get<BlogContentPayload>(kv_key, {
@@ -49,12 +84,21 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 
     const revisions = validateRevisions(attributes.updates);
 
-    // Deliberately not returning `attributes.tags`: nothing renders them, and a
-    // loader's return value ships twice — once in the HTML, once in hydration.
+    // `tags` used to be dropped here, and the reason was recorded: a loader's
+    // return value ships twice — once in the HTML, once in hydration — and
+    // nothing rendered them. That reasoning still holds; what changed is the
+    // other side of it. The chips are links to a page that now exists, so the
+    // bytes buy the reader a way out sideways, and this is the payload that
+    // already carries them: the front matter travelled here verbatim, so
+    // returning them costs no second query on either Post route.
     return {
         title: attributes.title,
         description: attributes.description,
+        tags: attributes.tags ?? [],
         publishedAt: new Date(attributes.publishedAt).toLocaleDateString(),
+        // The same date, unformatted. What a reader sees is written for their
+        // locale; what a crawler is told has to stay `YYYY-MM-DD`.
+        datePublished: attributes.publishedAt,
         html,
         slug: blogSlug,
         repository: attributes.repository,
@@ -68,7 +112,8 @@ export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export function meta({ loaderData }: Route.MetaArgs) {
 
-    const { title, description, slug } = loaderData;
+    const { title, description, slug, datePublished, revisions } = loaderData;
+    const path = `/blog/${slug}`;
 
     return [
         { title: `${title} | Paul Osorio Schuler` },
@@ -82,42 +127,42 @@ export function meta({ loaderData }: Route.MetaArgs) {
         { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
         { property: "og:type", content: "article" },
         { property: "og:url", content: `https://poschuler.com/blog/${slug}` },
+        {
+            "script:ld+json": blogPosting({
+                path,
+                title,
+                description,
+                datePublished,
+                // Newest first, guaranteed by `validateRevisions`.
+                dateRevised: revisions[0]?.date,
+                // A standalone Post has no Container, and saying otherwise
+                // would invent a continuity that does not exist.
+                seriesSlug: null,
+            }),
+        },
+        {
+            "script:ld+json": breadcrumbList([
+                HOME_CRUMB,
+                { name: "Blog", path: "/blog" },
+                { name: title, path },
+            ]),
+        },
     ];
 }
 
 export default function BlogSlug() {
-    const { html, publishedAt, title, repository, revisions } = useLoaderData<typeof loader>();
+    const { html, publishedAt, tags, title, repository, revisions } = useLoaderData<typeof loader>();
 
     return (
         <main className="flex-1 gap-4 p-4 md:gap-8 md:p-10 font-mono bg-ui">
-            <article className="prose mx-auto py-8">
-                <h1>{title}</h1>
-
-                {repository && (
-                    <p className="flex items-center gap-2">
-                        <GitHubIcon className="size-6" />
-                        <Link
-                            to={repository}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-lg no-underline text-low flex items-center gap-2 transition-colors duration-200 hover:text-default"
-                        >
-                            View Github Repository
-                        </Link>
-                    </p>
-                )}
-
-                <div className="not-prose my-4">
-                    <RevisionLine publishedAt={publishedAt} revisions={revisions} />
-                </div>
-
-                <hr className="mt-7 mb-7" />
-                <div dangerouslySetInnerHTML={{ __html: html }} />
-
-                <div className="not-prose">
-                    <RevisionHistory revisions={revisions} />
-                </div>
-            </article>
+            <PostArticle
+                title={title}
+                publishedAt={publishedAt}
+                tags={tags}
+                repository={repository}
+                revisions={revisions}
+                html={html}
+            />
         </main>
     )
 }

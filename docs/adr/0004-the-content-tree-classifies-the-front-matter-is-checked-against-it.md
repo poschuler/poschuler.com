@@ -10,6 +10,24 @@ This replaces an arrangement where the two generators answered the question diff
 - **Directory alone, dropping `type`.** The directory already implies the kind, so the field is redundant. Rejected on cost and on safety: removing it means editing every existing content file, and a misfiled document still passes silently — it is simply processed as whatever its new neighbours are, which is the failure above with a different cause.
 - **Directory classifies, front matter validates.** Chosen. It costs nothing in existing files, keeps the warning meaningful, and converts a silent mismatch into a red build.
 
+## Amendment (Phase 2a): depth classifies inside a tree
+
+The rule above assumed one tree holds one kind of file. `series/` breaks that: it holds the manifest that describes a Series *and* the Posts that are its Parts. The rule is generalised rather than replaced — what tells the two apart is already in the path, and it is how deep the file sits.
+
+```
+bookmarks/how-i-would-do-auth.md                   depth 1
+blog/<slug>/<slug>.en.md                           depth 2
+projects/<project>/<project>.en.md                 depth 2
+series/<series>/<series>.en.md                     depth 2      the Series
+series/<series>/<part>/<part>.en.md                depth 3      a Part of it
+```
+
+The reading is one sentence: **the file named after its folder *is* that folder, and a subfolder is content living inside it.** So depth 1 and 2 are the tree's own item, and depth 3 is content whose Container is the folder above. `CONTENT_TREES` says per tree what may nest — `series` accepts a nested `post`, and `blog`, `bookmarks` and `projects` accept nothing, so a subfolder under `blog/` fails the build rather than acquiring an invented meaning.
+
+`projects: { nested: null }` is the interesting one, because a Field Note is exactly a nested Post and is not accepted. It needs a `project_slug` on `content` to be linkable, and that column arrives in 1b. Accepting one today would seed a Post with no Container — the silent shape this ADR exists to remove.
+
+This is also what makes the Container derivable at all. The directory a Part sits in names its Series, so nothing has to be told twice: the Container is read from the path, and ADR 0007 keeps the *arc* in one manifest rather than in each Part's front matter.
+
 ## Consequences
 
 - **`contentRowFor` takes a path, not a filename.** It was `contentRowFor(filename, attributes)`, deriving identity from the basename alone; it now receives the path relative to `app/content`. `seed-sql.test.ts` is rewritten with it. Path separators are normalised before any comparison, so the rule does not depend on the platform the generator runs on.

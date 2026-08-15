@@ -17,7 +17,27 @@ CREATE TABLE content (
     external_url TEXT,
     source TEXT,
 
-    tags TEXT, -- Store as JSON string (e.g., '["tag1", "tag2"]')
+    -- The Tags as they were written, a JSON array, and nothing renders it:
+    -- `content_tag` below is what a query reaches for, and the chips on a Post
+    -- render from the front matter that travels verbatim in KV. It is kept
+    -- because the Worker's shared column list and the KV generator still select
+    -- it, and migrations run before the Worker — dropping it here would leave
+    -- the previous Worker asking for a column that is gone, which is 500s on
+    -- every listing page. The column and both selections go together, in a
+    -- later deploy. Do not build on it.
+    tags TEXT,
+
+    -- The Container, when this Post has one. All three are written by the
+    -- generator from the Series manifest and never appear in front matter: a
+    -- Part does not know where it is, the manifest says (ADR 0007).
+    --
+    -- `series_slug` is what makes a correct link possible from anywhere. Any
+    -- listing that renders a Post needs it to build the href — the Timeline
+    -- interleaves Bookmarks, loose Posts and Parts, and each takes a different
+    -- prefix.
+    series_slug TEXT,
+    series_section TEXT,   -- the section's slug, within that Series
+    section_order INTEGER, -- the Part's position in its section's list
 
     -- What the author says changed, newest first, as a JSON array of
     -- { date, note }. Distinct from `updated_at` below, which is when the
@@ -38,6 +58,33 @@ CREATE UNIQUE INDEX content_post_idx ON content (slug, lang) WHERE lang IS NOT N
 -- Conditional Unique Index for 'link' types (lang IS NULL)
 -- This is supported in SQLite/D1.
 CREATE UNIQUE INDEX content_link_idx ON content (slug) WHERE lang IS NULL;
+
+-- One row per Tag per Content Item, derived from the Markdown like everything
+-- else and rebuilt on every seed run. It exists so that *which Posts carry this
+-- Tag* and *how many does each Tag hold* are queries rather than work done in
+-- JavaScript over every row and its parsed JSON.
+--
+-- Rows are written for Posts and Bookmarks alike. What a Tag page lists is a
+-- policy of the page, not of the data: today it lists Posts only, and the day
+-- that is reopened there is nothing to seed first.
+CREATE TABLE content_tag (
+    -- The natural key of the Content Item plus the Tag. Never `id_content`:
+    -- that is an autoincrement, and the seed upserts with `INSERT OR REPLACE`,
+    -- which deletes and re-inserts on a conflict — so the id changes on every
+    -- run. `(slug, lang)` is what all four existing prunes already key on.
+    slug TEXT NOT NULL,
+    lang TEXT, -- NULL for a Bookmark, as in `content`
+    tag TEXT NOT NULL,
+
+    PRIMARY KEY (slug, lang, tag)
+);
+
+-- The Bookmark half of that key, because SQLite treats NULLs as distinct in a
+-- unique index — and a PRIMARY KEY on a rowid table is one. Without this a
+-- Bookmark's rows conflict with nothing, `INSERT OR REPLACE` inserts rather
+-- than replaces, and every seed run doubles them. It is the same partial index
+-- `content_link_idx` already is, for the same reason.
+CREATE UNIQUE INDEX content_tag_link_idx ON content_tag (slug, tag) WHERE lang IS NULL;
 
 -- A Project is not a Content Item: no published_at, no place in the Timeline,
 -- revised in place rather than published. It gets its own table for that
@@ -87,3 +134,73 @@ CREATE TABLE project (
 );
 
 CREATE UNIQUE INDEX project_idx ON project (slug, lang);
+
+-- A Series is a Container, not a Content Item: it has no Published At — it is
+-- revised in place as Parts arrive — and never appears in the Timeline. What it
+-- holds instead is a contract with the reader, stated once and, for the
+-- Destination, never changed.
+CREATE TABLE series (
+    id_series INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    slug TEXT NOT NULL,
+    lang TEXT NOT NULL, -- as on a Project: prose in one Locale
+
+    title TEXT NOT NULL,
+    description TEXT, -- SEO meta description
+
+    -- Editorial, and deliberately not derived from every section being
+    -- complete: another section can always be added. It states whether the
+    -- Destination has been reached.
+    status TEXT NOT NULL,
+
+    -- The four halves of the contract, all required. A landing that omits one
+    -- of them is the failure this phase exists to prevent: a reader cannot tell
+    -- whether the series is for them.
+    starting_point TEXT NOT NULL,
+    destination TEXT NOT NULL,
+    out_of_scope TEXT NOT NULL, -- Store as JSON string (e.g., '["Microservices"]')
+    audience TEXT NOT NULL,
+
+    -- No `updates` column, unlike `project`. ADR 0005 gives Revisions to a
+    -- document with no other possible date; a Series has one — what changes on
+    -- its landing is that a Part arrived, and that Part is already dated.
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now')),
+
+    CONSTRAINT series_status_known
+    CHECK (status IN ('ongoing', 'complete'))
+);
+
+CREATE UNIQUE INDEX series_idx ON series (slug, lang);
+
+-- One row per section of a Series' arc, in the order the manifest lists them.
+CREATE TABLE series_section (
+    id_series_section INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    series_slug TEXT NOT NULL,
+    lang TEXT NOT NULL,
+
+    slug TEXT NOT NULL,
+    title TEXT NOT NULL,
+    summary TEXT NOT NULL, -- one or two sentences; rendered even when the section is planned
+
+    -- Nullable, and the only value it accepts is 'complete'. The other two
+    -- states `08` described are already stated by the structure: a section with
+    -- no Parts is planned, a section with Parts is in progress. Only *finished*
+    -- cannot be observed, because it is a promise the author holds. Allowing
+    -- the other two to be declared would restore two sources of truth free to
+    -- disagree. See ADR 0007.
+    status TEXT,
+
+    -- The position in the manifest's list, written by the generator. A list has
+    -- no gaps and no duplicate positions, which is why nothing checks for them.
+    section_order INTEGER NOT NULL,
+
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now')),
+
+    CONSTRAINT series_section_status_known
+    CHECK (status IS NULL OR status = 'complete')
+);
+
+CREATE UNIQUE INDEX series_section_idx ON series_section (series_slug, lang, slug);
