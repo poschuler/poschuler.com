@@ -18,6 +18,10 @@ Configuration lives in [`ralph.config.sh`](./ralph.config.sh); the loop is in
   `ralph/<timestamp>`**, forked from `dev`. For each issue it runs a **fresh
   Claude session** (fresh context per issue is the point — it avoids context rot)
   to implement it, then verifies the issue was **closed** on GitHub, and moves on.
+- Each issue actually gets **two** fresh sessions: one to implement it, then a
+  second, independent one to **review** that work against the repo's standards and
+  commit any fixes. The reviewer sees the diff, not the implementer's context —
+  that isolation is the point. Turn it off with `RALPH_REVIEW=0`.
 - When the list drains, Ralph pushes and opens **one draft PR back to `dev`**,
   titled after the issues it worked (so it reads well even though the branch is a
   timestamp).
@@ -79,7 +83,7 @@ right.)
 ### 3. Preview (always do this first)
 
 ```bash
-scripts/ralph.sh --dry-run
+ralph/ralph.sh --dry-run
 ```
 
 Expands the list and shows, per issue, whether it would be implemented or
@@ -88,8 +92,8 @@ skipped (already closed / missing label) — **creates nothing, calls no Claude.
 ### 4. Run
 
 ```bash
-scripts/ralph.sh                    # work the whole list
-scripts/ralph.sh --max-iterations 2 # cautious: stop after 2 issues actually run
+ralph/ralph.sh                    # work the whole list
+ralph/ralph.sh --max-iterations 2 # cautious: stop after 2 issues actually run
 ```
 
 Per issue, ralph:
@@ -102,8 +106,13 @@ Per issue, ralph:
    child).
 3. Re-reads the issue state. If it isn't `CLOSED`, ralph **stops the entire run**
    (fail-fast) and leaves the worktree for inspection.
-4. Repeats down the list.
-5. Pushes the branch and opens **one draft PR into `dev`**.
+4. Runs a **second, isolated session** that code-reviews everything committed since
+   the issue started and commits any fixes it finds (skipped when
+   `RALPH_REVIEW=0`). The summary records which it was: `reviewed (fixes)` when the
+   review moved `HEAD`, `reviewed (clean)` when it found nothing. A review session
+   that exits non-zero is also fail-fast.
+5. Repeats down the list.
+6. Pushes the branch and opens **one draft PR into `dev`**.
 
 ---
 
@@ -182,10 +191,11 @@ Each run gets **one timestamped folder next to the script**, in the main checkou
 (it survives the worktree being removed) and **gitignored**:
 
 ```
-scripts/ralph-logs/<run-timestamp>/
-├── summary.md        # run header (branch, issues) + issue → status → commit table
-├── issue-50.log      # full Claude output for issue #50
-└── issue-51.log      # …one per issue actually run
+ralph/ralph-logs/<run-timestamp>/
+├── summary.md              # run header (branch, issues) + issue → status → commit table
+├── issue-50.log            # full Claude output for issue #50 (implementation)
+├── issue-50-review.log     # …and for its review session
+└── issue-51.log            # …one pair per issue actually run
 ```
 
 Every invocation is its own folder, so each run's result is a self-contained
@@ -203,6 +213,8 @@ summary.
 | `RALPH_REQUIRE_LABEL`   | `ready-for-agent`   | Only work issues with this label (`""` = no gate).               |
 | `RALPH_OPEN_PR`         | `1`                 | Open a draft PR when the list finishes.                          |
 | `RALPH_MODEL`           | `claude-sonnet-5`   | Model for each headless session.                                 |
+| `RALPH_REVIEW`          | `1`                 | Run the isolated code-review session after each closed issue. `0` = implement only. |
+| `RALPH_REVIEW_MODEL`    | *(= `RALPH_MODEL`)* | Model for the review session, when you want it to differ.        |
 | `RALPH_PERMISSION_MODE` | `auto`              | `claude -p` permission mode.                                     |
 | `RALPH_MAX_ITERATIONS`  | *(empty)*           | Cap issues actually run per invocation. `--max-iterations` wins. |
 
@@ -220,7 +232,7 @@ Command-line flags: `--dry-run`, `--max-iterations N`, `-h`/`--help`.
   is deliberately short and trusts the `/implement` skill — write those sections
   well so "verify every acceptance criterion is met" has something to check.
 - **Fail-fast is intentional.** If ralph stops, read the last `.log` and the
-  `ralph-result.md` row to see which issue broke. The worktree is left intact;
+  `summary.md` row to see which issue broke. The worktree is left intact;
   fix it, then re-run — closed issues stay skipped and ralph resumes from the
   next open one.
 - **PRD auto-close needs the `PRD: #NN` line** in the issue body. Without it,

@@ -33,12 +33,14 @@ deploy.log
 
 .claude/
 .agents/
+
 skills-lock.json
 
+ralph/ralph.config.sh
 ralph-logs/
 
 /handoff/
 
-scripts/ralph.config.sh
+
 
 /evolution-plan/

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Ralph loop: drives Claude Code, one headless invocation per GitHub issue,
-# through an ordered list of issue numbers defined in scripts/ralph.config.sh.
+# through an ordered list of issue numbers defined in ralph/ralph.config.sh.
 #
-# What to work and how are configured in scripts/ralph.config.sh — there are no
+# What to work and how are configured in ralph/ralph.config.sh — there are no
 # positional arguments (and no dependency on the current branch name).
 #
 # The whole list runs in ONE git worktree on RALPH_BRANCH, forked from
@@ -22,11 +22,11 @@
 # RALPH_BASE_REF for you to review.
 #
 # Each run gets one timestamped folder next to this script, in the MAIN checkout,
-# under scripts/ralph-logs/<run>/ (gitignored): a summary.md plus one log per
+# under ralph/ralph-logs/<run>/ (gitignored): a summary.md plus one log per
 # issue. It survives the worktree being torn down and never dirties your tree.
 #
 # Usage:
-#   scripts/ralph.sh [--dry-run] [--max-iterations N]
+#   ralph/ralph.sh [--dry-run] [--max-iterations N]
 
 set -euo pipefail
 
@@ -37,17 +37,17 @@ cd "$REPO_ROOT"
 usage() {
   cat <<'EOF'
 Ralph loop — drives Claude Code through the GitHub issues listed in
-scripts/ralph.config.sh.
+ralph/ralph.config.sh.
 
 Usage:
-  scripts/ralph.sh [--dry-run] [--max-iterations N]
+  ralph/ralph.sh [--dry-run] [--max-iterations N]
 
   --dry-run           Show the expanded issue list and per-issue gating decisions
                       without invoking claude or creating the worktree.
   --max-iterations N  Stop after N issues are actually run (overrides
                       RALPH_MAX_ITERATIONS). Skipped issues don't count.
 
-What/how to run is configured in scripts/ralph.config.sh
+What/how to run is configured in ralph/ralph.config.sh
 (RALPH_ISSUES, RALPH_BRANCH, RALPH_BASE_REF, RALPH_REQUIRE_LABEL, RALPH_MODEL, ...).
 EOF
 }
@@ -97,18 +97,98 @@ fi
 
 command -v gh >/dev/null 2>&1 || { echo "ralph: 'gh' not found on PATH — required." >&2; exit 1; }
 
-# Skills the prompts drive (see build_prompt / build_review_prompt). They must
-# exist in the main checkout, or nothing downstream can resolve them — fail fast.
-RALPH_SKILL="implement"
-RALPH_REVIEW_SKILL="code-review"
+# Skills the prompts drive (see build_prompt / build_review_prompt). Where they
+# come from is a property of the machine, not of the repo, so it is a config
+# flag rather than something inferred: "directory" is the original behaviour
+# (skills in the repo's gitignored .claude/, symlinked into the worktree),
+# "plugin" reads them from an installed Claude Code plugin. Either way they are
+# resolved before a session is spent — claude runs happily without a skill it
+# cannot find, and quietly does something else.
+: "${RALPH_SKILL_SOURCE:=plugin}"
+: "${RALPH_SKILL_PLUGIN:=mattpocock-skills}"
+: "${RALPH_SKILL:=implement}"
+: "${RALPH_REVIEW_SKILL:=code-review}"
+case "$RALPH_SKILL_SOURCE" in
+  plugin|directory) ;;
+  *) echo "ralph: RALPH_SKILL_SOURCE must be 'plugin' or 'directory', got '$RALPH_SKILL_SOURCE'." >&2; exit 1 ;;
+esac
+if [[ "$RALPH_SKILL_SOURCE" == "plugin" && -z "$RALPH_SKILL_PLUGIN" ]]; then
+  echo "ralph: RALPH_SKILL_SOURCE=plugin needs RALPH_SKILL_PLUGIN set in $CONFIG_FILE." >&2
+  exit 1
+fi
 REQUIRED_SKILLS=("$RALPH_SKILL")
 [[ "$RALPH_REVIEW" == "1" ]] && REQUIRED_SKILLS+=("$RALPH_REVIEW_SKILL")
+
+# The slash command that invokes a skill: namespaced by plugin, or bare.
+skill_ref() {
+  if [[ "$RALPH_SKILL_SOURCE" == "plugin" ]]; then
+    echo "$RALPH_SKILL_PLUGIN:$1"
+  else
+    echo "$1"
+  fi
+}
+
+# Echoes the SKILL.md backing a skill, or fails if it resolves nowhere. A
+# plugin's cache path carries its version and groups skills into category
+# folders, so both are globbed rather than pinned — a plugin update must not
+# break ralph, and which version claude ends up loading is claude's business.
+skill_manifest() {
+  local name="$1" hit
+  if [[ "$RALPH_SKILL_SOURCE" == "directory" ]]; then
+    [[ -f "$REPO_ROOT/.claude/skills/$name/SKILL.md" ]] || return 1
+    echo "$REPO_ROOT/.claude/skills/$name/SKILL.md"
+    return 0
+  fi
+  for hit in "$HOME"/.claude/plugins/cache/*/"$RALPH_SKILL_PLUGIN"/*/skills/*/"$name"/SKILL.md; do
+    [[ -f "$hit" ]] || continue
+    echo "$hit"
+    return 0
+  done
+  return 1
+}
+
 for s in "${REQUIRED_SKILLS[@]}"; do
-  if [[ ! -f "$REPO_ROOT/.claude/skills/$s/SKILL.md" ]]; then
-    echo "ralph: skill '$s' not found at $REPO_ROOT/.claude/skills/$s — cannot run." >&2
+  if ! skill_manifest "$s" >/dev/null; then
+    if [[ "$RALPH_SKILL_SOURCE" == "plugin" ]]; then
+      echo "ralph: skill '$s' not found in plugin '$RALPH_SKILL_PLUGIN' — cannot run." >&2
+      echo "       Install the plugin with /plugin inside Claude Code, or set" >&2
+      echo "       RALPH_SKILL_SOURCE=directory in $CONFIG_FILE." >&2
+    else
+      echo "ralph: skill '$s' not found at $REPO_ROOT/.claude/skills/$s — cannot run." >&2
+    fi
     exit 1
   fi
 done
+# Installed but disabled is the one failure the manifest check cannot see, and it
+# fails the same way — a session with no skill. Warn rather than stop: the plugin
+# may be enabled from a settings file this check does not read.
+if [[ "$RALPH_SKILL_SOURCE" == "plugin" ]] &&
+   ! grep -q "\"$RALPH_SKILL_PLUGIN@" "$HOME/.claude/settings.json" 2>/dev/null; then
+  echo "ralph: warning — plugin '$RALPH_SKILL_PLUGIN' is installed but not listed" >&2
+  echo "       under enabledPlugins in ~/.claude/settings.json; its skills may not resolve." >&2
+fi
+
+# What each session is actually told. Lives in the config so the wording can be
+# tuned without touching the runner; these are only the fallbacks for a config
+# written before they existed. Placeholders: {{SKILL}} (resolved to the slash
+# command, namespaced or bare), {{N}} (issue number), {{BASE}} (the base ref the
+# reviewer diffs against).
+if [[ -z "${RALPH_PROMPT:-}" ]]; then
+  RALPH_PROMPT="$(cat <<'PROMPT'
+/{{SKILL}} issue #{{N}}. When the implementation is done, verify every acceptance
+criterion is met; if so, close the issue and leave a comment summarizing the work
+and the criteria that were met. If this is the last open issue of its PRD, close
+the PRD too with a summary comment.
+PROMPT
+)"
+fi
+if [[ -z "${RALPH_REVIEW_PROMPT:-}" ]]; then
+  RALPH_REVIEW_PROMPT="$(cat <<'PROMPT'
+/{{SKILL}} {{BASE}}. Make sure every acceptance criterion of the issue is met, and
+if you find any errors you must fix them. Commit your fixes when you are done.
+PROMPT
+)"
+fi
 
 # ── Expand RALPH_ISSUES into an ordered, de-duplicated list of numbers ────────
 expand_issues() {
@@ -163,32 +243,18 @@ issue_title() {
 }
 
 build_prompt() {
-  local n="$1"
-  local template
-  template="$(cat <<'PROMPT'
-/{{SKILL}} issue #{{N}}. When the implementation is done, verify every acceptance
-criterion is met; if so, close the issue and leave a comment summarizing the work
-and the criteria that were met. If this is the last open issue of its PRD, close
-the PRD too with a summary comment.
-PROMPT
-)"
-  template="${template//\{\{SKILL\}\}/$RALPH_SKILL}"
-  echo "${template//\{\{N\}\}/$n}"
+  local template="$RALPH_PROMPT"
+  template="${template//\{\{SKILL\}\}/$(skill_ref "$RALPH_SKILL")}"
+  echo "${template//\{\{N\}\}/$1}"
 }
 
 build_review_prompt() {
-  local base="$1"
-  local template
-  template="$(cat <<'PROMPT'
-/{{SKILL}} {{BASE}}. Make sure every acceptance criterion of the issue is met, and
-if you find any errors you must fix them. Commit your fixes when you are done.
-PROMPT
-)"
-  template="${template//\{\{SKILL\}\}/$RALPH_REVIEW_SKILL}"
-  echo "${template//\{\{BASE\}\}/$base}"
+  local template="$RALPH_REVIEW_PROMPT"
+  template="${template//\{\{SKILL\}\}/$(skill_ref "$RALPH_REVIEW_SKILL")}"
+  echo "${template//\{\{BASE\}\}/$1}"
 }
 
-# ── Per-run summary (scripts/ralph-logs/<run>/summary.md, gitignored) ─────────
+# ── Per-run summary (ralph/ralph-logs/<run>/summary.md, gitignored) ─────────
 init_summary() {
   local file="$1"
   { printf '# Ralph run %s\n\n' "$RUN_TS"
@@ -216,14 +282,17 @@ setup_worktree() {
     git -C "$REPO_ROOT" worktree add -b "$branch" "$wt" "$RALPH_BASE_REF" >&2
   fi
 
-  # The project's skills live in the gitignored .claude/, so a fresh worktree
-  # checkout doesn't have them and `/implement` would not resolve when claude
-  # runs from inside the worktree. Point the worktree's .claude/skills at the
-  # main checkout's. Absolute target + `-sfn` keeps it idempotent on resume and
-  # stops it nesting inside an existing link; .claude/ is gitignored so the link
-  # never dirties the tree.
-  mkdir -p "$wt/.claude"
-  ln -sfn "$REPO_ROOT/.claude/skills" "$wt/.claude/skills" >&2
+  # Under RALPH_SKILL_SOURCE=directory the project's skills live in the
+  # gitignored .claude/, so a fresh worktree checkout doesn't have them and the
+  # skill would not resolve when claude runs from inside the worktree. Point the
+  # worktree's .claude/skills at the main checkout's. Absolute target + `-sfn`
+  # keeps it idempotent on resume and stops it nesting inside an existing link;
+  # .claude/ is gitignored so the link never dirties the tree. A plugin is
+  # installed per user, not per project, so it needs none of this.
+  if [[ "$RALPH_SKILL_SOURCE" == "directory" ]]; then
+    mkdir -p "$wt/.claude"
+    ln -sfn "$REPO_ROOT/.claude/skills" "$wt/.claude/skills" >&2
+  fi
   echo "$wt"
 }
 
@@ -294,7 +363,7 @@ echo "ralph: branch '$RALPH_BRANCH' (fork from $RALPH_BASE_REF) — issues: ${IS
 
 # Per-run log folder next to this script (gitignored): summary.md + one log per
 # issue; survives the worktree being torn down. Shares RUN_TS with the branch.
-RUN_DIR="$REPO_ROOT/scripts/ralph-logs/$RUN_TS"
+RUN_DIR="$REPO_ROOT/ralph/ralph-logs/$RUN_TS"
 summary_file="$RUN_DIR/summary.md"
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
@@ -320,10 +389,12 @@ fi
 WORKDIR="$(setup_worktree)"
 cd "$WORKDIR"
 
-# Fail fast if the skill doesn't resolve from inside the worktree (a broken or
-# missing symlink) — otherwise claude would run without /$RALPH_SKILL and quietly
-# do the wrong thing.
+# Fail fast if a skill doesn't resolve from inside the worktree — otherwise
+# claude would run without it and quietly do the wrong thing. Only the directory
+# source can fail here, and only through the symlink setup_worktree just made:
+# a plugin is user-global, so the cd cannot have moved it out of reach.
 for s in "${REQUIRED_SKILLS[@]}"; do
+  [[ "$RALPH_SKILL_SOURCE" == "plugin" ]] && break
   if [[ ! -f "$WORKDIR/.claude/skills/$s/SKILL.md" ]]; then
     echo "ralph: skill '$s' does not resolve inside the worktree" >&2
     echo "       ($WORKDIR/.claude/skills/$s) — the symlink is broken. Stopping." >&2
