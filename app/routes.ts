@@ -9,9 +9,12 @@ export default [
     layout("routes/layouts/_layout.tsx", [
         route("/", "routes/home/_home.tsx"),
         route("/bookmarks", "routes/bookmarks/_bookmarks.tsx"),
+        route("/timeline", "routes/timeline/_timeline.tsx"),
         route("/blog", "routes/blog/_blog.tsx"),
         route("/resume", "routes/resume/_resume.tsx"),
         route("/blog/:blogSlug", "routes/blog-slug/_$blog-slug.tsx"),
+        route("/projects", "routes/projects/_projects.tsx"),
+        route("/projects/:projectSlug", "routes/project-slug/_$project-slug.tsx"),
 
         // Inside the layout on purpose: a visitor who lands here still gets the
         // header, and a way out.

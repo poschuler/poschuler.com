@@ -2,6 +2,8 @@ import { Link, useLoaderData } from "react-router";
 import type { Route } from "./+types/_$blog-slug";
 import { cloudflareContext } from "~/context";
 import { GitHubIcon } from "~/components/ui/brand-icons";
+import { RevisionHistory, RevisionLine } from "~/components/revisions";
+import { validateRevisions } from "~/lib/revisions";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 
 
@@ -11,6 +13,13 @@ interface PostAttributes {
     tags: string[];
     publishedAt: string;
     repository?: string;
+    /**
+     * `unknown` because this is front matter that travelled through KV as
+     * written. `validateRevisions` is what turns it into a list — and it is the
+     * same function the seed uses, so a payload the build accepted renders and
+     * one it did not never reaches here.
+     */
+    updates?: unknown;
 }
 
 interface BlogContentPayload {
@@ -38,6 +47,8 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 
     const { attributes, html } = contentPayload;
 
+    const revisions = validateRevisions(attributes.updates);
+
     // Deliberately not returning `attributes.tags`: nothing renders them, and a
     // loader's return value ships twice — once in the HTML, once in hydration.
     return {
@@ -47,6 +58,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
         html,
         slug: blogSlug,
         repository: attributes.repository,
+        // A malformed list is caught at build time; a page is better off
+        // without its revision line than not rendering at all.
+        revisions: "revisions" in revisions ? revisions.revisions : [],
     };
 }
 
@@ -62,22 +76,23 @@ export function meta({ loaderData }: Route.MetaArgs) {
         { tagName: "link", rel: "canonical", href: `https://poschuler.com/blog/${slug}` },
         { property: "og:title", content: `${title}` },
         { property: "og:description", content: `${description}` },
-        { property: "og:image", content: "https://avatars.githubusercontent.com/u/1238212?v=4" },
+        { property: "og:image", content: "https://poschuler.com/og.png" },
+        { property: "og:image:width", content: "1200" },
+        { property: "og:image:height", content: "630" },
+        { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
         { property: "og:type", content: "article" },
         { property: "og:url", content: `https://poschuler.com/blog/${slug}` },
     ];
 }
 
 export default function BlogSlug() {
-    const { html, publishedAt, title, repository } = useLoaderData<typeof loader>();
+    const { html, publishedAt, title, repository, revisions } = useLoaderData<typeof loader>();
 
     return (
-        <main className="min-h-[calc(100vh_-_theme(spacing.16))] flex-1 gap-4 p-4 md:gap-8 md:p-10 font-mono bg-ui">
-            {/* <article className="prose py-8 mx-auto lg:max-w-4xl xl:max-w-5xl 2xl:max-w-7xl"> */}
-            <article className="prose py-8 mx-auto lg:max-w-4xl">
+        <main className="flex-1 gap-4 p-4 md:gap-8 md:p-10 font-mono bg-ui">
+            <article className="prose mx-auto py-8">
                 <h1>{title}</h1>
 
-                {/* show fancy repository design  flex items-center gap-2 text-muted-foreground transition-colors duration-200 hover:text-default*/}
                 {repository && (
                     <p className="flex items-center gap-2">
                         <GitHubIcon className="size-6" />
@@ -92,9 +107,16 @@ export default function BlogSlug() {
                     </p>
                 )}
 
-                <p>Published on: {publishedAt}</p>
+                <div className="not-prose my-4">
+                    <RevisionLine publishedAt={publishedAt} revisions={revisions} />
+                </div>
+
                 <hr className="mt-7 mb-7" />
                 <div dangerouslySetInnerHTML={{ __html: html }} />
+
+                <div className="not-prose">
+                    <RevisionHistory revisions={revisions} />
+                </div>
             </article>
         </main>
     )

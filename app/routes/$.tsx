@@ -12,14 +12,22 @@ export const meta: MetaFunction = () => [
 
 export default function Component() {
   return (
-    <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] w-full flex-col items-center justify-center gap-5 bg-ui p-4 font-mono text-xl font-medium leading-none">
-      <Unplug className="h-14 w-14" />
-      <h1>404 - Not Found</h1>
+    <main className="flex w-full flex-1 flex-col items-center justify-center gap-5 bg-ui p-4 font-mono">
+      <Unplug className="size-14" aria-hidden />
+
+      <h1 className="font-semibold text-3xl tracking-tight lg:text-4xl">
+        404 — Not Found
+      </h1>
+
+      {/* It read "Back to the timeline" until now, from when `/` *was* the
+        * Timeline. It has been the landing page since Phase 0, and the Timeline
+        * has had its own route ever since — one the header above this offers,
+        * along with everywhere else worth going. */}
       <Link
         to="/"
-        className="text-base text-low underline-offset-4 hover:underline"
+        className="text-low transition-colors duration-200 hover:text-default"
       >
-        Back to the timeline
+        Back to the home page
       </Link>
     </main>
   );

@@ -29,6 +29,11 @@
       "~/*": ["./app/*"]
     },
     "esModuleInterop": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    // The seed generators are run by `node ./seed/…/*.ts` directly, and Node's
+    // type stripping resolves specifiers as written — so their imports must
+    // carry the `.ts` extension. They reach this project transitively, through
+    // the tests that import them.
+    "allowImportingTsExtensions": true
   }
 }

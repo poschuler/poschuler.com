@@ -44,6 +44,15 @@ jobs:
       # so this needs no credentials and touches nothing deployed.
       - run: pnpm test
 
+      # The shape is written twice — once whole in `schema.sql`, once as a path
+      # in `seed/d1/migrations` — and this is what makes that safe. It applies
+      # the chain from zero to a throwaway database and requires the result to
+      # be the declared shape, so a migration that does not add up is caught
+      # here rather than by the deployed database, which is the only other place
+      # those files ever run. No credentials, so it belongs in this job. ADR 0006.
+      - name: The migration chain arrives at the declared schema
+        run: pnpm run verify:schema:local
+
       # The stores are seeded from the committed fixtures and never regenerated,
       # so a Markdown edit without a regeneration would republish the previous
       # version in silence. This runs the generators and fails if their output
@@ -104,11 +113,18 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # First, before anything is written. The schema is applied by hand — there
-      # is no migration tool, see ADR 0002 — so a commit that changes the
-      # table's shape can arrive with the deployed table still on the old one.
-      # Seeding into that, or deploying code that reads it, is a broken page
-      # rather than a degraded one.
+      # First, before anything is written. The schema travels in this commit
+      # like everything else — ADR 0006 — so there is no longer a hand-applied
+      # step for a push to arrive ahead of. Migrations that have already run are
+      # skipped, which makes a publication carrying no schema change a no-op
+      # here rather than a special case.
+      - name: Apply any new migrations
+        run: pnpm run d1:migrate:remote
+
+      # Confirms what the step above produced, and it is not redundant: a
+      # migration can succeed and still leave a shape the repository does not
+      # declare. Still before the seed, so a disagreement costs a failed run
+      # rather than rows written against a table nobody meant to have.
       - name: The deployed schema matches the repository
         run: pnpm run verify:schema:remote
 

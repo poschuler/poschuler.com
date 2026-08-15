@@ -24,8 +24,16 @@ BASE="http://localhost:${PORT}"
 
 # Derived, not hardcoded: a Slug never changes once published, but which Posts
 # exist does.
-FIRST_PAYLOAD=$(find seed/kv/kv_payloads -name '*.en.json' | sort | head -1)
-POST_SLUG=$(basename "${FIRST_PAYLOAD}" .en.json)
+mapfile -t POST_SLUGS < <(
+	find seed/kv/kv_payloads/blog -name '*.en.json' -exec basename {} .en.json \; | sort
+)
+
+if [[ "${#POST_SLUGS[@]}" -eq 0 ]]; then
+	echo "error: no Post payloads under seed/kv/kv_payloads/blog." >&2
+	exit 1
+fi
+
+POST_SLUG="${POST_SLUGS[0]}"
 
 ROUTES=(/ /blog /bookmarks /resume /robots.txt /sitemap.xml "/blog/${POST_SLUG}")
 
@@ -64,11 +72,14 @@ trap cleanup EXIT INT TERM
 
 # Both stores are filled from files that are in git, applied locally — no
 # network, no Cloudflare credentials, nothing touching the deployed resources.
-# `seed.sql` deletes and re-inserts, so running this repeatedly is safe; the
-# schema is the only step that objects to already existing.
+# `seed.sql` deletes and re-inserts, so running this repeatedly is safe.
+#
+# The schema is rebuilt rather than applied over, because applying a bare
+# `CREATE TABLE` to a database that already exists fails, and ignoring that
+# failure — which is what this did — also ignores a database sitting on an older
+# shape. A cold start check that passes against a stale store proves nothing.
 echo "==> Seeding the local D1 and KV from the committed fixtures"
-pnpm exec wrangler d1 execute poschuler --file ./seed/d1/schema.sql --local >/dev/null 2>&1 ||
-	echo "    (schema already applied)"
+pnpm run d1:reset:local >/dev/null
 pnpm exec wrangler d1 execute poschuler --file ./seed/d1/seed.sql --local >/dev/null
 pnpm run kv:upload:local >/dev/null
 
@@ -114,8 +125,11 @@ done
 
 # A 200 holding an empty page would pass everything above. Matching on the Slug
 # rather than on a title keeps this free of HTML-escaping guesswork.
+#
+# These two must name this exact Slug: `/blog` lists every Post, and the Post's
+# own page is that Post.
 echo "==> Those pages carry content, not just a status code"
-for route in / /blog "/blog/${POST_SLUG}"; do
+for route in /blog "/blog/${POST_SLUG}"; do
 	# Held in a variable rather than piped into grep: under `pipefail`, grep -q
 	# exits on the first match and curl dies of SIGPIPE, failing the pipeline
 	# precisely when the check succeeds.
@@ -128,6 +142,28 @@ for route in / /blog "/blog/${POST_SLUG}"; do
 		failed=1
 	fi
 done
+
+# The home page is asked for any Post, not that one. It carries a short excerpt
+# of the most recent Posts, so the Slug that happens to sort first need not be
+# on it — and asserting it was there is how this check started failing on a
+# working site. What it is for is that the page is not empty, and that survives
+# the home page changing how many Posts it shows.
+home=$(curl -s "${BASE}/")
+named=""
+
+for slug in "${POST_SLUGS[@]}"; do
+	if grep -qF "${slug}" <<<"${home}"; then
+		named="${slug}"
+		break
+	fi
+done
+
+if [[ -n "${named}" ]]; then
+	printf '    ok   %-24s mentions %s\n' "/" "${named}"
+else
+	printf '    FAIL %-24s names none of the %d Posts\n' "/" "${#POST_SLUGS[@]}"
+	failed=1
+fi
 
 # The theme toggle is the one thing that legitimately fails without its secret —
 # it signs a cookie, and signing with a placeholder is worse than not signing.

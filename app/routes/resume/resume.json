@@ -1,18 +1,19 @@
 {
+  "meta": {
+    "lastModified": "2026-08-14"
+  },
   "basics": {
     "name": "Paul Osorio Schuler",
-    "label": "Staff Software Engineer | Backend • TypeScript • Node.js",
-    "image": "https://avatars.githubusercontent.com/u/1238212?v=4",
+    "label": "Senior Backend Engineer | TypeScript • Node.js",
+    "image": "/paul-osorio-schuler.webp",
     "email": "poschuler@gmail.com",
     "url": "https://poschuler.com",
-    "summary": "Hands-on Staff Software Engineer with 12+ years of experience building backend systems, enterprise platforms, and digital products across banking and automation. Specialized in backend architecture with TypeScript and Node.js, cloud infrastructure, and event-driven systems. Proven track record of leading technical execution, delivering business-critical platforms, and generating $10M+ in business value through software, automation, and large-scale platform modernization initiatives.",
+    "summary": "Senior backend engineer with 15+ years across banking and product. I build and operate Chekalo.pe, a price intelligence platform that ingests Peru's major retailers daily, resolves the same product across stores into a single canonical identity, and serves search and comparison from OpenSearch. TypeScript and Node.js throughout, structured as a modular monolith over PostgreSQL and Redis-backed work queues. Previously led solution architecture at Scotiabank and BCP for enterprise orchestration and integration platforms.",
     "location": {
-      "address": "Chosica",
-      "postalCode": "15472",
       "city": "Lima",
       "countryCode": "PE",
       "region": "Peru",
-      "url": "https://maps.app.goo.gl/rDwEKUjsx1XpjiGo7"
+      "timezone": "UTC-5"
     },
     "profiles": [
       {
@@ -28,13 +29,6 @@
         "username": "poschuler",
         "url": "https://www.linkedin.com/in/poschuler/",
         "key": "l"
-      },
-      {
-        "row": 3,
-        "network": "X",
-        "username": "poschuler",
-        "url": "https://twitter.com/poschuler",
-        "key": "x"
       }
     ]
   },
@@ -42,126 +36,91 @@
     {
       "row": 9,
       "name": "Chekalo.pe",
-      "position": "Staff Software Engineer",
-      "location": "Remote",
+      "position": "Backend Engineer (independent product)",
+      "location": "Lima, Peru",
       "startDate": "2023",
       "endDate": "present",
       "summary": "",
       "highlights": [
-        "Architected and built a scalable product comparison platform using TypeScript and Node.js, processing 500K+ products daily across multiple retailers.",
-        "Designed and evolved large-scale product ingestion and catalog consolidation pipelines, covering product discovery, normalization, matching, and retailer integrations.",
-        "Built resilient scraping and background processing workflows using queue-based orchestration, rate limiting, retry strategies, and fault-tolerant mechanisms.",
-        "Designed the search and storage architecture using PostgreSQL, OpenSearch, and vector search technologies on Google Cloud, achieving sub-second search performance.",
-        "Implemented AI-assisted enrichment workflows using embeddings, vector similarity, and Gemini to improve product matching accuracy and metadata validation."
+        "Design, build and operate a price intelligence platform that ingests nine major retail sites daily, each behind its own integration, resolving their listings into a single canonical catalog with per-seller offers and price history.",
+        "Structured the backend as a modular monolith with three bounded modules — ingestion, catalog and search projection — each owning its own durable, reprocessable state behind hard boundaries.",
+        "Replaced LLM- and vector-based product matching (Qdrant, embeddings, cosine similarity) with deterministic identity resolution on brand, model and variant signature, corroborated by barcode — reproducible, auditable, and a fraction of the cost.",
+        "Built queue-backed ingestion on Redis and BullMQ with per-retailer rate limits and retries, validating every retailer payload at the boundary in production and de-duplicating unchanged ones to halve what gets stored.",
+        "Projected the catalog into OpenSearch incrementally — only the canonical products that changed — reindexing behind atomic alias swaps so search stays available through every schema change.",
+        "Shipped the consumer site (chekalo.pe) as a pure read model on React Router 8 with SSR — no query API, no database, reading the projected index directly."
       ]
     },
     {
       "row": 8,
       "name": "Scotiabank Perú",
-      "position": "Staff Software Engineer",
-      "location": "Remote",
+      "position": "Solutions Architect (Contract)",
+      "location": "Lima, Peru",
       "startDate": "2021",
       "endDate": "present",
       "summary": "",
       "highlights": [
-        "Led the modernization of enterprise workflow platforms through event-driven architectures, improving scalability, resilience, and system decoupling across banking operations.",
-        "Drove technical direction and solution architecture for process automation and workflow initiatives across multiple cross-functional teams.",
-        "Architected and validated large-scale distributed solutions, driving technical alignment to address complex integration and orchestration challenges.",
-        "Delivered enterprise automation and workflow initiatives generating over CAD 2M annually through operational efficiency, sales growth, and risk reduction.",
-        "Mentored engineers and led end-to-end technical delivery, establishing engineering standards and guiding platform modernization initiatives across automation and integration environments."
+        "Lead solution architecture for enterprise orchestration and integration across banking operations — Camunda over Kafka, with .NET and Python workers — moving the platform toward event-driven design.",
+        "Delivered systems generating over CAD 2M annually through operational efficiency, sales growth and risk reduction.",
+        "Own delivery across the portfolio — commitments, scope control and stakeholder expectations — with 12 engineers (7 in-house, 5 outsourced) reporting progress and escalating technical blockers.",
+        "Review technical and economic feasibility before initiatives are committed, and validate requirements directly with the business areas that own them."
       ]
     },
     {
       "row": 7,
       "name": "Banco de Crédito BCP",
-      "position": "Technical Lead",
-      "location": "Remote",
+      "position": "Technical Tribe Leader",
+      "location": "Lima, Peru",
       "startDate": "2019",
       "endDate": "2021",
       "summary": "",
       "highlights": [
-        "Led solution architecture and technical delivery across 4 cross-functional squads (22+ engineers), driving large-scale platform modernization and workflow initiatives.",
-        "Delivered USD 8M in business value through enterprise workflow and modernization initiatives focused on operational efficiency and revenue growth.",
-        "Helped define and implement the bank’s Automation Center of Excellence (CoE), establishing governance frameworks, engineering standards, and operating models for enterprise-scale delivery.",
-        "Standardized engineering and delivery practices across multiple squads, improving solution quality, scalability, and execution consistency.",
-        "Led cross-functional solution design efforts, aligning business, engineering, and operational stakeholders around scalable and secure platform solutions."
+        "Led solution architecture and technical delivery across 4 cross-functional squads (22+ engineers) for the bank's COVID-19 credit response — state-guaranteed lending (Reactiva Perú), mass loan rescheduling and payment-schedule updates — under statutory deadlines announced at short notice.",
+        "Took on hands-on implementation when the emergency demanded it, building .NET jobs that queued mass credit updates into the bank's nightly batch processing.",
+        "Delivered USD 8M in business value through platform modernization focused on operational efficiency and revenue growth.",
+        "Co-defined and implemented the bank's Automation Center of Excellence — governance framework, engineering standards and operating model for enterprise-scale delivery."
       ]
     },
     {
       "row": 6,
       "name": "Scotiabank Perú",
       "position": "Technical Lead, Automation",
-      "location": "",
+      "location": "Lima, Peru",
       "startDate": "2016",
       "endDate": "2019",
       "summary": "",
       "highlights": [
-        "Pioneered enterprise automation initiatives by developing and deploying Scotiabank Latam’s first production automation solution, generating an initial business impact of USD 500K.",
-        "Scaled automation adoption across banking operations, delivering solutions that improved operational efficiency and business outcomes across multiple business units.",
-        "Defined and implemented the automation governance model, establishing engineering standards, security practices, and scalable delivery frameworks.",
-        "Led and mentored a team of 9 engineers, driving technical delivery and capability growth across enterprise automation initiatives.",
-        "Developed enterprise integrations and workflow solutions that connected legacy banking systems with modern operational processes."
+        "Founded the bank's automation practice, delivering Scotiabank Latam's first production solution (USD 500K initial impact) and growing it into a standing team.",
+        "Led a team of 9 engineers, defining the governance model, engineering standards and security practices the area operated under."
       ]
     },
     {
       "row": 5,
       "name": "Scotiabank Perú",
-      "position": "IT Analyst → Tech Lead",
-      "location": "",
+      "position": "IT Analyst → Tech Leader",
+      "location": "Lima, Peru",
       "startDate": "2014",
       "endDate": "2016",
       "summary": "",
       "highlights": [
-        "Developed and enhanced mission-critical features for the Wholesale Banking credit approval platform, supporting large-scale corporate lending operations.",
-        "Led the digital transformation of the savings account onboarding process, reducing onboarding time from over 1 hour to 5 minutes per client and decreasing paper consumption by 95%.",
-        "Improved financial tracking and workflow automation processes, reducing manual effort and increasing operational efficiency across banking operations."
+        "Built the Wholesale Banking credit approval flow end to end, from proposal through disbursement across three core banking systems — origination, covenant tracking and credit line disbursement.",
+        "Built the web layer for savings account onboarding against an AS/400 COBOL core, cutting time per client from over an hour to five minutes and paper use by 95%."
       ]
     },
     {
-      "row": 4,
-      "name": "Software Enterprise Services",
-      "position": "Software Developer",
-      "location": "",
-      "startDate": "2014",
-      "endDate": "2014",
-      "summary": "Provided maintenance for the bank's web application supporting the loan processing system.",
-      "highlights": []
-    },
-    {
-      "row": 3,
-      "name": "MINEDU Peru",
-      "position": "Software Developer",
-      "location": "",
-      "startDate": "2013",
-      "endDate": "2014",
-      "summary": "Designed, developed, and implemented the nationwide student admission system for pedagogical institutes supported by MINEDU.",
-      "highlights": []
-    },
-    {
-      "row": 2,
-      "name": "Software Enterprise Services",
-      "position": "Software Developer",
-      "location": "",
-      "startDate": "2012",
-      "endDate": "2013",
-      "summary": "Developed new functionalities for the bank's system supporting mortgage loans.",
-      "highlights": []
-    },
-    {
       "row": 1,
-      "name": "SISPRO S.A.C.",
+      "name": "Software Enterprise Services · MINEDU Peru · SISPRO",
       "position": "Software Developer",
       "location": "",
       "startDate": "2011",
-      "endDate": "2012",
-      "summary": "Performed analysis, maintenance, and development of applications for BANBIF, including the integration of RENIEC's (National Registry of Identification and Civil Status) queuing system into an application for customer identification.",
+      "endDate": "2014",
+      "summary": "Banking applications through two consultancies — loan processing, mortgage lending, and customer identification against RENIEC, Peru's national identity registry — and, at MINEDU, the nationwide admission system for Peru's pedagogical institutes.",
       "highlights": []
     }
   ],
   "education": [
     {
       "row": 2,
-      "institution": "Escuela de Postgrado UTP",
+      "institution": "Universidad Tecnológica del Perú (UTP) Graduate School",
       "url": "https://www.postgradoutp.edu.pe/",
       "area": "MBA",
       "summary": "",
@@ -170,7 +129,7 @@
     },
     {
       "row": 5,
-      "institution": "Universidad Tecnológica del Perú (UTP)",
+      "institution": "UTP",
       "url": "https://www.utp.edu.pe/",
       "area": "B.S. in Software Engineering",
       "summary": "",
@@ -181,18 +140,7 @@
   "certificates": [
     {
       "row": 0,
-      "name": "Microsoft Certified: Azure AI Fundamentals",
-      "date": "2025",
-      "issuer": "Microsoft",
-      "url": "https://learn.microsoft.com/api/credentials/share/en-us/poschuler/E3F019C0BD6B6BA7?sharingId",
-      "keywords": [
-        "AI",
-        "Azure"
-      ]
-    },
-    {
-      "row": 1,
-      "name": "iSAQB® Certified Professional for Software Architecture – Foundation Level",
+      "name": "iSAQB® Certified Professional for Software Architecture – Foundation Level (CPSA-F)",
       "date": "2025",
       "issuer": "iSAQB®",
       "url": "https://drive.google.com/file/d/1uH_beSQe2LV6gVy8_TmhqZ012SsjkpY-/view?usp=drive_link",
@@ -201,8 +149,8 @@
       ]
     },
     {
-      "row": 2,
-      "name": "Microsoft Certified: Azure Developer Associate",
+      "row": 1,
+      "name": "Microsoft Certified: Azure Developer Associate (AZ-204)",
       "date": "2024",
       "issuer": "Microsoft",
       "url": "https://learn.microsoft.com/api/credentials/share/es-es/poschuler/F578FDEA6F723D10?sharingId",
@@ -212,201 +160,85 @@
       ]
     },
     {
-      "row": 3,
-      "name": "Microsoft Certified: Azure Fundamentals",
-      "date": "2024",
+      "row": 2,
+      "name": "Microsoft Certified: Azure AI Fundamentals (AI-900)",
+      "date": "2025",
       "issuer": "Microsoft",
-      "url": "https://learn.microsoft.com/api/credentials/share/es-mx/poschuler/4D01352F022D0273?sharingId",
+      "url": "https://learn.microsoft.com/api/credentials/share/en-us/poschuler/E3F019C0BD6B6BA7?sharingId",
       "keywords": [
-        "Cloud",
+        "AI",
         "Azure"
-      ]
-    },
-    {
-      "row": 4,
-      "name": "Remix bootcamp",
-      "date": "2024",
-      "issuer": "Zero to Mastery Academy",
-      "url": "https://drive.google.com/file/d/1msCT8eoHHfvsONPou7aK97VGZYv4J-wg/view?usp=drive_link",
-      "keywords": [
-        "Full Stack Development",
-        "Web Development"
-      ]
-    },
-    {
-      "row": 5,
-      "name": "Web Developer",
-      "date": "2023",
-      "issuer": "Zero to Mastery Academy",
-      "url": "https://drive.google.com/file/d/14LxGXtcCxT6OIbAWBJJ-qfrq3h0dd2Bw/view?usp=drive_link",
-      "keywords": [
-        "Web Development"
-      ]
-    },
-    {
-      "row": 6,
-      "name": "React Developer",
-      "date": "2023",
-      "issuer": "Zero to Mastery Academy",
-      "url": "https://drive.google.com/file/d/1NZ4voFTDgS49KxcX82Z3-QE4Vg2Y9-Wy/view?usp=drive_link",
-      "keywords": [
-        "Front End Development",
-        "Web Development"
-      ]
-    },
-    {
-      "row": 7,
-      "name": "Typescript: The Complete Developer's Guide",
-      "date": "2023",
-      "issuer": "Zero to Mastery Academy",
-      "url": "https://drive.google.com/file/d/1bxNAL1bln5TW6MzJJlMS_mWbZqHD7yEw/view?usp=drive_link",
-      "keywords": [
-        "Typescript",
-        "Web Development"
-      ]
-    },
-    {
-      "row": 8,
-      "name": "Node.js Developer",
-      "date": "2023",
-      "issuer": "Zero to Mastery Academy",
-      "url": "https://drive.google.com/file/d/1dk3KVVY2Rz6i6qMkzMPCnMivkjBYqWTU/view?usp=drive_link",
-      "keywords": [
-        "Back End Development",
-        "Web Development"
-      ]
-    },
-    {
-      "row": 9,
-      "name": "Junior to Senior Web Developer Roadmap",
-      "date": "2023",
-      "issuer": "Zero to Mastery Academy",
-      "url": "https://drive.google.com/file/d/1LgRUa8awN2WENfOnoEdSoS3UY8wwxJC7/view?usp=drive_link",
-      "keywords": [
-        "Web Development"
-      ]
-    },
-    {
-      "row": 10,
-      "name": "M320: MongoDB Data Modeling",
-      "date": "2021",
-      "issuer": "MongoDB University",
-      "url": "https://ti-user-certificates.s3.amazonaws.com/ae62dcd7-abdc-4e90-a570-83eccba49043/d00f0c92-18db-555f-b268-82225a69ba4c-paul-osorio-schuler-6e6ce82f-4ccc-5122-97ac-6ccfe5137c17-certificate.pdf",
-      "keywords": [
-        "Database",
-        "NOSQL"
-      ]
-    },
-    {
-      "row": 11,
-      "name": "M220JS: MongoDB for JavaScript Developers",
-      "date": "2021",
-      "issuer": "MongoDB University",
-      "url": "https://ti-user-certificates.s3.amazonaws.com/ae62dcd7-abdc-4e90-a570-83eccba49043/d00f0c92-18db-555f-b268-82225a69ba4c-paul-osorio-schuler-c17e1f29-f2f6-554a-aa9c-552d6c2d1ada-certificate.pdf",
-      "keywords": [
-        "Database",
-        "NOSQL"
-      ]
-    },
-    {
-      "row": 12,
-      "name": "M001: MongoDB Basics",
-      "date": "2021",
-      "issuer": "MongoDB University",
-      "url": "https://ti-user-certificates.s3.amazonaws.com/ae62dcd7-abdc-4e90-a570-83eccba49043/d00f0c92-18db-555f-b268-82225a69ba4c-paul-osorio-schuler-6b9b4864-5b28-5fad-81d3-bc0f449c8a1c-certificate.pdf",
-      "keywords": [
-        "Database",
-        "NOSQL"
-      ]
-    },
-    {
-      "row": 13,
-      "name": "Introduction to RPA Express",
-      "date": "2018",
-      "issuer": "Automation Academy by WorkFusion",
-      "url": "https://www.credential.net/gn4wyjuk",
-      "keywords": [
-        "RPA"
-      ]
-    },
-    {
-      "row": 14,
-      "name": "Automation Essentials",
-      "date": "2018",
-      "issuer": "Automation Academy by WorkFusion",
-      "url": "https://www.credential.net/buh0benk",
-      "keywords": [
-        "RPA"
       ]
     }
   ],
   "skills": [
     {
       "row": 1,
-      "name": "Software Architecture"
+      "category": "Backend",
+      "items": [
+        "TypeScript",
+        "Node.js",
+        "REST APIs",
+        "Work queues and background processing",
+        "Vitest"
+      ]
     },
     {
       "row": 2,
-      "name": "Project Management"
+      "category": "Data & Search",
+      "items": [
+        "PostgreSQL",
+        "OpenSearch",
+        "Redis",
+        "MS SQL Server"
+      ]
     },
     {
       "row": 3,
-      "name": "Leadership"
+      "category": "Architecture",
+      "items": [
+        "Modular monoliths",
+        "Domain modeling",
+        "Event-driven integration",
+        "System design"
+      ]
     },
     {
       "row": 4,
-      "name": "JavaScript"
+      "category": "Cloud & DevOps",
+      "items": [
+        "Cloudflare Workers (D1, KV)",
+        "Google Cloud",
+        "Docker",
+        "GitHub Actions",
+        "Linux"
+      ]
     },
     {
       "row": 5,
-      "name": "JavaScript"
+      "category": "AI & Data",
+      "items": [
+        "Vector search (Qdrant)",
+        "Embeddings",
+        "Similarity matching",
+        "Data pipelines"
+      ]
     },
     {
       "row": 6,
-      "name": "JavaScript"
-    },
-    {
-      "row": 7,
-      "name": "TypeScript"
-    },
-    {
-      "row": 8,
-      "name": "React/Remix"
-    },
-    {
-      "row": 9,
-      "name": "Tailwind CSS"
-    },
-    {
-      "row": 10,
-      "name": "Node.js/NestJS"
-    },
-    {
-      "row": 11,
-      "name": "PostgreSQL"
-    },
-    {
-      "row": 12,
-      "name": "MongoDB"
-    },
-    {
-      "row": 13,
-      "name": "MS SQL Server"
-    },
-    {
-      "row": 14,
-      "name": ".NET"
-    },
-    {
-      "row": 15,
-      "name": "C#"
+      "category": "Frontend",
+      "items": [
+        "React",
+        "React Router",
+        "Tailwind CSS"
+      ]
     }
   ],
   "languages": [
     {
       "row": 1,
       "language": "English",
-      "fluency": "B2"
+      "fluency": "Professional working proficiency"
     },
     {
       "row": 2,

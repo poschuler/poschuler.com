@@ -1,30 +1,132 @@
 @import "tailwindcss" source(".");
 
-/* Only the six families the `@theme` block below maps onto tokens. Every scale
- * imported here ships ~2.5 kB of custom properties whether or not anything
- * reads it, so an unused import is dead weight in render-blocking CSS.
+/* One family, because the site paints with one. Every scale imported here ships
+ * ~2.2 kB of custom properties whether or not anything reads it, so an unused
+ * import is dead weight in render-blocking CSS.
  * Keep this list in sync with SCALES in scripts/generate-system-dark-css.mjs. */
 @import "@radix-ui/colors/mauve";
 @import "@radix-ui/colors/mauve-dark";
-@import "@radix-ui/colors/indigo";
-@import "@radix-ui/colors/indigo-dark";
-@import "@radix-ui/colors/tomato";
-@import "@radix-ui/colors/tomato-dark";
-@import "@radix-ui/colors/amber";
-@import "@radix-ui/colors/amber-dark";
-@import "@radix-ui/colors/grass";
-@import "@radix-ui/colors/grass-dark";
-@import "@radix-ui/colors/violet";
-@import "@radix-ui/colors/violet-dark";
+
+/* The scrim, and the only non-Slate primitive here. A dimmer is BLACK in both
+ * themes — that is what makes a panel read as "on top of" rather than "instead
+ * of" — so it has no dark counterpart to import and none of the four solid
+ * scales can supply it. Added when the site got its first slide-over panel
+ * (`site-drawer.tsx`); the full-screen search surface is opaque and uses none of
+ * this. */
+@import "@radix-ui/colors/black-alpha.css";
 
 /* `.system` (= "follow the OS") under prefers-color-scheme: dark.
  * Generated — see scripts/generate-system-dark-css.mjs. Must come last so it
  * overrides the `:root` light values for a `.system` root when the OS is dark. */
 @import "./styles/radix-system-dark.css";
 
-@import "tw-animate-css";
+/* ---------------------------------------------------------------------------
+ * Fonts — self-hosted from the `@fontsource-variable` packages, declared here
+ * rather than by importing their stylesheets.
+ *
+ * Each package ships one `@font-face` per subset — cyrillic, greek, vietnamese,
+ * symbols. `unicode-range` means the browser downloads only the file whose
+ * glyphs a page actually needs, so the unused subsets cost nothing on the wire,
+ * but they still cost their bytes in a render-blocking stylesheet and their
+ * files in the deployed asset directory. This site is English now and Spanish
+ * next; both live inside `latin`, with `latin-ext` as the cheap insurance for a
+ * name or a quotation that strays past it.
+ *
+ * The ranges below are copied verbatim from the packages. Re-copy them when
+ * bumping either dependency — a range that drifts from the file it names is a
+ * missing glyph, not an error anything reports.
+ *
+ * Italic ships for the monospace family only. The four italic runs on the site
+ * are the index subtitles, and those sit inside a `font-mono` main; an italic
+ * in a sans context would be synthesised, and there is none to synthesise.
+ *
+ * `root.tsx` preloads the two latin faces: without it the browser cannot
+ * discover a font until this stylesheet has parsed.
+ * ------------------------------------------------------------------------- */
 
-@plugin "@tailwindcss/typography";
+/* Inter Variable — latin */
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/inter/files/inter-latin-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+
+/* Inter Variable — latin-ext */
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Intel One Mono Variable — latin */
+@font-face {
+  font-family: "Intel One Mono Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url("@fontsource-variable/intel-one-mono/files/intel-one-mono-latin-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+
+/* Intel One Mono Variable — latin-ext */
+@font-face {
+  font-family: "Intel One Mono Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url("@fontsource-variable/intel-one-mono/files/intel-one-mono-latin-ext-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Intel One Mono Variable — latin, italic */
+@font-face {
+  font-family: "Intel One Mono Variable";
+  font-style: italic;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url("@fontsource-variable/intel-one-mono/files/intel-one-mono-latin-wght-italic.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+
+/* Intel One Mono Variable — latin-ext, italic */
+@font-face {
+  font-family: "Intel One Mono Variable";
+  font-style: italic;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url("@fontsource-variable/intel-one-mono/files/intel-one-mono-latin-ext-wght-italic.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 
 /* Handles both an explicit `.dark` root and `.system` under an OS dark pref. */
 @custom-variant dark {
@@ -38,216 +140,327 @@
   }
 }
 
+/* ---------------------------------------------------------------------------
+ * Design tokens — everything that is not a colour.
+ *
+ * These stay in a plain `@theme` rather than `@theme inline` below, because
+ * `--font-sans` is read by a rule in `@layer base`: an inline token is
+ * substituted into the utilities that use it and never emitted as a custom
+ * property, so `var(--font-sans)` would resolve to nothing.
+ * ------------------------------------------------------------------------- */
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-sans:
+    "Inter Variable", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
+  /* The dominant typeface on the site: every content page and the whole Resume
+   * set `font-mono`. Named explicitly rather than left to Tailwind's default
+   * stack, which resolved to whatever monospace the visitor's OS happened to
+   * ship — a different page on every machine. */
+  --font-mono:
+    "Intel One Mono Variable", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* The column. Every page is one, and this is how wide it is: `max-w-measure`
+   * on the section, and the same value inside `prose`.
+   *
+   * It was four values before it was one — 650px on the home page, 42rem on
+   * Projects and the Resume, 72ch in prose, and `lg:max-w-4xl xl:max-w-5xl
+   * 2xl:max-w-7xl` on Blog, Bookmarks and Timeline, which grew a list of dates
+   * and titles to 1280px and left a thousand pixels of nothing beside it.
+   *
+   * 42rem is about 70 characters of this monospace, and it holds a fenced code
+   * block of roughly 75 — 98% of the lines in the corpus. The last 2% scroll
+   * inside their own box, which is a better trade than every paragraph on the
+   * site running to a length no one reads. */
+  --container-measure: 42rem;
+
+  /* Motion — all three numbers of it. They exist for one thing: a panel
+   * entering from an edge of the screen (`ui/sheet.tsx`). Named rather than
+   * written into a class list, so the site's whole motion budget is legible
+   * here and retuning it is one edit rather than a grep.
+   *
+   * `--transition-duration-*` is a real Tailwind v4 namespace that ships EMPTY:
+   * the framework resolves a bare `duration-250` to milliseconds on its own, so
+   * filling the namespace is what buys the names. Same for `--ease-*`.
+   *
+   * The curve leaves fast and settles slowly, so the panel reads as arriving
+   * rather than as being pushed — which is the point, since the edge it comes
+   * from is what says the page is still there behind it.
+   *
+   * Out is faster than in, and that asymmetry is deliberate: arriving has to be
+   * understood, leaving has already been decided. */
+  --ease-panel: cubic-bezier(0.32, 0.72, 0, 1);
+  --transition-duration-panel: 250ms;
+  --transition-duration-panel-out: 150ms;
+}
+
+/* ---------------------------------------------------------------------------
+ * Semantic role tokens — the ONLY colour API.
+ *
+ * `inline` so a utility substitutes the Radix variable directly rather than
+ * pointing at a second custom property that points at it. The palette still
+ * flips with the theme, because the Radix variable is what the `.dark` and
+ * `.system` rules redefine — and forty custom properties stop being emitted
+ * into `:root` for no reader to ever see.
+ *
+ * Namespaces are SCOPED: Tailwind maps `--background-color-*` to `bg-*`,
+ * `--text-color-*` to `text-*`, and so on. That is what makes `text-app` and
+ * `bg-default` simply not exist, and what lets the same suffix mean the right
+ * Radix step in each scenario.
+ *
+ * A token exists because a scenario exists. The scales run twelve steps and
+ * every namespace could be filled out to match, but a token nothing selects is
+ * a decision nobody made — and it reads, to the next person, as an intention
+ * the site has already committed to.
+ * ------------------------------------------------------------------------- */
+@theme inline {
+  /* Backgrounds -> bg-* */
   --background-color-app: var(--mauve-1);
   --background-color-subtle: var(--mauve-2);
   --background-color-ui: var(--mauve-3);
   --background-color-hover: var(--mauve-4);
   --background-color-active: var(--mauve-5);
-  --background-color-border: var(--mauve-6);
-  --background-color-solid: var(--mauve-9);
-  --background-color-solid-hover: var(--mauve-10);
-  --background-color-solid-active: var(--mauve-11);
 
-  --background-color-primary-app: var(--indigo-1);
-  --background-color-primary-subtle: var(--indigo-2);
-  --background-color-primary-ui: var(--indigo-3);
-  --background-color-primary-hover: var(--indigo-4);
-  --background-color-primary-active: var(--indigo-5);
-  --background-color-primary-solid: var(--indigo-9);
-  --background-color-primary-solid-hover: var(--indigo-10);
-  --background-color-primary-solid-active: var(--indigo-11);
+  /* The scrim behind a modal panel. Black in both themes, and deliberately not
+   * a mauve step: a dimmer is what makes a panel read as *on top of* the page
+   * rather than *instead of* it, and a tinted one reads as a surface. */
+  --background-color-overlay: rgb(0 0 0 / 0.7);
 
-  --background-color-danger-app: var(--tomato-1);
-  --background-color-danger-subtle: var(--tomato-2);
-  --background-color-danger-ui: var(--tomato-3);
-  --background-color-danger-hover: var(--tomato-4);
-  --background-color-danger-active: var(--tomato-5);
-  --background-color-danger-solid: var(--tomato-9);
-  --background-color-danger-solid-hover: var(--tomato-10);
-  --background-color-danger-solid-active: var(--tomato-11);
-
-  --background-color-warning-app: var(--amber-1);
-  --background-color-warning-subtle: var(--amber-2);
-  --background-color-warning-ui: var(--amber-3);
-  --background-color-warning-hover: var(--amber-4);
-  --background-color-warning-active: var(--amber-5);
-  --background-color-warning-solid: var(--amber-9);
-  --background-color-warning-solid-hover: var(--amber-10);
-  --background-color-warning-solid-active: var(--amber-11);
-
-  --background-color-success-app: var(--grass-1);
-  --background-color-success-subtle: var(--grass-2);
-  --background-color-success-ui: var(--grass-3);
-  --background-color-success-hover: var(--grass-4);
-  --background-color-success-active: var(--grass-5);
-  --background-color-success-solid: var(--grass-9);
-  --background-color-success-solid-hover: var(--grass-10);
-  --background-color-success-solid-active: var(--grass-11);
-
-  --background-color-info-app: var(--violet-1);
-
-  --background-color-pending-app: var(--amber-1);
-
+  /* Text -> text-* */
   --text-color-default: var(--mauve-12);
   --text-color-low: var(--mauve-11);
 
-  --text-color-primary-default: var(--indigo-12);
-  --text-color-primary-low: var(--indigo-11);
-
-  --text-color-danger-default: var(--tomato-12);
-  --text-color-danger-low: var(--tomato-11);
-
-  --text-color-warning-default: var(--amber-12);
-  --text-color-warning-low: var(--amber-11);
-
-  --text-color-info-default: var(--violet-12);
-  --text-color-info-low: var(--violet-11);
-
-  --text-color-pending-default: var(--amber-12);
-  --text-color-pending-low: var(--amber-11);
-
-  --text-color-success-default: var(--grass-12);
-  --text-color-success-low: var(--grass-11);
-
+  /* Focus ring -> ring-* */
   --ring-color-default: var(--mauve-6);
-  --ring-color-hover: var(--mauve-8);
-  --ring-color-active: var(--mauve-9);
-  --ring-color-primary-default: var(--indigo-6);
-  --ring-color-primary-ui: var(--indigo-7);
-  --ring-color-primary-hover: var(--indigo-8);
-  --ring-color-primary-active: var(--indigo-9);
-  --ring-color-primary-highlight: var(--indigo-12);
 
-  --ring-color-danger-default: var(--tomato-6);
-  --ring-color-danger-ui: var(--tomato-7);
-  --ring-color-danger-hover: var(--tomato-8);
-  --ring-color-danger-active: var(--tomato-9);
-  --ring-color-danger-highlight: var(--tomato-12);
-
-  --ring-color-success-default: var(--grass-6);
-  --ring-color-success-ui: var(--grass-7);
-  --ring-color-success-hover: var(--grass-8);
-  --ring-color-success-active: var(--grass-9);
-  --ring-color-success-highlight: var(--grass-12);
-
+  /* Borders -> border-* */
   --border-color-default: var(--mauve-6);
   --border-color-hover: var(--mauve-8);
-  --border-color-active: var(--mauve-9);
-
-  --border-color-primary-default: var(--indigo-6);
-  --border-color-primary-ui: var(--indigo-7);
-  --border-color-primary-hover: var(--indigo-8);
-  --border-color-primary-active: var(--indigo-9);
-
-  --border-color-danger-default: var(--tomato-6);
-  --border-color-danger-ui: var(--tomato-7);
-  --border-color-danger-hover: var(--tomato-8);
-  --border-color-danger-active: var(--tomato-9);
-
-  --border-color-warning-default: var(--amber-6);
-  --border-color-warning-ui: var(--amber-7);
-  --border-color-warning-hover: var(--amber-8);
-  --border-color-warning-active: var(--amber-9);
-
-  --border-color-info-default: var(--violet-6);
-  --border-color-info-ui: var(--violet-7);
-  --border-color-info-hover: var(--violet-8);
-  --border-color-info-active: var(--violet-9);
-
-  --border-color-pending-default: var(--amber-6);
-  --border-color-pending-ui: var(--amber-7);
-  --border-color-pending-hover: var(--amber-8);
-  --border-color-pending-active: var(--amber-9);
-
-  --border-color-success-default: var(--grass-6);
-  --border-color-success-ui: var(--grass-7);
-  --border-color-success-hover: var(--grass-8);
-  --border-color-success-active: var(--grass-9);
-  --radius-chip: 20px;
-
-  --background-color-subtle-modal-overlay: var(--mauve-2) / 70%;
-  --animate-modal-overlay-blur: modal-overlay-blur 300ms;
-  --animate-modal-overlay-reverse: modal-overlay-blur 300ms reverse ease-in;
-
-  --animate-accordion-down: accordion-down 0.2s ease-out;
-  --animate-accordion-up: accordion-up 0.2s ease-out;
-
-  @keyframes modal-overlay-blur {
-    from {
-      background: var(--mauve-2) / 0%;
-      backdrop-filter: blur(0);
-    }
-
-    to {
-      background: var(--mauve-2) / 70%;
-      backdrop-filter: blur(4px);
-    }
-  }
-
-  @keyframes accordion-down {
-    from {
-      height: 0;
-    }
-    to {
-      height: var(--radix-accordion-content-height);
-    }
-  }
-
-  @keyframes accordion-up {
-    from {
-      height: var(--radix-accordion-content-height);
-    }
-    to {
-      height: 0;
-    }
-  }
 }
 
+/* ---------------------------------------------------------------------------
+ * Base layer — two rules, and the bar for a third is that no utility can say
+ * it. Both below are properties of the document itself rather than of an
+ * element a component renders.
+ *
+ * What used to sit here, and why it does not: `button, [role="button"] {
+ * cursor: default }` and a `strong` weight, both inherited from the shadcn
+ * scaffold and both inert. Tailwind's preflight declares no cursor for
+ * buttons, the browser's own default is already the arrow, and nothing in
+ * this tree carries a `role="button"` — Base UI only stamps one when
+ * `nativeButton` is false, which no call site sets. Every `<strong>` here
+ * comes from Markdown, and every Markdown body renders inside `prose`, whose
+ * rule wins from the utilities layer regardless.
+ *
+ * A base rule that restates a default reads to the next person as a decision
+ * that was made. That is the cost worth avoiding, not the bytes.
+ * ------------------------------------------------------------------------- */
 @layer base {
+  /* Native form controls, scrollbars and the canvas behind the page follow the
+   * active scheme. Without this the palette flips and the scrollbar does not,
+   * which is the one part of a dark page a stylesheet cannot repaint.
+   * `.system` yields `light dark` so the OS decides, matching what the class
+   * means everywhere else. */
+  .light {
+    color-scheme: light;
+  }
+  .dark {
+    color-scheme: dark;
+  }
+  .system {
+    color-scheme: light dark;
+  }
+
+  /* `@apply` rather than a bare custom property: the colour tokens are declared
+   * `inline` above, so they are substituted into utilities and never emitted
+   * for a rule like this one to read.
+   *
+   * Do not name one in a comment either. Tailwind decides which theme variables
+   * to keep by scanning the stylesheet text for references, and it does not
+   * strip comments first — spelling a token out here is enough to emit it. */
   html,
   body {
-    font-family: var(--font-sans);
-    background-color: var(--background-color-app);
-    color: var(--text-color-default);
+    @apply bg-app font-sans text-default antialiased;
     height: 100%;
-    -webkit-font-smoothing: antialiased;
   }
 
-  [data-backdrop]::after {
-    @apply absolute inset-0 bg-app opacity-60 backdrop-blur-sm;
-    content: "";
-  }
-
-  button,
-  [role="button"] {
-    cursor: default;
-  }
-
-  strong {
-    @apply font-semibold;
+  /* A fixed bottom bar has to be paid for in bottom padding, or the last thing
+   * on the page sits under it forever — and only the page that mounts one should
+   * pay. A page that floats a bar below `md` declares it with `data-bottom-bar`
+   * (today only the product page's buy bar), and the shell reserves the space
+   * only when one is present.
+   *
+   * A CSS fact about the DOM rather than a route test in React: a route test
+   * would have to be re-derived on the server and on the client, and the layout
+   * would shift on hydration. Scoped to the widths where the bars exist — above
+   * `md` neither renders and the padding would be dead space. */
+  @media (width < 48rem) {
+    body:has([data-bottom-bar]) [data-app-shell] {
+      padding-bottom: calc(var(--spacing) * 20);
+    }
   }
 }
 
+/* Long-form bodies: the HTML `marked` produces from a Markdown file, rendered
+ * through `dangerouslySetInnerHTML`, where no class can be put on the elements
+ * themselves.
+ *
+ * Written out rather than taken from `@tailwindcss/typography`, which styles
+ * every element a Markdown document could contain at five size variants and an
+ * inverted colour scheme — none of which this site selects. The rules below
+ * cover what the content actually holds; the seed corpus is headings, prose,
+ * lists, code, quotes, links and images, and anything new that appears wants a
+ * decision here rather than a default.
+ *
+ * `:where()` keeps every selector at zero specificity, so a class on the
+ * element still wins, and `:not(.not-prose *)` is the escape hatch the routes
+ * use for the blocks they compose themselves. */
 @utility prose {
-  --tw-prose-body: var(--mauve-11);
-  --tw-prose-headings: var(--mauve-12);
-  --tw-prose-lead: var(--mauve-10);
-  --tw-prose-links: var(--mauve-12);
-  --tw-prose-bold: var(--mauve-12);
-  --tw-prose-counters: var(--mauve-9);
-  --tw-prose-bullets: var(--mauve-7);
-  --tw-prose-hr: var(--mauve-6);
-  --tw-prose-quotes: var(--mauve-12);
-  --tw-prose-quote-borders: var(--mauve-6);
-  --tw-prose-captions: var(--mauve-10);
-  --tw-prose-code: var(--mauve-12);
-  --tw-prose-pre-code: var(--mauve-12);
-  --tw-prose-pre-bg: var(--mauve-5);
-  --tw-prose-th-borders: var(--mauve-6);
-  --tw-prose-td-borders: var(--mauve-5);
+  color: var(--mauve-11);
+  line-height: 1.75;
 
+  /* The same column as every list page — see `--container-measure`. An article
+   * and an index are the same one column; only what is stacked in it differs. */
+  max-width: var(--container-measure);
+
+  /* A 60-character URL or an inline `code` run longer than the measure has no
+   * space to break in. Fenced blocks are exempt on their own: `white-space:
+   * pre` disables this, and they scroll instead. */
+  overflow-wrap: break-word;
+
+  &
+    :where(p, ul, ol, blockquote, pre, img):not(
+      :where(.not-prose, .not-prose *)
+    ) {
+    margin-block: 1.25em;
+  }
+
+  /* Markdown makes a list "loose" — `<li><p>…</p></li>` — as soon as one item
+   * has a blank line in it, and 42 of the 47 items in the corpus are loose.
+   * Without this the paragraph inside each item carries the full block margin,
+   * so every list item is spaced like a paragraph and the list stops reading
+   * as a list. Same for the paragraph a blockquote always wraps its text in. */
+  & :where(li, blockquote) > :where(:first-child):not(:where(.not-prose, .not-prose *)) {
+    margin-block-start: 0;
+  }
+
+  & :where(li, blockquote) > :where(:last-child):not(:where(.not-prose, .not-prose *)) {
+    margin-block-end: 0;
+  }
+
+  & :where(h1, h2, h3, h4):not(:where(.not-prose, .not-prose *)) {
+    color: var(--mauve-12);
+    font-weight: 600;
+    line-height: 1.3;
+    text-wrap: balance;
+  }
+
+  & :where(h1):not(:where(.not-prose, .not-prose *)) {
+    margin-block: 0 0.8em;
+    font-size: 2.25em;
+    letter-spacing: -0.02em;
+  }
+
+  & :where(h2):not(:where(.not-prose, .not-prose *)) {
+    margin-block: 2em 0.8em;
+    font-size: 1.5em;
+  }
+
+  & :where(h3):not(:where(.not-prose, .not-prose *)) {
+    margin-block: 1.6em 0.6em;
+    font-size: 1.25em;
+  }
+
+  & :where(h4):not(:where(.not-prose, .not-prose *)) {
+    margin-block: 1.5em 0.5em;
+  }
+
+  & :where(a):not(:where(.not-prose, .not-prose *)) {
+    color: var(--mauve-12);
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  & :where(strong):not(:where(.not-prose, .not-prose *)) {
+    color: var(--mauve-12);
+    font-weight: 600;
+  }
+
+  & :where(ul, ol):not(:where(.not-prose, .not-prose *)) {
+    padding-inline-start: 1.5em;
+  }
+
+  & :where(ul):not(:where(.not-prose, .not-prose *)) {
+    list-style-type: disc;
+  }
+
+  & :where(ol):not(:where(.not-prose, .not-prose *)) {
+    list-style-type: decimal;
+  }
+
+  & :where(li):not(:where(.not-prose, .not-prose *)) {
+    margin-block: 0.5em;
+    padding-inline-start: 0.4em;
+  }
+
+  & :where(li):not(:where(.not-prose, .not-prose *))::marker {
+    color: var(--mauve-9);
+  }
+
+  & :where(blockquote):not(:where(.not-prose, .not-prose *)) {
+    padding-inline-start: 1em;
+    border-inline-start: 3px solid var(--mauve-6);
+    color: var(--mauve-12);
+    font-style: italic;
+  }
+
+  /* Inline code. The `pre >` rule below undoes this for a fenced block, whose
+   * own `<code>` should inherit the block rather than sit in a chip inside it. */
+  & :where(code):not(:where(.not-prose, .not-prose *)) {
+    padding: 0.15em 0.4em;
+    border-radius: 0.25rem;
+    background-color: var(--mauve-4);
+    color: var(--mauve-12);
+    font-size: 0.875em;
+    font-weight: 500;
+  }
+
+  & :where(pre):not(:where(.not-prose, .not-prose *)) {
+    padding: 1em 1.25em;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    background-color: var(--mauve-4);
+    color: var(--mauve-12);
+    font-size: 0.875em;
+    line-height: 1.7;
+  }
+
+  & :where(pre > code):not(:where(.not-prose, .not-prose *)) {
+    padding: 0;
+    border-radius: 0;
+    background-color: transparent;
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  & :where(img):not(:where(.not-prose, .not-prose *)) {
+    border-radius: 0.5rem;
+  }
+
+  & :where(hr):not(:where(.not-prose, .not-prose *)) {
+    margin-block: 3em;
+    border-color: var(--mauve-6);
+  }
+
+  /* The first and last children set the article's own padding, so their outer
+   * margins would double it. */
+  & > :where(:first-child):not(:where(.not-prose, .not-prose *)) {
+    margin-block-start: 0;
+  }
+
+  & > :where(:last-child):not(:where(.not-prose, .not-prose *)) {
+    margin-block-end: 0;
+  }
 }

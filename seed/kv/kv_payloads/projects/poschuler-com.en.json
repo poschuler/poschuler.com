@@ -1,0 +1,27 @@
+{
+  "attributes": {
+    "type": "project",
+    "title": "poschuler.com",
+    "summary": "This site. Markdown in git, derived into D1 and KV at build time, served from a Cloudflare Worker — with the decisions written down as ADRs rather than remembered.",
+    "description": "How poschuler.com is built: a build-time pipeline from Markdown into D1 and KV, hand-written SQL, and the architecture decisions recorded as ADRs.",
+    "tier": "supporting",
+    "status": "active",
+    "stack": [
+      "TypeScript",
+      "React Router",
+      "Cloudflare Workers",
+      "D1",
+      "KV",
+      "Vitest"
+    ],
+    "repoUrl": "https://github.com/poschuler/poschuler.com",
+    "sortOrder": 2,
+    "updates": [
+      {
+        "date": "2026-08-14",
+        "note": "First published."
+      }
+    ]
+  },
+  "html": "<p>You are reading it, which makes this the one project on the site you can check while you read about it.</p>\n<p>It is a personal site, and personal sites are the most common project there is. What makes this one worth a page is not the site — it is that the decisions behind it are written down, in the repository, as ADRs. Here are the ones worth arguing about.</p>\n<h2>Markdown is the source; the stores are derived</h2>\n<p>Content is authored as Markdown files and versioned in git. The Worker never reads or parses them. A build-time pipeline splits each file in two: the front matter becomes a row in D1, and the body is rendered to HTML and stored in KV under an exact key.</p>\n<p>Serving a post is therefore one KV read, and listing everything is one indexed query. No Markdown parsing on the request path — which is why <code>front-matter</code> and <code>marked</code> are dependencies that appear in no runtime import.</p>\n<p>The obvious alternative was to read the Markdown at request time; the files are already in the bundle. It puts a parse on every request, and it makes <em>&quot;everything published, newest first&quot;</em> a question you can only answer by opening every file.</p>\n<h2>No ORM, and a reversal on migrations</h2>\n<p>Data access is hand-written SQL through a helper thin enough to read in one sitting. One table that matters, four read queries, no joins.</p>\n<p>An ORM&#39;s value is relationship mapping, migrations and query composition — and there is nothing here for any of the three to work on, while the costs are real: bundle size inside a Worker, and a schema definition that duplicates the one in <code>schema.sql</code> and is free to disagree with it. That half still holds.</p>\n<p>The same decision ruled out a migration tool in the same sentence, and that half did not survive. Every argument above is about what ships inside a Worker, and a CLI ships nothing — so migrations had been rejected by association rather than on their merits. What applying the schema by hand actually cost was a two-hundred-line script whose only job was to notice that the remote half had been forgotten: a drift detector written by hand for a problem migrations do not have. Adopting them removed the last manual step against production and left less machinery behind, not more.</p>\n<p><code>schema.sql</code> stayed, because it is where the schema is explained rather than merely stated, and every database that does not exist yet is still built from it in one step. The migrations move the only one that already does. So the shape is written twice — and what makes that safe is a check that applies the chain from zero to a throwaway database and requires it to arrive at exactly the declared shape, on every push, before the deployed one has seen anything.</p>\n<p>There are still no down migrations, and none are wanted. A migration that did the wrong thing is corrected by another migration and a seed, and nothing is lost in between, because nothing in this database is original.</p>\n<h2>The publication is one ordered operation</h2>\n<p>A push to <code>main</code> used to start two things that never learned about each other: a CI job that wrote the deployed stores, and Cloudflare&#39;s own build system deploying the Worker on its own schedule. Nothing ordered them, and nothing failed when only one succeeded.</p>\n<p>Now one job does the whole thing in sequence — verify the deployed schema, seed both stores, read them back, build, deploy, then confirm that the version now serving is the one just uploaded. Any step failing fails the run.</p>\n<p>Seeding happens before deploying, and that order is a chosen failure mode rather than an accident: old code serving new content is almost always harmless, while new code over old content 404s a post that was just published.</p>\n<h2>What it is not</h2>\n<p>There is no CMS, no admin interface, no comments and no newsletter. The Markdown pipeline works, and the absence of the rest is the point rather than a backlog.</p>\n"
+}

@@ -4,7 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 
-import { kvKeyFor } from "./kv-keys.ts";
+import { KV_PREFIXES, kvKeyFor } from "./kv-keys.ts";
+import { listPayloadFiles } from "./payload-files.ts";
 
 /**
  * Uploads the generated KV payloads, locally or to the deployed namespace.
@@ -39,19 +40,19 @@ async function bulkUpload(mode: string) {
         throw new Error(`ERROR: Directory ${JSON_DIR} does not exist. Run 'pnpm run kv:generate' first.`);
     }
 
-    const files = (await fsPromise.readdir(JSON_DIR)).filter((f) => f.endsWith(".json"));
+    const files = await listPayloadFiles(JSON_DIR);
     const entries: Array<{ key: string; value: string }> = [];
 
-    for (const filename of files) {
-        const key = kvKeyFor(filename);
+    for (const relativePath of files) {
+        const key = kvKeyFor(relativePath);
 
         if (!key) {
-            throw new Error(`ERROR: could not derive a KV key from ${filename}.`);
+            throw new Error(`ERROR: could not derive a KV key from ${relativePath}.`);
         }
 
         entries.push({
             key,
-            value: await fsPromise.readFile(path.join(JSON_DIR, filename), "utf-8"),
+            value: await fsPromise.readFile(path.join(JSON_DIR, relativePath), "utf-8"),
         });
     }
 
@@ -77,13 +78,20 @@ async function bulkUpload(mode: string) {
 }
 
 /**
- * Removes `blog:` keys with no payload behind them any more — a Post deleted or
- * renamed. Scoped to the `blog:` prefix so nothing else in the namespace is this
- * script's business.
+ * Removes keys with no payload behind them any more — a Post or a Project
+ * deleted or renamed. Scoped to the prefixes this repository writes, so nothing
+ * else in the namespace is this script's business. The sitemap is deliberately
+ * outside them: it is rewritten every run and never orphaned.
  */
 async function pruneOrphans(expected: string[], wranglerArgs: string[]) {
-    const listed = wrangler(["kv", "key", "list", "--binding", KV_BINDING, "--prefix", "blog:"], wranglerArgs);
-    const keys = JSON.parse(listed) as Array<{ name: string }>;
+    const keys = KV_PREFIXES.flatMap((prefix) => {
+        const listed = wrangler(
+            ["kv", "key", "list", "--binding", KV_BINDING, "--prefix", `${prefix}:`],
+            wranglerArgs,
+        );
+        return JSON.parse(listed) as Array<{ name: string }>;
+    });
+
     const orphans = keys.map((key) => key.name).filter((name) => !expected.includes(name));
 
     if (orphans.length === 0) {

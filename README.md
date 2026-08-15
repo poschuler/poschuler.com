@@ -8,9 +8,11 @@ The whole site is a single Cloudflare Worker. There is no separate API, no origi
 
 | Page         | What it shows                                                        |
 | ------------ | -------------------------------------------------------------------- |
-| `/`          | The Timeline — Posts and Bookmarks interleaved, newest first          |
+| `/`          | Landing page — who he is, the flagship project, the newest writing    |
+| `/projects`  | Software he built and runs, weighted by tier                          |
 | `/blog`      | Long-form articles, written here                                      |
 | `/bookmarks` | External articles worth endorsing, credited to their source           |
+| `/timeline`  | Posts and Bookmarks interleaved, newest first                         |
 | `/resume`    | Structured professional history, plus a PDF download                  |
 
 ## How content works
@@ -18,10 +20,10 @@ The whole site is a single Cloudflare Worker. There is no separate API, no origi
 **Markdown files are the source of truth, and the Worker never parses Markdown.** Everything under `app/content/` is versioned in git, and a build-time pipeline splits each file in two:
 
 ```
-app/content/**/*.md            ← authored here, versioned in git
-   │
-   ├─ front matter ──▶ D1 (content)      metadata: title, dates, tags, source
-   └─ body ──────────▶ KV  (blog:<slug>:<locale>)   pre-rendered HTML
+app/content/<tree>/**/*.md     ← authored here, versioned in git
+   │                             the tree — blog, bookmarks, projects — says what it is
+   ├─ front matter ──▶ D1 (content, project)   metadata: title, dates, tags, source
+   └─ body ──────────▶ KV  (blog:… , project:…)   pre-rendered HTML
 ```
 
 Serving a Post is therefore one KV read, and listing Content Items is one indexed D1 query — no Markdown parsing on the request path. That is why `front-matter` and `marked` are dependencies yet appear in no runtime import. See [ADR 0001](docs/adr/0001-markdown-as-source-of-truth-derived-into-d1-and-kv.md).
@@ -78,8 +80,35 @@ description: 'A practical guide to…'
 tags: ['nodejs', 'typescript', 'ddd']
 publishedAt: '2025-11-02'
 repository: 'https://github.com/…'   # optional, renders a repo link
+updates:                             # optional, newest first, curated
+  - date: '2026-08-14'
+    note: 'Updated for Node 24; the Express 4 examples now use Express 5.'
 ---
 ```
+
+`updates` is what the author says changed, not a commit log — the fine-grained history is already in git. It never reorders the Timeline, and it does date the page in the sitemap. See [ADR 0005](docs/adr/0005-revisions-are-a-curated-list-in-the-content.md).
+
+A **Project** is a folder plus a locale-suffixed file, `app/content/projects/<slug>/<slug>.en.md`. It is not a Content Item — no publication date, no place in the Timeline — so it carries revisions instead, and needs at least one:
+
+```yaml
+---
+type: 'project'
+title: 'Chekalo'
+summary: 'One or two sentences, outcome first. This is what the index shows.'
+description: 'The SEO meta description.'
+tier: 'flagship'          # flagship | supporting | experiment
+status: 'active'          # active | archived
+stack: ['TypeScript', 'Node.js']
+liveUrl: 'https://chekalo.pe'        # optional
+repoUrl: 'https://github.com/…'      # optional
+sortOrder: 1
+updates:
+  - date: '2026-08-20'
+    note: 'First published.'
+---
+```
+
+`tier` is weight, never route shape: promoting a project that grew is a change to this field, and its URL never moves.
 
 A **Bookmark** is a single file, `app/content/bookmarks/<slug>.md`, front matter only — the body stays at the source:
 
@@ -109,11 +138,18 @@ The filename is the Slug, and it never changes once published — it is the URL.
 | `pnpm run test:coverage` | Coverage over the modules the suite is meant to cover      |
 | `pnpm run smoke`         | Build, then serve it with nothing configured and check it answers |
 | `pnpm run deploy`        | Build and ship in one step                                 |
+| `pnpm run d1:reset:local` | Rebuild the local D1 from `schema.sql` (KV is left alone)  |
 | `pnpm run d1:seed:local` | Regenerate `seed.sql` and apply it locally                 |
 | `pnpm run kv:seed:local` | Regenerate KV payloads and upload them locally             |
 | `pnpm run verify:stores:local` | Read D1 and KV back and check they match the repo    |
 | `pnpm run check:fixtures` | Regenerate the fixtures and fail if anything changed       |
-| `pnpm run verify:schema:remote` | Check the deployed D1 still matches `schema.sql`     |
+| `pnpm run verify:schema:local` | Check the migration chain arrives at `schema.sql`     |
+| `pnpm run verify:schema:remote` | Check the deployed D1 arrives at `schema.sql`        |
+| `pnpm run d1:migrate:remote` | Apply pending migrations to the deployed D1 (CI does this) |
+
+Changing the schema is two files, not one: edit `seed/d1/schema.sql`, then add a
+migration under `seed/d1/migrations/` making the same change. `verify:schema:local`
+fails the build if they disagree, so neither can be forgotten. See ADR 0006.
 
 The generated `worker-configuration.d.ts` and `.react-router/` are gitignored, so a fresh clone must install before it type-checks.
 

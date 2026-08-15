@@ -22,6 +22,14 @@ export async function loader() {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename=${FILENAME}`,
       "Cache-Control": "public, max-age=86400",
+      // The download serves a visitor who is already on `/resume`. Indexed, it
+      // would compete with that page for the same queries and win nothing —
+      // a PDF is a worse landing than the page that links to it.
+      //
+      // A `Disallow` in `robots.txt` would not do this: the crawler would never
+      // fetch the file, never see this header, and could list the URL anyway
+      // with nothing behind it.
+      "X-Robots-Tag": "noindex",
     },
   });
 }

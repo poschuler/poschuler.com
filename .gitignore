@@ -37,6 +37,8 @@ skills-lock.json
 
 ralph-logs/
 
-handoff/
+/handoff/
 
 scripts/ralph.config.sh
+
+/evolution-plan/

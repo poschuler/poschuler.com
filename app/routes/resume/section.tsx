@@ -5,8 +5,10 @@ export type SectionProps = {
 
 export function Section({ title, children }: SectionProps) {
   return (
-    <section className="flex min-h-0 flex-col gap-y-3">
-      {title && <h2 className="text-xl font-bold">{title}</h2>}
+    <section className="flex flex-col gap-y-3">
+      {title && (
+        <h2 className="font-sans font-semibold text-xl">{title}</h2>
+      )}
       {children}
     </section>
   );

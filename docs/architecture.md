@@ -30,15 +30,23 @@ Two rules came out of it. **Read bindings inside the request, never at module sc
 The single most important decision in this codebase: **Markdown files are the source of truth, and the Worker never parses Markdown.**
 
 ```
-app/content/**/*.md                       ← source of truth, versioned in git
+app/content/<tree>/**/*.md                ← source of truth, versioned in git
+   │                                        the tree decides what a file is — ADR 0004
    │
    ├─ front matter ──▶ seed/d1/generate-seed-sql.ts ──▶ seed/d1/seed.sql ──▶ D1 `content`
-   │                     (front-matter)                   (committed)          metadata only
+   │                     (front-matter)                   (committed)          `project`
    │
-   └─ body ──────────▶ seed/kv/generate-kv-json.ts ──▶ seed/kv/kv_payloads/*.json ──▶ KV
+   └─ body ──────────▶ seed/kv/generate-kv-json.ts ──▶ seed/kv/kv_payloads/<kind>/*.json ──▶ KV
                          (seed/kv/markdown.ts)                              `blog:<slug>:<locale>`
-                         (app/lib/seo/sitemap.ts)                           `sitemap`
+                         (app/lib/seo/sitemap.ts)                           `project:<slug>:<locale>`
+                                                                            `sitemap`
 ```
+
+The trees are `blog/`, `bookmarks/` and `projects/`. Each generator walks only
+its own, and the `type` in the front matter is checked against the tree rather
+than believed — a mismatch, or a top-level directory no generator walks, fails
+the build. Payload directories follow the same rule: the directory a payload
+sits in decides its key prefix.
 
 Both generators are Node scripts run from the developer's machine, never in the Worker. That is why `front-matter` and `marked` appear in `dependencies` yet are absent from every runtime import. Sitemap and `robots.txt` rendering is hand-rolled in `app/lib/seo/`, with no third-party SEO dependency.
 
@@ -51,13 +59,17 @@ pnpm run d1:seed:local    # generate seed.sql, then wrangler d1 execute --local
 pnpm run kv:seed:local    # generate JSON payloads, then wrangler kv key put --local
 ```
 
-`:remote` variants do the same against the deployed resources. `kv-bulk-upload.ts` uploads every payload first and only then removes `blog:` keys with nothing behind them, so the result is a full replacement without a moment where a published Post is missing.
+`:remote` variants do the same against the deployed resources. `kv-bulk-upload.ts` uploads every payload first and only then removes keys with nothing behind them, across every prefix this repository writes, so the result is a full replacement without a moment where a published Post is missing.
 
 ## Data stores
 
 ### D1 — `POSCHULER_BD`
 
-SQLite at the edge, queried with hand-written SQL through a single thin helper in `app/db.server.ts` (`dbQuery`). No ORM, no query builder, no migration tool: `seed/d1/schema.sql` is applied by hand and `seed.sql` is regenerated wholesale. Applying it is still manual; forgetting to is not silent, because `seed/verify-schema.ts` blocks a publication when the deployed schema and this file disagree. There is no write helper because no request writes — content reaches D1 through the seed pipeline. `dbQueryRow` and `dbExecute` existed, were never called, and were deleted; add them back the day a route needs one.
+SQLite at the edge, queried with hand-written SQL through a single thin helper in `app/db.server.ts` (`dbQuery`). No ORM and no query builder (ADR 0002); `seed.sql` is regenerated wholesale rather than migrated. There is no write helper because no request writes — content reaches D1 through the seed pipeline. `dbQueryRow` and `dbExecute` existed, were never called, and were deleted; add them back the day a route needs one.
+
+The schema is **not** applied by hand. `seed/d1/schema.sql` is the declared shape and every database that does not exist yet is built from it in one step — the test setup, `check:fixtures`, the smoke test. The deployed one already exists, so it is moved forward by the migrations in `seed/d1/migrations/`, applied by the publication job (ADR 0006). Only a database that already exists needs a path.
+
+Changing the schema is therefore: edit `schema.sql`, add a migration that makes the same change, and push. `verify:schema:local` applies the chain from zero and fails the `verify` job if the two disagree — so the duplication cannot reach production, and neither can a migration nobody wrote.
 
 The `content` table holds every Content Item. `type` discriminates `'post'` from `'link'` — note that `'link'` is the persisted spelling of what the domain calls a **Bookmark**; `CONTEXT.md` is the authority on the name, the column is legacy spelling. Identity is enforced by two partial unique indexes:
 
@@ -78,8 +90,9 @@ Read-only at runtime, written only by the seed pipeline.
 
 | Key                     | Value                                                      |
 | ----------------------- | ---------------------------------------------------------- |
-| `blog:<slug>:<locale>`  | `{ attributes, html }` — front matter plus rendered Post HTML |
-| `sitemap`               | `{ sitemap }` — the full sitemap XML as a string             |
+| `blog:<slug>:<locale>`    | `{ attributes, html }` — front matter plus rendered Post HTML |
+| `project:<slug>:<locale>` | `{ attributes, html }` — the same shape, for a Project body   |
+| `sitemap`                 | `{ sitemap }` — the full sitemap XML as a string              |
 
 A Post body is one KV read. Missing key → 404, which is also how an unpublished or misspelled slug behaves.
 
@@ -89,10 +102,13 @@ Routes are declared explicitly in `app/routes.ts` (config-based, not file-system
 
 | Route            | Store  | Cache-Control  | Notes                                       |
 | ---------------- | ------ | -------------- | ------------------------------------------- |
-| `/`              | D1     | none           | Timeline — `findAll`, Posts and Bookmarks interleaved |
+| `/`              | D1     | none           | landing page — three newest Posts, plus the flagship Project |
 | `/blog`          | D1     | none           | `findAllPosts`                              |
 | `/bookmarks`     | D1     | none           | `findAllBookmarks`                          |
+| `/timeline`      | D1     | none           | Timeline — `findAll`, Posts and Bookmarks interleaved |
 | `/blog/:blogSlug`| KV     | none           | Locale hardcoded to `en`; body injected via `dangerouslySetInnerHTML` |
+| `/projects`      | D1     | none           | `findAllProjects` — flagship first, supporting in a grid |
+| `/projects/:project` | D1 + KV | none      | row frames the page, KV carries the body; Locale hardcoded to `en` |
 | `/resume`        | none   | none           | no loader — sections import `resume.json` directly      |
 | `/resume.pdf`    | fetch  | 1 day          | proxies `cdn.poschuler.dev`, forces `Content-Disposition: attachment` |
 | `/sitemap.xml`   | KV     | 1 hour         | serves the pre-generated XML verbatim       |
@@ -112,7 +128,7 @@ Every route above except the last four sits inside `routes/layouts/_layout.tsx`,
 
 It rebuilds rather than mutates because a response proxied from `fetch` — the Resume PDF — carries immutable headers, and `.set` on those throws.
 
-The CSP uses a **per-request nonce**: `workers/app.ts` generates it, puts it in `nonceContext`, and `entry.server.tsx` hands it to `<ServerRouter nonce>`, which stamps it onto every inline script React Router emits. The allow-list covers what the site actually loads — Google Fonts, the GitHub avatar, the Cloudflare Insights beacon — and nothing else. `style-src` keeps `'unsafe-inline'` because Base UI positions popups with inline `style` attributes; scripts do not need it.
+The CSP uses a **per-request nonce**: `workers/app.ts` generates it, puts it in `nonceContext`, and `entry.server.tsx` hands it to `<ServerRouter nonce>`, which stamps it onto every inline script React Router emits. The allow-list covers what the site actually loads — the Cloudflare Insights beacon — and nothing else. `style-src` and `font-src` are both plain `'self'`: the fonts are self-hosted, so no third party can put a stylesheet or a face into this document. No third-party image host is authorised: `img-src` is `'self' data:`, because the portrait and the Open Graph card are both served from this origin. `style-src` keeps `'unsafe-inline'` because Base UI positions popups with inline `style` attributes; scripts do not need it.
 
 Dev is exempt: Vite injects its own inline scripts with no nonce, and a CSP would block them. **That means the policy is only exercised in a production build** — verify changes with `pnpm run preview`, not `pnpm run dev`.
 
@@ -210,19 +226,22 @@ Measured across all of `app/`, `seed/` and `workers/` instead it reads about 33%
 
 A second job, `publish`, runs only on a push to `main` and only after `verify` passes. It owns the whole Publication, in this order and in one workspace:
 
-1. **`seed/verify-schema.ts`** — the deployed D1 has the shape `seed/d1/schema.sql` describes, or the run stops before anything is written.
-2. **Seed D1, then KV** from the committed fixtures.
-3. **`seed/verify-stores.ts`** — read both stores back.
-4. **`pnpm run deploy`** — build, then `wrangler deploy`.
-5. **`scripts/verify-deployment.sh`** — the version just uploaded is the one serving, at 100%.
+1. **`wrangler d1 migrations apply --remote`** — the only step that writes to production before the seed, and the only one that can. Migrations already recorded are skipped, so a publication carrying no schema change is a no-op here.
+2. **`seed/verify-schema.ts`** — the deployed D1 has the shape `seed/d1/schema.sql` describes, or the run stops before any *content* is written. It confirms what step 1 produced rather than guarding against a step somebody forgot; there is no longer a step to forget.
+3. **Seed D1, then KV** from the committed fixtures.
+4. **`seed/verify-stores.ts`** — read both stores back.
+5. **`pnpm run deploy`** — build, then `wrangler deploy`.
+6. **`scripts/verify-deployment.sh`** — the version just uploaded is the one serving, at 100%.
 
 Its credentials, `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, are secrets of the `production` environment rather than of the repository, and that environment only accepts deployments from `main`. Repository secrets are readable by every workflow in the repo; environment secrets reach only a job that declares `environment: production`, and only from an allowed branch — so the restriction holds even if this file is edited badly. The token needs `D1:Edit`, `Workers KV Storage:Edit` and `Workers Scripts:Edit`, and nothing else.
 
 **One job, not three, and not by preference.** `wrangler deploy` locates the built Worker through `.wrangler/deploy/config.json`, a gitignored artefact `@cloudflare/vite-plugin` writes at build time. A separate deploy job would not have it, and wrangler would silently fall back to the root `wrangler.jsonc` — whose `main` is the unbuilt entry point and which declares no `assets`. That run is green and ships the wrong Worker with no static files. Passing `build/` between jobs does not fix it either; the redirect lives outside that directory.
 
-**Why the schema is checked and not applied.** There is no migration tool here on purpose (ADR 0002), so a commit that changes the table's shape can arrive with the deployed table still on the old one — the one failure that is a broken page rather than a degraded one. The check builds its expectation by applying `schema.sql` to a throwaway local database instead of parsing it, so there is no second description of the schema to drift from the first.
+**Why the schema is applied *and* checked.** The migration does the work; the check says it added up. Those are different questions, and a migration can succeed while leaving a shape the repository does not declare — which is exactly the risk of writing the shape twice, once whole in `schema.sql` and once as a path. The check builds its expectation by applying `schema.sql` to a throwaway local database instead of parsing it, so there is no third description to drift from the other two.
 
-Two things it had to learn the hard way. Comparing the stored DDL as text does not work: the same table comes back with its comments intact from the deployed database and stripped from a local one, because the two were created through different paths. So columns are compared through `pragma_table_info`, which reports shape rather than wording. Indexes stay as text, because a partial index's `WHERE` clause is not exposed by any pragma — and that clause is the entire reason `INSERT OR REPLACE` behaves as an upsert here. And `sqlite_sequence` and Cloudflare's `_cf_KV` are filtered out: they exist in every deployed D1 and in no local one, so leaving them in would fail every run forever.
+The same script runs in `verify` as `verify:schema:local`, where it compares the migration chain applied from zero against the declared shape. That one matters more than it sounds: without it, the deployed database would be the only place those migration files ever ran.
+
+Four things it had to learn the hard way. Comparing the stored DDL as text does not work: SQLite keeps a deployed table's comments and drops them from one rewritten by `ALTER`, and `ALTER TABLE … ADD COLUMN` appends rather than inserting, so the column order differs too. So columns are compared through `pragma_table_info`, which reports shape rather than wording. But a pragma reports no constraints, so named `CHECK`s are parsed out of the stored statement and compared alongside — this schema keeps its `tier` and `status` value lists there, and a migration that recreated a table without them would otherwise read as identical. Indexes stay as text, because a partial index's `WHERE` clause is not exposed by any pragma — and that clause is the entire reason `INSERT OR REPLACE` behaves as an upsert here; `IF NOT EXISTS` is normalised away with the whitespace, since the baseline migration is guarded and `schema.sql` is not. And `sqlite_sequence`, Cloudflare's `_cf_KV` and wrangler's `d1_migrations` are filtered out: they belong to the engines, not to this repository, so leaving them in would fail every run forever.
 
 **A successful upload is not a live deployment.** `wrangler deploy` exiting 0 means the version was accepted; it does not mean that version is serving. Step 5 reads that back and refuses anything that is not this run's version at 100%, which also catches a gradual rollout nobody meant to configure.
 
@@ -235,7 +254,7 @@ Detecting the challenge and continuing would have been worse than removing the s
 **Both halves are idempotent, and neither empties anything first.** That property is load-bearing now that this runs unattended:
 
 - **D1** upserts and then prunes. The partial unique indexes on `(slug, lang)` and `(slug)` make `INSERT OR REPLACE` a genuine upsert, so `generate-seed-sql.ts` emits the inserts first and closes with a `DELETE … WHERE slug || ':' || ifnull(lang,'') NOT IN (…)` that removes only rows no Markdown file backs any more. It used to open with `DELETE FROM content`, which on the remote database empties the live table and serves an empty Timeline until the inserts land.
-- **KV** writes before it deletes. `kv-bulk-upload.ts` uploads every payload in one `kv bulk put` — a `put` over an existing key is a replacement — and only then removes `blog:` keys with no payload behind them. It used to clear every key first and upload them back one at a time, so every published Post 404'd for the length of the upload.
+- **KV** writes before it deletes. `kv-bulk-upload.ts` uploads every payload in one `kv bulk put` — a `put` over an existing key is a replacement — and only then removes keys with no payload behind them. It used to clear every key first and upload them back one at a time, so every published Post 404'd for the length of the upload.
 
 **The verifier is separate from the seed on purpose.** The seed scripts report what they *sent*; `verify-stores.ts` reports what is *there*. It derives its expectations from the Markdown files rather than from the generated SQL — a generator that silently dropped a file would otherwise produce a seed and a check that agree with each other and with nothing else — and it compares each KV value against its payload as parsed JSON. Run it by hand with `pnpm run verify:stores:local` or `:remote`.
 
@@ -256,7 +275,7 @@ The protection has edges. It covers concurrency-driven cancellation only — a m
 - **The build copies `.dev.vars` into `build/server/`.** `@cloudflare/vite-plugin` does this so the built output can be previewed locally, but it means a build run on a machine with real local secrets leaves them in plaintext inside the build directory. `build/` is gitignored and `wrangler deploy` does not turn them into Worker vars (confirmed with `--dry-run`), so nothing leaks by default — but do not ship `build/` anywhere as an artifact. Behaviour predates Vite 8; verified identical on Vite 7.
 - **`/blog/:blogSlug` hardcodes `:en`.** The schema, the seed pipeline and the KV key layout are all Locale-aware; the route is not, and no URL carries a Locale. Serving a second Translation needs a routing decision first (`/es/blog/…` vs. a query param vs. content negotiation).
 - **`generate-kv-json.ts` builds its D1 query with nested unescaped double quotes** inside a double-quoted `--command` string. It works only because SQL treats the collapsed quoting as bare identifiers.
-- **The sitemap's `/resume` `lastmod` is the hardcoded string `2025-12-21`.** The Resume has no Published At to derive one from. It is now the exported `RESUME_LASTMOD` in `seed/kv/sitemap-routes.ts` with a test pinning it, so the staleness is at least visible rather than buried in a template literal.
+- **The sitemap's `/resume` `lastmod` is maintained by hand.** The Resume has no Published At to derive one from, so it is `meta.lastModified` inside `resume.json` — passed into `buildSitemapRoutes` rather than held as a constant in the seed pipeline, so the date sits beside the document it describes and whoever edits one is looking at the other. Deriving it from git does not work: CI checks out with `fetch-depth: 1`, so the only commit present is the checkout's own and the date would describe the build rather than the Resume.
 - **`…setup-nodejs-express-typescript-project.en-old.md` is never published.** Its front matter says `type: post`, but `en-old` is not a Locale the generator recognises, so it is skipped with a warning nobody reads and no row or KV key exists for it. It is either a draft that should not be in `app/content/`, or a Translation that needs a real Locale.
 - **No test renders a component.** CSS and markup regressions are caught by eye only. jsdom does not compute animations, so a component test would not have found the sidebar's closing flash either — catching that class of defect needs a real browser, which is a third runtime nobody has signed up for yet.
 - **`/resume` has no test, and does not need one the way the others do.** It has no loader: its sections import `resume.json` directly, so there is no request-time behaviour to assert. What could still break — a section that stops rendering — needs a component test, which is the same gap as above.
@@ -269,7 +288,7 @@ This repo was scaffolded from an earlier e-commerce project and carried roughly 
 
 **The code went; the tables stayed.** That pass deleted the modules and left the two tables standing in the deployed database, where they sat unreferenced for months. Nothing could see them: no test touches the remote schema and no document recorded them, so this section read as if the cleanup had been complete. `seed/verify-schema.ts` found them the first time it ran, which is the argument for the check in one sentence — the deployed schema is not something you can reason about from the repository. They are dropped by hand, and the check now refuses any table `schema.sql` does not declare.
 
-All of it was deleted in one pass, verified by walking the import graph from the real entry points (`workers/app.ts`, `app/root.tsx`, and every module named in `app/routes.ts`). `app/` went from 178 source files to 40, with zero unreachable files remaining. The one live import into the inherited tree — `ModeToggle`'s icon button — was preserved by moving that component to `app/components/ui/icon-button.tsx` rather than rewriting the toggle, so the UI is unchanged.
+All of it was deleted in one pass, verified by walking the import graph from the real entry points (`workers/app.ts`, `app/root.tsx`, and every module named in `app/routes.ts`). `app/` went from 178 source files to 40, with zero unreachable files remaining. The one live import into the inherited tree — `ModeToggle`'s icon button — was preserved by moving that component to `app/components/ui/icon-button.tsx` rather than rewriting the toggle, so the UI was unchanged. It has since been folded into `ui/button.tsx`, which is the one button the site has.
 
 **`app/` now contains only reachable code.** A new orphan is therefore a defect, not background noise: if a file is not reachable from a route, it does not belong in `app/`.
 

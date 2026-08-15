@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { kvKeyFor } from "../../seed/kv/kv-keys";
+import { listPayloadFiles } from "../../seed/kv/payload-files";
 
 import { TEST_PERSIST_DIR, openTestPlatform } from "./platform";
 
@@ -35,7 +36,7 @@ export async function setup() {
   const { env, dispose } = await openTestPlatform();
 
   try {
-    const files = (await fs.readdir(PAYLOAD_DIR)).filter((file) => file.endsWith(".json"));
+    const files = await listPayloadFiles(PAYLOAD_DIR);
 
     if (files.length === 0) {
       throw new Error(`No KV payloads found in ${PAYLOAD_DIR}`);
