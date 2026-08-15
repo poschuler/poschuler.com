@@ -26,7 +26,16 @@ export default {
     const destination = resolveRedirect(new URL(request.url));
 
     if (destination) {
-      return new Response(null, { status: 301, headers: { Location: destination } });
+      // Through the same headers as everything else. A redirect is often the
+      // *first* thing a browser gets from this origin — an old link, a cold
+      // cache — and that is exactly the response that has to carry HSTS, or
+      // the policy is never established on the visit that needed it. There is
+      // no body, so the nonce has nothing to sign and the CSP, which only
+      // attaches to HTML, does not apply.
+      return withSecurityHeaders(
+        new Response(null, { status: 301, headers: { Location: destination } }),
+        { nonce: "", isProduction: import.meta.env.PROD },
+      );
     }
 
     const context = new RouterContextProvider();

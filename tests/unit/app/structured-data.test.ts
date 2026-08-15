@@ -40,13 +40,29 @@ describe("blogPosting", () => {
     expect(article.dateModified).toBe("2026-06-01");
   });
 
-  /** One entity, referenced — not a fourth description of the same person. */
-  it("points at the one Person instead of describing him again", () => {
-    const article = blogPosting(PART);
+  /**
+   * Named *and* identified. The `@id` merges this with the full `Person` on the
+   * home page and the Resume; the name is there because Google's Article
+   * requirements ask for `author.name` on the page and do not follow an `@id`
+   * into another document — an article carrying the identifier alone is an
+   * article with an anonymous author as far as a rich result is concerned.
+   */
+  it("credits a named author that is the same entity as the Person", () => {
+    const article = blogPosting(PART) as {
+      author: { "@id": string; name: string };
+      publisher: { "@id": string; name: string };
+    };
 
-    expect(article.author).toEqual({ "@id": PERSON_ID });
-    expect(article.publisher).toEqual({ "@id": PERSON_ID });
-    expect(JSON.stringify(article)).not.toContain("PostalAddress");
+    expect(article.author["@id"]).toBe(PERSON_ID);
+    expect(article.author.name).toBe(PERSON_CORE.name);
+    expect(article.publisher["@id"]).toBe(PERSON_ID);
+    expect(article.publisher.name).toBe(PERSON_CORE.name);
+  });
+
+  /** Named, not described again: the credentials stay where they live. */
+  it("does not restate the rest of him on every article", () => {
+    expect(JSON.stringify(blogPosting(PART))).not.toContain("PostalAddress");
+    expect(JSON.stringify(blogPosting(PART))).not.toContain("hasCredential");
   });
 
   it("attaches a Part to its Series by the identifier the landing declares", () => {

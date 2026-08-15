@@ -48,7 +48,12 @@ export function SeriesBreadcrumb({
           </Link>
         </li>
         <li aria-hidden="true">›</li>
-        <li aria-current="page">{sectionTitle}</li>
+        {/* No `aria-current="page"`. A Section has no address — which is why
+          * it is left out of the `BreadcrumbList` entirely — so announcing it
+          * as the current page tells a screen reader the reader is on a thing
+          * that cannot be visited. Here it is context for a human, and the
+          * page it labels is the article below. */}
+        <li>{sectionTitle}</li>
       </ol>
     </nav>
   );

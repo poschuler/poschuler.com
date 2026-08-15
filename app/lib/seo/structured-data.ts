@@ -1,4 +1,4 @@
-import { AUTHOR, PERSON_ID, SITE } from "./person";
+import { AUTHOR, SITE } from "./person";
 
 /**
  * The JSON-LD objects the site emits, all of them **derived** from what is
@@ -90,10 +90,11 @@ export function blogPosting({
     dateModified: dateRevised ?? datePublished,
     image: `${SITE}/og.png`,
     inLanguage: "en",
-    // Both point at the one Person entity rather than restating him. He is the
-    // author and there is no publisher between him and the reader.
+    // The same entity twice, and both named: he is the author and there is no
+    // publisher between him and the reader. The shared `@id` is what merges
+    // these with the full `Person` on the home page and the Resume.
     author: AUTHOR,
-    publisher: { "@id": PERSON_ID },
+    publisher: AUTHOR,
     ...(seriesSlug ? { isPartOf: { "@id": seriesId(seriesSlug) } } : {}),
   };
 }

@@ -24,18 +24,70 @@ BASE="http://localhost:${PORT}"
 
 # Derived, not hardcoded: a Slug never changes once published, but which Posts
 # exist does.
+#
+# Two lists, because two questions. `/` shows the newest Posts whatever they
+# belong to, so it is asked about all of them. The Post probed by URL has to be
+# one with **no Container**: the `blog:` key space holds every
+# Post body, a Part of a Series included — the prefix says what kind of payload
+# it is, not which URL serves it — but a Part answers 301 at `/blog/<slug>` and
+# `/blog` collapses its whole Series into one row. Both checks below would fail
+# on correct code. Picking the first payload alphabetically works today only
+# because the one loose Post happens to sort first; the next Part published
+# under a slug starting `a`–`h` would break CI and point at nothing.
+#
+# Which slugs are Parts is read from the Series manifests, the same place the
+# generators read the arc from (ADR 0007).
+# Each line is `<series>\t<part>`, so the pair that probes a Part below can be
+# taken whole — a Part read from one manifest and a Series read from another
+# would produce a URL that correctly answers 404.
+mapfile -t SERIES_PARTS < <(
+	node --input-type=module -e '
+		import { readdir, readFile } from "node:fs/promises";
+
+		const directory = "seed/kv/kv_payloads/series";
+
+		for (const file of await readdir(directory).catch(() => [])) {
+			const { attributes } = JSON.parse(await readFile(`${directory}/${file}`, "utf-8"));
+			const series = file.replace(/\.[^.]+\.json$/, "");
+
+			for (const section of attributes.sections ?? []) {
+				for (const part of section.parts ?? []) console.log(`${series}\t${part}`);
+			}
+		}
+	'
+)
+
+mapfile -t PART_SLUGS < <(
+	if [[ "${#SERIES_PARTS[@]}" -gt 0 ]]; then printf '%s\n' "${SERIES_PARTS[@]}" | cut -f2; fi
+)
+
 mapfile -t POST_SLUGS < <(
 	find seed/kv/kv_payloads/blog -name '*.en.json' -exec basename {} .en.json \; | sort
 )
 
-if [[ "${#POST_SLUGS[@]}" -eq 0 ]]; then
-	echo "error: no Post payloads under seed/kv/kv_payloads/blog." >&2
+mapfile -t LOOSE_POST_SLUGS < <(
+	printf '%s\n' "${POST_SLUGS[@]}" |
+		{ if [[ "${#PART_SLUGS[@]}" -gt 0 ]]; then grep -vxF "$(printf '%s\n' "${PART_SLUGS[@]}")"; else cat; fi; }
+)
+
+if [[ "${#LOOSE_POST_SLUGS[@]}" -eq 0 ]]; then
+	echo "error: no payload under seed/kv/kv_payloads/blog for a Post outside a Series." >&2
 	exit 1
 fi
 
-POST_SLUG="${POST_SLUGS[0]}"
+POST_SLUG="${LOOSE_POST_SLUGS[0]}"
 
 ROUTES=(/ /blog /bookmarks /resume /robots.txt /sitemap.xml "/blog/${POST_SLUG}")
+
+# The Series namespace, when there is one to probe. All three read a store —
+# the landing and a Part read *both*, D1 for the arc and KV for the body — so
+# they are the routes most likely to be the ones a missing binding takes down,
+# which is the failure this whole script exists for.
+if [[ "${#SERIES_PARTS[@]}" -gt 0 ]]; then
+	IFS=$'\t' read -r SERIES_SLUG PART_SLUG <<<"${SERIES_PARTS[0]}"
+
+	ROUTES+=(/series "/series/${SERIES_SLUG}" "/series/${SERIES_SLUG}/${PART_SLUG}")
+fi
 
 if [[ ! -d build/client ]]; then
 	echo "error: no build found. Run 'pnpm build' first." >&2

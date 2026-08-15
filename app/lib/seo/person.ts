@@ -17,8 +17,27 @@ export const SITE = "https://poschuler.com";
  */
 export const PERSON_ID = `${SITE}/#paul`;
 
-/** How a document points at him without describing him again. */
-export const AUTHOR = { "@id": PERSON_ID } as const;
+/** Stated once, because two spellings of a name are two people to a crawler. */
+const NAME = "Paul Osorio Schuler";
+
+/**
+ * How a document credits him.
+ *
+ * The `@id` is what merges this with the full `Person` on the home page and the
+ * Resume, but it cannot be the whole reference: Google's Article requirements
+ * ask for `author.name` on the page itself and do not resolve an `@id` across
+ * documents. An article carrying the bare identifier is an article with an
+ * anonymous author as far as a rich result is concerned — which on a site that
+ * exists to be found is the whole point of emitting it.
+ *
+ * So: the name and the URL inline, the credentials left where they live.
+ */
+export const AUTHOR = {
+  "@type": "Person",
+  "@id": PERSON_ID,
+  name: NAME,
+  url: SITE,
+} as const;
 
 /**
  * The identity every page states the same way.
@@ -41,7 +60,7 @@ export const PERSON_CORE = {
   "@context": "https://schema.org",
   "@type": "Person",
   "@id": PERSON_ID,
-  name: "Paul Osorio Schuler",
+  name: NAME,
   url: SITE,
   image: `${SITE}/paul-osorio-schuler.webp`,
   jobTitle: "Senior Backend Engineer",

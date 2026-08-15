@@ -29,7 +29,7 @@ interface BlogContentPayload {
     html: string;
 }
 
-export async function loader({ params, context }: Route.LoaderArgs) {
+export async function loader({ params, request, context }: Route.LoaderArgs) {
 
     const blogSlug = params.blogSlug;
 
@@ -54,7 +54,11 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     }
 
     if (post.seriesSlug) {
-        throw redirect(postHref(post), 301);
+        // The query string travels, for the reason `app/lib/redirects.ts`
+        // states for the hop before this one: it is what tells the author the
+        // redirect is being used at all. The two land on the same page, so
+        // they cannot behave differently.
+        throw redirect(postHref(post) + new URL(request.url).search, 301);
     }
 
     const BLOG_KV = env.BLOG_KV;
