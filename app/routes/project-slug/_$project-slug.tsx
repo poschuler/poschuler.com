@@ -1,9 +1,11 @@
 import { useLoaderData } from "react-router";
+import { chip } from "~/components/chip";
 import { LiveLink } from "~/components/live-link";
 import { GitHubIcon } from "~/components/ui/brand-icons";
 import { RevisionHistory, RevisionLine } from "~/components/revisions";
 import { cloudflareContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
+import { cn } from "~/lib/utils";
 import { findProjectBySlug } from "~/models/project.server";
 import type { Route } from "./+types/_$project-slug";
 
@@ -88,7 +90,7 @@ export default function Project() {
           * nothing. A dead one still written in the present tense is what
           * costs. */}
         {status === "archived" && (
-          <p className="not-prose mb-4 inline-flex rounded-md border border-default px-2 py-0.5 font-mono text-xs font-semibold text-low">
+          <p className={cn(chip, "not-prose mb-4")}>
             Archived — no longer maintained
           </p>
         )}

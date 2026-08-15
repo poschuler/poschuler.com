@@ -1,4 +1,5 @@
 import { Link, useLoaderData, type MetaFunction } from "react-router";
+import { chip } from "~/components/chip";
 import { LiveLink } from "~/components/live-link";
 import { cloudflareContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
@@ -41,12 +42,8 @@ function ArchivedBadge({ project }: { project: ProjectRowType }) {
     return null;
   }
 
-  /* A border rather than a fill. The page is `bg-ui`, and a `bg-subtle` chip
-   * on it is a step *down* the scale — it reads as recessed into the page
-   * rather than as a label on top of it. The site's own rule applies: a
-   * division that needs marking gets a border, not a hue. */
   return (
-    <span className="rounded-md border border-default px-2 py-0.5 font-mono text-xs font-semibold text-low">
+    <span className={chip}>
       Archived
     </span>
   );

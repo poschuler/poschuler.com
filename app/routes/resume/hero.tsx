@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { Download, Globe, Mail } from "lucide-react";
 
+import { chip } from "~/components/chip";
 import { BrandNetworkIcon } from "~/components/ui/brand-icons";
 import { Button } from "~/components/ui/button";
 import { basics, languages } from "./resume.json";
@@ -29,15 +30,9 @@ export function Hero() {
           {city}, {region} · {timezone}
         </p>
 
-        {/* `text-xs`, like every other chip on the page. These were
-          * `text-[10px]` with no vertical padding — the only two arbitrary
-          * font sizes in the tree, and small enough to stop being readable. */}
         <ul className="flex flex-wrap gap-1 pt-1">
           {languages.map((item) => (
-            <li
-              key={item.row}
-              className="inline-flex items-center rounded-md border border-default px-2 py-0.5 font-semibold text-low text-xs"
-            >
+            <li key={item.row} className={chip}>
               {`${item.language} — ${item.fluency}`}
             </li>
           ))}

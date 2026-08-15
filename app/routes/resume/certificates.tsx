@@ -1,3 +1,4 @@
+import { chip } from "~/components/chip";
 import { Section } from "./section";
 import { certificates } from "./resume.json";
 
@@ -29,10 +30,7 @@ export function Certificates() {
 
             <ul className="mt-auto flex flex-wrap gap-1 pt-2">
               {cert.keywords.map((item) => (
-                <li
-                  key={`${cert.row}-${item}`}
-                  className="inline-flex items-center text-nowrap rounded-md border border-default px-2 py-0.5 font-semibold text-low text-xs"
-                >
+                <li key={`${cert.row}-${item}`} className={chip}>
                   {item}
                 </li>
               ))}
