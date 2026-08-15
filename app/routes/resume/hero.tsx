@@ -29,11 +29,14 @@ export function Hero() {
           {city}, {region} · {timezone}
         </p>
 
+        {/* `text-xs`, like every other chip on the page. These were
+          * `text-[10px]` with no vertical padding — the only two arbitrary
+          * font sizes in the tree, and small enough to stop being readable. */}
         <ul className="flex flex-wrap gap-1 pt-1">
           {languages.map((item) => (
             <li
               key={item.row}
-              className="inline-flex items-center rounded-md border border-default px-1.5 py-0 font-semibold text-[10px] text-low"
+              className="inline-flex items-center rounded-md border border-default px-2 py-0.5 font-semibold text-low text-xs"
             >
               {`${item.language} — ${item.fluency}`}
             </li>

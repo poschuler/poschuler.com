@@ -31,7 +31,7 @@ export function Certificates() {
               {cert.keywords.map((item) => (
                 <li
                   key={`${cert.row}-${item}`}
-                  className="inline-flex items-center text-nowrap rounded-md border border-default px-1.5 py-0 font-semibold text-[10px] text-low"
+                  className="inline-flex items-center text-nowrap rounded-md border border-default px-2 py-0.5 font-semibold text-low text-xs"
                 >
                   {item}
                 </li>
