@@ -27,6 +27,12 @@ interface ContentRow {
     type: string;
 }
 
+interface ContentTagRow {
+    slug: string;
+    lang: string | null;
+    tag: string;
+}
+
 interface SeriesRow {
     slug: string;
     lang: string;
@@ -41,6 +47,7 @@ interface SeriesSectionRow {
 /** What the Markdown says each table should hold, keyed by identity. */
 interface Expectation {
     content: Set<string>;
+    contentTags: Set<string>;
     series: Set<string>;
     sections: Set<string>;
 }
@@ -79,8 +86,16 @@ function d1Query<T>(sql: string, wranglerArgs: string[]): T[] {
 async function expectedFromMarkdown(): Promise<Expectation> {
     const expectation: Expectation = {
         content: new Set<string>(),
+        contentTags: new Set<string>(),
         series: new Set<string>(),
         sections: new Set<string>(),
+    };
+
+    /** Keyed as the prune keys it: the Content Item's identity plus the Tag. */
+    const addTags = (slug: string, locale: string, tags: unknown) => {
+        for (const tag of Array.isArray(tags) ? tags : []) {
+            expectation.contentTags.add(`${slug}:${locale}:${tag}`);
+        }
     };
 
     async function walk(dir: string) {
@@ -103,16 +118,22 @@ async function expectedFromMarkdown(): Promise<Expectation> {
             }
 
             const [, slug, locale] = match;
-            const { attributes } = fm<{ type?: string; sections?: Array<{ slug: string }> }>(
-                await fsPromise.readFile(full, "utf-8"),
-            );
+            const { attributes } = fm<{
+                type?: string;
+                tags?: unknown;
+                sections?: Array<{ slug: string }>;
+            }>(await fsPromise.readFile(full, "utf-8"));
 
             if (attributes.type === "post") {
+                // A Post with no Locale in its filename is a draft: no row, and
+                // so no Tag rows either. The rule is the generator's, mirrored.
                 if (locale) {
                     expectation.content.add(`${slug}:${locale}`);
+                    addTags(slug, locale, attributes.tags);
                 }
             } else if (attributes.type === "link") {
                 expectation.content.add(`${slug}:`);
+                addTags(slug, "", attributes.tags);
             } else if (attributes.type === "series" && locale) {
                 expectation.series.add(`${slug}:${locale}`);
 
@@ -146,6 +167,7 @@ async function verify(mode: string): Promise<boolean> {
     const expected = await expectedFromMarkdown();
 
     const contentRows = d1Query<ContentRow>("select slug, lang, type from content", wranglerArgs);
+    const tagRows = d1Query<ContentTagRow>("select slug, lang, tag from content_tag", wranglerArgs);
     const seriesRows = d1Query<SeriesRow>("select slug, lang from series", wranglerArgs);
     const sectionRows = d1Query<SeriesSectionRow>(
         "select series_slug, lang, slug from series_section",
@@ -170,6 +192,8 @@ async function verify(mode: string): Promise<boolean> {
 
     compareKeys("Content Item", expected.content,
         new Set(contentRows.map((row) => `${row.slug}:${row.lang ?? ""}`)));
+    compareKeys("Tag row", expected.contentTags,
+        new Set(tagRows.map((row) => `${row.slug}:${row.lang ?? ""}:${row.tag}`)));
     compareKeys("Series", expected.series,
         new Set(seriesRows.map((row) => `${row.slug}:${row.lang}`)));
     compareKeys("Series Section", expected.sections,

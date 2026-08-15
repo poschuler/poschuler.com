@@ -9,6 +9,7 @@ import {
     isInvalid,
     isSkipped,
     parseContentFilename,
+    type ContentRow,
     type FrontMatterAttributes,
     type PartPlacement,
     type SeededRow,
@@ -196,12 +197,12 @@ async function readSeriesFolders(): Promise<Map<string, SeriesFolder>> {
 async function collectSeriesRows(vocabulary: TagVocabulary): Promise<{
     series: SeededRow[];
     sections: SeededRow[];
-    content: SeededRow[];
+    content: ContentRow[];
 }> {
     const folders = await readSeriesFolders();
     const series: SeededRow[] = [];
     const sections: SeededRow[] = [];
-    const content: SeededRow[] = [];
+    const content: ContentRow[] = [];
 
     for (const [folderName, folder] of folders) {
         if (folder.manifests.length === 0) {
@@ -344,7 +345,7 @@ async function generateSqlSeed() {
 
     console.log(`Found ${filePaths.length} markdown files to process.`);
 
-    const rows: SeededRow[] = [];
+    const rows: ContentRow[] = [];
 
     for (const filePath of filePaths) {
         const relativePath = path.relative(CONTENT_DIR, filePath);

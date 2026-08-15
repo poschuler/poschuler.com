@@ -29,8 +29,14 @@ type ContentRowBase = {
   /** `publishedAt` truncated to `YYYY-MM-DD`, the form the UI renders. */
   publishedStringDate: string;
   /**
-   * A JSON array as stored, **not** parsed. Nothing reads Tags yet; whoever
-   * does should parse it here and change this to `string[]`.
+   * A JSON array as stored, **not** parsed, and **not** the place to read Tags
+   * from. `content_tag` holds one row per Tag per Content Item, which is what a
+   * query reaches for; a Post's own chips render from the front matter that
+   * travels verbatim in KV. Nothing renders this copy — it is still *selected*,
+   * here and by the KV generator, which is the only reason it cannot go yet:
+   * migrations run before the Worker, so the column and both selections are
+   * dropped in a later deploy than the one that stopped reading them. Do not
+   * build on it.
    */
   tags: string;
 };

@@ -8,6 +8,7 @@ import {
   isInvalid,
   isSkipped,
   parseContentFilename,
+  type ContentRow,
   type FrontMatterAttributes,
   type SeededRow,
 } from "../../../seed/d1/seed-sql";
@@ -409,6 +410,82 @@ describe("contentRowFor — Tags are drawn from the declared vocabulary", () => 
   });
 });
 
+/**
+ * The rows a Tag page will query, rather than every Content Item's parsed JSON
+ * aggregated in JavaScript.
+ *
+ * Keyed on the natural key of the Content Item plus the Tag. `id_content` is an
+ * autoincrement and this seed upserts with `INSERT OR REPLACE`, which deletes
+ * and re-inserts on a conflict — so a row pointing at the id would point at a
+ * different Content Item, or at nothing, after the next seed run.
+ */
+describe("contentRowFor — Tags become rows", () => {
+  it("emits one row per Tag on a Post, keyed by (Slug, Locale, Tag)", () => {
+    const row = contentRowFor(
+      "blog/a/a.en.md",
+      post({ tags: ["nodejs", "ddd"] }),
+      VOCABULARY,
+    ) as ContentRow;
+
+    expect(row.tags.map((tag) => tag.key)).toEqual(["a:en:nodejs", "a:en:ddd"]);
+    expect(row.tags[0].statement).toContain("INSERT OR REPLACE INTO content_tag (slug, lang, tag)");
+    expect(row.tags[0].statement).toContain("VALUES ('a', 'en', 'nodejs')");
+  });
+
+  /**
+   * `INSERT OR REPLACE` against the natural key, exactly as the `content` row
+   * beside it. Losing it would turn a re-seed into duplicate rows and every
+   * Tag count into a multiple of how often the seed has run.
+   */
+  it("upserts rather than inserting, so re-running the seed is a no-op", () => {
+    const row = contentRowFor("blog/a/a.en.md", post(), VOCABULARY) as ContentRow;
+
+    expect(row.tags[0].statement).toMatch(/INSERT OR REPLACE/);
+    expect(row.tags[0].statement).not.toMatch(/^\s*INSERT INTO/m);
+  });
+
+  it("emits nothing for a Post that carries no Tags", () => {
+    const row = contentRowFor("blog/a/a.en.md", post({ tags: undefined }), VOCABULARY) as ContentRow;
+
+    expect(row.tags).toEqual([]);
+  });
+
+  /**
+   * A Part's rows are a loose Post's rows. Where it sits is already on its
+   * `content` row, and repeating it here would be a second place for it to be
+   * wrong — while what a Tag page lists is a policy of the page, not of the
+   * data.
+   */
+  it("gives a Part of a Series the same rows as a loose Post, with no trace of its Container", () => {
+    const row = contentRowFor(
+      "series/pragmatic-nodejs-api/project-setup/project-setup.en.md",
+      post({ tags: ["nodejs"] }),
+      VOCABULARY,
+      { seriesSlug: "pragmatic-nodejs-api", section: "fundamentals", order: 1 },
+    ) as ContentRow;
+
+    expect(row.tags.map((tag) => tag.key)).toEqual(["project-setup:en:nodejs"]);
+    expect(row.tags[0].statement).toContain("VALUES ('project-setup', 'en', 'nodejs')");
+    expect(row.tags[0].statement).not.toContain("pragmatic-nodejs-api");
+  });
+
+  /**
+   * Seeded although no Tag page lists a Bookmark today: the store is derived
+   * from the Markdown, and which kinds a page shows is decided at render, so
+   * reopening that question later needs no migration and no reseed.
+   */
+  it("writes a Bookmark's Tags with a null Locale", () => {
+    const row = contentRowFor(
+      "bookmarks/a.md",
+      bookmark({ tags: ["backend"] }),
+      VOCABULARY,
+    ) as ContentRow;
+
+    expect(row.tags.map((tag) => tag.key)).toEqual(["a::backend"]);
+    expect(row.tags[0].statement).toContain("VALUES ('a', NULL, 'backend')");
+  });
+});
+
 describe("contentRowFor — revisions", () => {
   it("stores an absent list as an empty array, not as NULL", () => {
     const row = contentRowFor("blog/a/a.en.md", post(), VOCABULARY) as SeededRow;
@@ -481,9 +558,9 @@ describe("duplicateKeys", () => {
 });
 
 describe("buildSeedSql", () => {
-  const rows = (): SeededRow[] => [
-    contentRowFor("blog/a/a.en.md", post(), VOCABULARY) as SeededRow,
-    contentRowFor("bookmarks/b.md", bookmark(), VOCABULARY) as SeededRow,
+  const rows = (): ContentRow[] => [
+    contentRowFor("blog/a/a.en.md", post(), VOCABULARY) as ContentRow,
+    contentRowFor("bookmarks/b.md", bookmark({ tags: ["backend"] }), VOCABULARY) as ContentRow,
   ];
 
   /**
@@ -521,5 +598,41 @@ describe("buildSeedSql", () => {
    */
   it("produces a table-emptying prune when given no rows at all", () => {
     expect(buildSeedSql([])).toContain("NOT IN ()");
+  });
+
+  /**
+   * `content_tag` is seeded here rather than by a builder of its own: its rows
+   * are the same reading of the same files, so they cannot drift into a Tag
+   * left alive by a Content Item that is gone.
+   */
+  it("writes every Tag row before either prune", () => {
+    const sql = buildSeedSql(rows());
+
+    expect(sql.indexOf("INSERT OR REPLACE INTO content_tag")).toBeLessThan(
+      sql.indexOf("DELETE FROM content"),
+    );
+    expect(sql).not.toMatch(/^\s*DELETE FROM content_tag/);
+  });
+
+  it("prunes Tag rows by (Slug, Locale, Tag), keeping every one a Markdown file still backs", () => {
+    const sql = buildSeedSql(rows());
+
+    expect(sql).toContain(
+      "DELETE FROM content_tag WHERE slug || ':' || ifnull(lang, '') || ':' || tag NOT IN ('a:en:ddd', 'b::backend')",
+    );
+  });
+
+  /**
+   * The same shape with an empty list, which SQLite reads as matching every
+   * row: with nothing carrying a Tag, no row in `content_tag` is backed. It is
+   * still the closing statement, never a leading truncate.
+   */
+  it("empties content_tag when no Content Item carries a Tag", () => {
+    const sql = buildSeedSql([
+      contentRowFor("blog/a/a.en.md", post({ tags: [] }), VOCABULARY) as ContentRow,
+    ]);
+
+    expect(sql).toContain("DELETE FROM content_tag WHERE slug || ':' || ifnull(lang, '') || ':' || tag NOT IN ()");
+    expect(sql).not.toMatch(/DELETE FROM content_tag;/);
   });
 });
