@@ -1,9 +1,10 @@
-import { Link, useLoaderData } from "react-router";
+import { redirect, useLoaderData } from "react-router";
 import type { Route } from "./+types/_$blog-slug";
 import { cloudflareContext } from "~/context";
-import { GitHubIcon } from "~/components/ui/brand-icons";
-import { RevisionHistory, RevisionLine } from "~/components/revisions";
+import { PostArticle } from "~/components/post-article";
+import { postHref } from "~/lib/hrefs";
 import { validateRevisions } from "~/lib/revisions";
+import { findPostBySlug } from "~/models/content.server";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 
 
@@ -32,6 +33,29 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     const blogSlug = params.blogSlug;
 
     const { env } = context.get(cloudflareContext);
+
+    /**
+     * The row before the body, for one reason: a Part is served under its
+     * Series, and its payload sits under the same `blog:` key as any other Post
+     * — the prefix says what kind of payload it is, not which URL serves it. So
+     * KV alone would answer this URL with a page that also exists at
+     * `/series/…`, and two addresses for one article is a canonical nobody
+     * declared.
+     *
+     * Not the historical redirects: those are a table of URLs that no longer
+     * exist and belong in `app/lib/redirects.ts`, consulted in the Worker. This
+     * is derived from the row itself.
+     */
+    const post = await findPostBySlug(env.POSCHULER_BD, blogSlug);
+
+    if (!post) {
+        throw new Response("Not Found", { status: 404 });
+    }
+
+    if (post.seriesSlug) {
+        throw redirect(postHref(post), 301);
+    }
+
     const BLOG_KV = env.BLOG_KV;
     const kv_key = `blog:${blogSlug}:en`;
     const contentPayload = await BLOG_KV.get<BlogContentPayload>(kv_key, {
@@ -90,34 +114,13 @@ export default function BlogSlug() {
 
     return (
         <main className="flex-1 gap-4 p-4 md:gap-8 md:p-10 font-mono bg-ui">
-            <article className="prose mx-auto py-8">
-                <h1>{title}</h1>
-
-                {repository && (
-                    <p className="flex items-center gap-2">
-                        <GitHubIcon className="size-6" />
-                        <Link
-                            to={repository}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-lg no-underline text-low flex items-center gap-2 transition-colors duration-200 hover:text-default"
-                        >
-                            View Github Repository
-                        </Link>
-                    </p>
-                )}
-
-                <div className="not-prose my-4">
-                    <RevisionLine publishedAt={publishedAt} revisions={revisions} />
-                </div>
-
-                <hr className="mt-7 mb-7" />
-                <div dangerouslySetInnerHTML={{ __html: html }} />
-
-                <div className="not-prose">
-                    <RevisionHistory revisions={revisions} />
-                </div>
-            </article>
+            <PostArticle
+                title={title}
+                publishedAt={publishedAt}
+                repository={repository}
+                revisions={revisions}
+                html={html}
+            />
         </main>
     )
 }
