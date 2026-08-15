@@ -5,7 +5,9 @@ import fm from "front-matter";
 import {
     buildSeedSql,
     contentRowFor,
+    draftError,
     duplicateKeys,
+    isDraft,
     isInvalid,
     isSkipped,
     parseContentFilename,
@@ -87,7 +89,7 @@ async function getMarkdownFilePaths(dir: string): Promise<string[]> {
  * invariants. The only thing they share is the tree that decides which one runs
  * (ADR 0004).
  */
-async function collectProjectRows(): Promise<SeededRow[]> {
+async function collectProjectRows(): Promise<{ rows: SeededRow[]; anyFilesFound: boolean }> {
     const filePaths = await getMarkdownFilePaths(path.join(CONTENT_DIR, "projects"));
     const rows: SeededRow[] = [];
 
@@ -113,7 +115,11 @@ async function collectProjectRows(): Promise<SeededRow[]> {
         console.log(`✅ Generated SQL for project: ${result.key}`);
     }
 
-    return rows;
+    // Distinct from `rows.length > 0`: every Project this walk found may have
+    // declared `draft: true`, and `buildProjectSeedSql` needs to tell that
+    // state apart from "nothing has ever been written" to know whether an
+    // empty `rows` still calls for a prune.
+    return { rows, anyFilesFound: filePaths.length > 0 };
 }
 
 /** One Series folder, read off the disk and split by what each file is. */
@@ -121,8 +127,10 @@ interface SeriesFolder {
     manifests: Array<{ relativePath: string; attributes: SeriesFrontMatter; body: string }>;
     /**
      * The Parts the manifest is reconciled against: only the files carrying a
-     * recognised Locale, because a draft is never seeded and so is never
-     * indexed either.
+     * recognised Locale. A draft filed under the `.en-old.md` convention parses
+     * to no Locale and is excluded here; a draft declared with `draft: true`
+     * has a Locale like any other file and is reconciled the same way, with
+     * `draft: true` set on the entry so `seriesRowsFor` can tell it apart.
      */
     parts: SeriesPartFile[];
     /**
@@ -174,11 +182,24 @@ async function readSeriesFolders(): Promise<Map<string, SeriesFolder>> {
         folder.nested.push({ relativePath, attributes });
 
         if (parsed?.lang) {
+            // Checked here, ahead of `contentRowFor`, and not left to run
+            // there alone: `seriesRowsFor` reads this Part's `draft` below to
+            // decide the Container-contradiction check, before `contentRowFor`
+            // ever sees this file. A malformed value must fail with its own
+            // message rather than being read as "published" and surfacing as a
+            // confusing contradiction against a manifest that never had one.
+            const draftProblem = draftError(relativePath, attributes.draft);
+
+            if (draftProblem) {
+                throw new Error(draftProblem);
+            }
+
             folder.parts.push({
                 slug: parsed.slug,
                 lang: parsed.lang,
                 folder: segments[segments.length - 2],
                 relativePath,
+                draft: isDraft(attributes.draft),
             });
         }
     }
@@ -198,6 +219,14 @@ async function collectSeriesRows(vocabulary: TagVocabulary): Promise<{
     series: SeededRow[];
     sections: SeededRow[];
     content: ContentRow[];
+    /**
+     * Distinct from `series.length > 0`: every Series manifest this walk found
+     * may have declared `draft: true`, and `buildSeriesSeedSql` needs to tell
+     * that state apart from "nothing has ever been written" to know whether an
+     * empty `series` still calls for a prune. A folder existing at all already
+     * guarantees at least one manifest was read — see the throw just below.
+     */
+    anyFilesFound: boolean;
 }> {
     const folders = await readSeriesFolders();
     const series: SeededRow[] = [];
@@ -235,12 +264,21 @@ async function collectSeriesRows(vocabulary: TagVocabulary): Promise<{
                 throw new Error(result.error);
             }
 
-            series.push(result.series);
-            sections.push(...result.sections);
-
+            // The placements are needed either way: a drafted Container's own
+            // Parts must themselves be drafts (the Container-contradiction
+            // check `seriesRowsFor` already ran), and each still has to be
+            // listed and reconciled like any other.
             for (const [slug, placement] of result.parts) {
                 placements.set(`${slug}:${locale}`, placement);
             }
+
+            if (result.draft) {
+                console.warn(`- Skipping: ${manifest.relativePath} is a draft`);
+                continue;
+            }
+
+            series.push(result.series);
+            sections.push(...result.sections);
 
             console.log(`✅ Generated SQL for series: ${result.series.key}`);
         }
@@ -277,7 +315,7 @@ async function collectSeriesRows(vocabulary: TagVocabulary): Promise<{
         }
     }
 
-    return { series, sections, content };
+    return { series, sections, content, anyFilesFound: folders.size > 0 };
 }
 
 /** Reads the disk; the rule itself lives in `content-tree.ts`. */
@@ -397,8 +435,10 @@ async function generateSqlSeed() {
 
     const sqlCommands =
         buildSeedSql(rows) +
-        buildProjectSeedSql(projectRows) +
-        buildSeriesSeedSql(seriesRows.series, seriesRows.sections);
+        buildProjectSeedSql(projectRows.rows, { anyFilesFound: projectRows.anyFilesFound }) +
+        buildSeriesSeedSql(seriesRows.series, seriesRows.sections, {
+            anyFilesFound: seriesRows.anyFilesFound,
+        });
 
     try {
         await fs.mkdir(path.dirname(OUTPUT_SQL_FILE), { recursive: true });

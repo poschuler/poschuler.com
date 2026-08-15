@@ -27,6 +27,11 @@ export interface FrontMatterAttributes {
    * what turns it into a list.
    */
   updates?: unknown;
+  /**
+   * `unknown` for the same reason as `updates`. `draftError` is what turns it
+   * into a boolean or a build failure.
+   */
+  draft?: unknown;
 }
 
 /**
@@ -129,6 +134,30 @@ export function parseContentFilename(
 }
 
 /**
+ * `draft: true` in front matter (see `evolution-plan/14-phase-1b-field-notes.md`
+ * Part 3) is the whole mechanism: a file declares itself a Draft, is read,
+ * classified and checked exactly like a published one, and only at the very
+ * end does it produce nothing.
+ *
+ * JavaScript's own truthiness is not trusted for the flag. `draft` is a YAML
+ * field, so `draft: 'true'` or `draft: yes` must fail the build rather than
+ * being read as the boolean it merely looks like — a document silently
+ * unpublished by a typo is worse than one that fails loudly.
+ */
+export function draftError(relativePath: string, draft: unknown): string | null {
+  if (draft === undefined || typeof draft === "boolean") {
+    return null;
+  }
+
+  return `${relativePath} declares draft: ${JSON.stringify(draft)} — draft must be true or false, nothing else`;
+}
+
+/** Whether a document is a Draft. `true` and nothing else counts — see `draftError`. */
+export function isDraft(draft: unknown): boolean {
+  return draft === true;
+}
+
+/**
  * One `content_tag` row per Tag the file carries.
  *
  * Written for Posts and Bookmarks alike, and for a Part exactly as for a loose
@@ -207,16 +236,26 @@ export function contentRowFor(
   const publishedAt = escapeSql(attributes.publishedAt);
   const title = escapeSql(attributes.title);
 
+  // Checked once, ahead of the branch: both a Post and a Bookmark can declare
+  // themselves a Draft, and a bad value is a mistake regardless of which one
+  // this file is.
+  const draftProblem = draftError(relativePath, attributes.draft);
+
+  if (draftProblem) {
+    return { error: draftProblem };
+  }
+
   if (attributes.type === "post") {
     if (!lang) {
       return { reason: `post ${filename} must have a language in its filename` };
     }
 
-    // Also after the Locale check, and for the same reason: a draft is never
-    // seeded, so it is never measured against the vocabulary either. That is
-    // what leaves `project-setup.en-old.md` holding the pre-vocabulary
-    // spellings without stopping the build — and what turns renaming it into a
-    // build failure, which is the honest outcome.
+    // Also after the Locale check, and for the same reason: a draft with no
+    // recognised Locale — the `.en-old.md` convention — is never seeded, so it
+    // is never measured against the vocabulary either. That is what leaves
+    // `project-setup.en-old.md` holding the pre-vocabulary spellings without
+    // stopping the build — and what turns renaming it into a build failure,
+    // which is the honest outcome.
     const badTag = tagError(relativePath, attributes.tags, vocabulary);
 
     if (badTag) {
@@ -224,7 +263,9 @@ export function contentRowFor(
     }
 
     // After the Locale check, deliberately: a draft that carries no Locale is
-    // not seeded at all, so the manifest has no reason to list it.
+    // not seeded at all, so the manifest has no reason to list it. A draft
+    // declared with `draft: true`, by contrast, is listed exactly like a
+    // published Part — see the check at the end of this branch.
     if (placed.container !== null && !part) {
       return {
         error: `${relativePath} is not listed in the ${placed.container} manifest — a Part nothing indexes cannot be reached or ordered`,
@@ -235,6 +276,14 @@ export function contentRowFor(
 
     if ("error" in revisions) {
       return { error: `${relativePath}: ${revisions.error}` };
+    }
+
+    // The last check in the branch, deliberately: a Draft passes every check
+    // a published document passes — its type against its placement, its Tags
+    // against the vocabulary, its manifest listing, its revisions — and only
+    // once all of them pass does it produce nothing.
+    if (isDraft(attributes.draft)) {
+      return { reason: `${relativePath} is a draft` };
     }
 
     // Written here or written as NULL, never read from front matter. The three
@@ -268,15 +317,20 @@ VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attrib
     return { error: `${relativePath} is a Bookmark and cannot carry updates — the body is not here` };
   }
 
-  // Checked here rather than above the branch, because a Bookmark has no draft
-  // state to step around: it is a single file with no Locale, so every one of
-  // them is seeded and every one of them is measured. The vocabulary covers
-  // Bookmarks even though no Tag page lists them, so the day that question is
-  // reopened there is nothing to clean up first.
+  // A Bookmark has no Locale to hide behind, unlike the `.en-old.md`
+  // convention a Post can use — `draft: true` is the only way one goes
+  // unpublished. The vocabulary covers Bookmarks even though no Tag page
+  // lists them, so the day that question is reopened there is nothing to
+  // clean up first.
   const badTag = tagError(relativePath, attributes.tags, vocabulary);
 
   if (badTag) {
     return { error: badTag };
+  }
+
+  // The last check, as on a Post: every other rule has already run.
+  if (isDraft(attributes.draft)) {
+    return { reason: `${relativePath} is a draft` };
   }
 
   return {

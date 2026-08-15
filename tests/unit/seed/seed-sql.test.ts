@@ -173,6 +173,124 @@ describe("contentRowFor — Posts", () => {
   });
 });
 
+/**
+ * ADR 0009: `draft: true` in front matter. The file is read, classified and
+ * checked exactly like a published one, and only then produces nothing.
+ */
+describe("contentRowFor — Drafts", () => {
+  it("skips a Post declaring itself a draft, after every other check has passed", () => {
+    const result = contentRowFor("blog/a/a.en.md", post({ draft: true }), VOCABULARY);
+
+    expect(isSkipped(result)).toBe(true);
+    expect((result as { reason: string }).reason).toBe("blog/a/a.en.md is a draft");
+  });
+
+  /**
+   * Part 12's promise: a Draft passes every check a published document
+   * passes. An undeclared Tag still fails the build, draft or not.
+   */
+  it("still fails a draft Post for every reason a published one would", () => {
+    const result = contentRowFor(
+      "blog/a/a.en.md",
+      post({ draft: true, tags: ["not-a-declared-tag"] }),
+      VOCABULARY,
+    );
+
+    expect(isInvalid(result)).toBe(true);
+  });
+
+  it("fails a draft Part that is not listed in its manifest, exactly as a published one would", () => {
+    const result = contentRowFor(
+      "series/pragmatic-nodejs-api/project-setup/project-setup.en.md",
+      post({ draft: true }),
+      VOCABULARY,
+    );
+
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/not listed in the pragmatic-nodejs-api manifest/);
+  });
+
+  /**
+   * A Part that is listed and is a draft: every check a Part has to pass
+   * still runs, and only then does it produce nothing.
+   */
+  it("skips a draft Part that is listed in its manifest, after the Container check passes", () => {
+    const result = contentRowFor(
+      "series/pragmatic-nodejs-api/project-setup/project-setup.en.md",
+      post({ draft: true }),
+      VOCABULARY,
+      { seriesSlug: "pragmatic-nodejs-api", section: "fundamentals", order: 1 },
+    );
+
+    expect(isSkipped(result)).toBe(true);
+  });
+
+  /** JavaScript's own truthiness is not trusted for the flag. */
+  it.each([["true"], ["yes"], [1]])("fails a non-boolean draft value %j rather than reading it as truthy", (value) => {
+    const result = contentRowFor("blog/a/a.en.md", post({ draft: value as never }), VOCABULARY);
+
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/draft must be true or false/);
+  });
+
+  it("behaves exactly as today when the flag is absent", () => {
+    const result = contentRowFor("blog/a/a.en.md", post(), VOCABULARY);
+
+    expect(isSkipped(result)).toBe(false);
+    expect(isInvalid(result)).toBe(false);
+  });
+
+  it("skips a Bookmark declaring itself a draft, after every other check has passed", () => {
+    const result = contentRowFor("bookmarks/a.md", bookmark({ draft: true }), VOCABULARY);
+
+    expect(isSkipped(result)).toBe(true);
+    expect((result as { reason: string }).reason).toBe("bookmarks/a.md is a draft");
+  });
+
+  it("still fails a draft Bookmark for every reason a published one would", () => {
+    const result = contentRowFor(
+      "bookmarks/a.md",
+      bookmark({ draft: true, tags: ["not-a-declared-tag"] }),
+      VOCABULARY,
+    );
+
+    expect(isInvalid(result)).toBe(true);
+  });
+
+  it("fails a non-boolean draft value on a Bookmark", () => {
+    const result = contentRowFor("bookmarks/a.md", bookmark({ draft: "true" as never }), VOCABULARY);
+
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/draft must be true or false/);
+  });
+
+  /**
+   * The round trip (Part 12's last rule): publishing inserted this row
+   * through `buildSeedSql`'s upsert; marking the same file a draft removes
+   * it from the rows the generator hands that function, so the existing
+   * prune — `DELETE FROM content WHERE … NOT IN (keyList)` — deletes it. No
+   * new mechanism, the same one every removed file already goes through.
+   */
+  it("removes a previously published Post's row through the existing prune once it becomes a draft", () => {
+    const published = contentRowFor("blog/a/a.en.md", post(), VOCABULARY) as ContentRow;
+
+    expect(isSkipped(published)).toBe(false);
+
+    const sqlWhilePublished = buildSeedSql([published]);
+    expect(sqlWhilePublished).toContain("DELETE FROM content WHERE slug || ':' || ifnull(lang, '') NOT IN ('a:en')");
+
+    const draftResult = contentRowFor("blog/a/a.en.md", post({ draft: true }), VOCABULARY);
+    expect(isSkipped(draftResult)).toBe(true);
+
+    // The generator collects rows from every file it walks; a draft
+    // contributes none, so the row that survived above is gone from the list
+    // `buildSeedSql` prunes against — the same keep-list mechanism, now
+    // excluding it.
+    const sqlAfterDraft = buildSeedSql([]);
+    expect(sqlAfterDraft).toContain("DELETE FROM content WHERE slug || ':' || ifnull(lang, '') NOT IN ()");
+  });
+});
+
 describe("contentRowFor — Bookmarks", () => {
   it("emits an upsert keyed by Slug alone, with a null Locale", () => {
     const row = contentRowFor(

@@ -103,6 +103,67 @@ describe("projectRowFor", () => {
   });
 });
 
+/** A Project landing can be a Draft exactly like a Post can. */
+describe("projectRowFor — Drafts", () => {
+  it("skips a Project landing declaring itself a draft, after every other check has passed", () => {
+    const result = projectRowFor("projects/chekalo/chekalo.en.md", project({ draft: true }));
+
+    expect(isSkipped(result)).toBe(true);
+    expect((result as { reason: string }).reason).toBe("projects/chekalo/chekalo.en.md is a draft");
+  });
+
+  it("still fails a draft Project for every reason a published one would", () => {
+    const result = projectRowFor(
+      "projects/chekalo/chekalo.en.md",
+      project({ draft: true, tier: "featured" as never }),
+    );
+
+    expect(isInvalid(result)).toBe(true);
+  });
+
+  it("fails a non-boolean draft value rather than reading it as truthy", () => {
+    const result = projectRowFor("projects/chekalo/chekalo.en.md", project({ draft: "true" as never }));
+
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/draft must be true or false/);
+  });
+
+  it("behaves exactly as today when the flag is absent", () => {
+    const result = projectRowFor("projects/chekalo/chekalo.en.md", project());
+
+    expect(isSkipped(result)).toBe(false);
+    expect(isInvalid(result)).toBe(false);
+  });
+
+  /**
+   * The round trip: the existing prune removes what the walk no longer hands
+   * it. A second, always-published Project keeps the row list non-empty
+   * throughout — `buildProjectSeedSql([])` is deliberately a no-op (see its
+   * own tests below), so a lone Project's own draft round trip has to be
+   * proven with company, the way the site is never down to zero Projects.
+   */
+  it("removes a previously published Project's row through the existing prune once it becomes a draft", () => {
+    const chekalo = projectRowFor("projects/chekalo/chekalo.en.md", project()) as SeededRow;
+    const other = projectRowFor(
+      "projects/poschuler-com/poschuler-com.en.md",
+      project({ sortOrder: 2 }),
+    ) as SeededRow;
+
+    const sqlWhilePublished = buildProjectSeedSql([chekalo, other]);
+    expect(sqlWhilePublished).toContain(
+      "DELETE FROM project WHERE slug || ':' || lang NOT IN ('chekalo:en', 'poschuler-com:en')",
+    );
+
+    const draftResult = projectRowFor("projects/chekalo/chekalo.en.md", project({ draft: true }));
+    expect(isSkipped(draftResult)).toBe(true);
+
+    // The generator's walk now hands only `other` to the builder — the same
+    // keep-list mechanism, with chekalo's key excluded.
+    const sqlAfterDraft = buildProjectSeedSql([other]);
+    expect(sqlAfterDraft).toContain("DELETE FROM project WHERE slug || ':' || lang NOT IN ('poschuler-com:en')");
+  });
+});
+
 describe("buildProjectSeedSql", () => {
   const rows = () =>
     [
@@ -131,5 +192,17 @@ describe("buildProjectSeedSql", () => {
    */
   it("emits nothing at all when there are no projects", () => {
     expect(buildProjectSeedSql([])).toBe("");
+  });
+
+  /**
+   * The bug an empty list alone cannot rule out: the site's one Project going
+   * draft looks identical, from `rows.length`, to no Project ever having been
+   * written — unless the caller says otherwise. Without `anyFilesFound`, this
+   * would leave a previously published Project's row live in D1 forever.
+   */
+  it("prunes everything when every Project the walk found is a draft", () => {
+    const sql = buildProjectSeedSql([], { anyFilesFound: true });
+
+    expect(sql).toContain("DELETE FROM project WHERE slug || ':' || lang NOT IN ()");
   });
 });

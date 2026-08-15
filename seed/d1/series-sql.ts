@@ -16,7 +16,9 @@
 
 import { basenameOf, declaredTypeMatches, isMisplaced, placementOf } from "./content-tree.ts";
 import {
+  draftError,
   escapeSql,
+  isDraft,
   parseContentFilename,
   type InvalidFile,
   type PartPlacement,
@@ -61,6 +63,8 @@ export interface SeriesFrontMatter {
   outOfScope: unknown;
   audience: string;
   sections: unknown;
+  /** `unknown` for the same reason as on a Post — see `draftError`. */
+  draft?: unknown;
 }
 
 /** A Markdown file found under a Series folder, already parsed. */
@@ -71,6 +75,14 @@ export interface SeriesPartFile {
   /** The folder it sits in — its own name, per the rule in `content-tree.ts`. */
   folder: string;
   relativePath: string;
+  /**
+   * Whether this Part's own front matter declares `draft: true`. Read leniently
+   * here — the definitive check that the value is a boolean at all happens
+   * where the Part's own row is built, in `contentRowFor` — because all this
+   * needs is to tell a published Part from an unpublished one for the
+   * Container-contradiction check below.
+   */
+  draft: boolean;
 }
 
 export interface SeriesRows {
@@ -82,6 +94,14 @@ export interface SeriesRows {
   sections: SeededRow[];
   /** Part Slug → where the manifest says it sits. */
   parts: Map<string, PartPlacement>;
+  /**
+   * Whether this manifest declared itself a Draft. `series` and `sections`
+   * above are still built when it did — the caller decides whether to seed
+   * them — because `parts` is needed either way: a drafted Container's Parts,
+   * which must themselves be Drafts (see the Container-contradiction check),
+   * still have to be listed and reconciled like any other.
+   */
+  draft: boolean;
 }
 
 export type SeriesResult = SeriesRows | InvalidFile;
@@ -217,12 +237,36 @@ function reconcileError(
 }
 
 /**
+ * A Container may be a Draft only while it holds no published content (Part 5
+ * of `evolution-plan/14-phase-1b-field-notes.md`). There is no cascade: a
+ * drafted Series does not hide its published Parts, it refuses to coexist
+ * with them.
+ *
+ * `partFiles` here is only ever the files that would otherwise be reconciled
+ * against this manifest, so an unlisted or misfiled Part has already failed
+ * elsewhere by the time this runs.
+ */
+function containerContradictionError(
+  relativePath: string,
+  partFiles: SeriesPartFile[],
+): string | null {
+  const published = partFiles.find((file) => !file.draft);
+
+  if (!published) {
+    return null;
+  }
+
+  return `${relativePath} is a draft, but '${published.slug}' is published — a Post cannot be reached through a Container that is not.`;
+}
+
+/**
  * The rows for one Series manifest, or the reason the build should stop.
  *
  * `partFiles` is every Markdown file under this Series folder that carries this
- * manifest's Locale and a recognised one at all. A draft — the `.en-old.md`
- * shape — parses to no Locale, is never seeded, and so is not reconciled
- * against the manifest either.
+ * manifest's Locale and a recognised one at all. A draft filed under the
+ * `.en-old.md` convention parses to no Locale, is never seeded, and so is not
+ * reconciled against the manifest either — a draft declared with
+ * `draft: true`, by contrast, is reconciled exactly like a published Part.
  */
 export function seriesRowsFor(
   relativePath: string,
@@ -254,10 +298,17 @@ export function seriesRowsFor(
 
   const { slug, lang } = parsed;
 
-  // No skip branch, as on a Project: a Series landing has no draft state. It is
-  // one page, revised in place, so a missing Locale is a mistake.
+  // A Series landing has no `.en-old.md` convention to hide behind, as on a
+  // Project: it is one page, revised in place, so a missing Locale is a
+  // mistake. `draft: true` is the only way one goes unpublished.
   if (!lang) {
     return { error: `${relativePath} must have a language in its filename` };
+  }
+
+  const draftProblem = draftError(relativePath, attributes.draft);
+
+  if (draftProblem) {
+    return { error: draftProblem };
   }
 
   // The landing renders the contract, the sections and the Parts from data. The
@@ -301,6 +352,14 @@ export function seriesRowsFor(
     return { error: reconcile };
   }
 
+  if (isDraft(attributes.draft)) {
+    const contradiction = containerContradictionError(relativePath, partFiles);
+
+    if (contradiction) {
+      return { error: contradiction };
+    }
+  }
+
   const series: SeededRow = {
     statement: `
 INSERT OR REPLACE INTO series (slug, lang, title, description, status, starting_point, destination, out_of_scope, audience, updated_at)
@@ -326,11 +385,12 @@ VALUES (${escapeSql(slug)}, ${escapeSql(lang)}, ${escapeSql(section.slug)}, ${es
     });
   });
 
-  return { slug, lang, series, sections: sectionRows, parts };
+  return { slug, lang, series, sections: sectionRows, parts, draft: isDraft(attributes.draft) };
 }
 
 /**
- * Inserts first, prune last, and nothing at all when there are no Series.
+ * Inserts first, prune last, and nothing at all when there are no Series —
+ * unless `anyFilesFound` says otherwise.
  *
  * Both prunes are needed and neither is optional: a section removed from a
  * manifest would otherwise stay alive in the database and keep rendering on the
@@ -338,10 +398,17 @@ VALUES (${escapeSql(slug)}, ${escapeSql(lang)}, ${escapeSql(section.slug)}, ${es
  *
  * The guard on an empty list is `project-sql.ts`'s, for its reason: a repo with
  * no Series is an ordinary state, and a prune built from an empty list deletes
- * every row on the strength of finding nothing.
+ * every row on the strength of finding nothing. And `anyFilesFound` is
+ * `project-sql.ts`'s too, for the same reason: every Series this walk found
+ * may have declared `draft: true`, in which case a previously published one
+ * must still be pruned even though `seriesRows` came back empty.
  */
-export function buildSeriesSeedSql(seriesRows: SeededRow[], sectionRows: SeededRow[]): string {
-  if (seriesRows.length === 0) {
+export function buildSeriesSeedSql(
+  seriesRows: SeededRow[],
+  sectionRows: SeededRow[],
+  { anyFilesFound = false }: { anyFilesFound?: boolean } = {},
+): string {
+  if (seriesRows.length === 0 && !anyFilesFound) {
     return "";
   }
 

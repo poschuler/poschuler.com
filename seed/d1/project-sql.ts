@@ -10,7 +10,9 @@
 import { validateRevisions } from "../../app/lib/revisions.ts";
 import { basenameOf, treeOf } from "./content-tree.ts";
 import {
+  draftError,
   escapeSql,
+  isDraft,
   parseContentFilename,
   type FileResult,
   type SeededRow,
@@ -36,6 +38,8 @@ export interface ProjectFrontMatter {
   sortOrder?: number;
   /** `unknown` for the same reason as on a Post: this is a YAML field. */
   updates?: unknown;
+  /** `unknown` for the same reason as `updates` — see `draftError`. */
+  draft?: unknown;
 }
 
 function isOneOf<T extends readonly string[]>(
@@ -62,11 +66,18 @@ export function projectRowFor(
 
   const { slug, lang } = parsed;
 
-  // No skip branch here, unlike a Post. `.en-old.md` is how a draft Post stays
-  // unpublished; a Project has no drafts — it is one page, revised in place —
-  // so a missing Locale is a mistake rather than an intention.
+  // A Project has no `.en-old.md` convention to hide behind — it is one page,
+  // revised in place, and a filename with no Locale is a mistake rather than
+  // an intention. `draft: true` is the only way one goes unpublished, checked
+  // below, after every other rule has run.
   if (!lang) {
     return { error: `${relativePath} must have a language in its filename` };
+  }
+
+  const draftProblem = draftError(relativePath, attributes.draft);
+
+  if (draftProblem) {
+    return { error: draftProblem };
   }
 
   if (!isOneOf(TIERS, attributes.tier)) {
@@ -97,6 +108,12 @@ export function projectRowFor(
     };
   }
 
+  // The last check, as on a Post: a Draft passes every check a published
+  // Project landing passes, and only then produces nothing.
+  if (isDraft(attributes.draft)) {
+    return { reason: `${relativePath} is a draft` };
+  }
+
   const row: SeededRow = {
     statement: `
 INSERT OR REPLACE INTO project (slug, lang, title, summary, description, tier, status, stack, live_url, repo_url, sort_order, updates, updated_at)
@@ -109,16 +126,25 @@ VALUES (${escapeSql(slug)}, ${escapeSql(lang)}, ${escapeSql(attributes.title)}, 
 }
 
 /**
- * Inserts first, prune last, and **nothing at all** when there are no rows.
+ * Inserts first, prune last, and **nothing at all** when there are no rows —
+ * unless `anyFilesFound` says otherwise.
  *
- * That last part is where this differs from `buildSeedSql`. An empty `content`
- * means the walker found no Markdown, which the caller treats as a reason to
- * stop; an empty `project` is an ordinary state — the table exists before the
- * first Project is written — and a prune built from an empty list would delete
- * every row on the strength of finding nothing.
+ * That last part is where this differs from `buildSeedSql`. An empty `project`
+ * with nothing found on disk is an ordinary state — the table exists before
+ * the first Project is written — and a prune built from that silence would
+ * delete every row on the strength of finding nothing.
+ *
+ * But zero rows is no longer only that state: every Project this walk found
+ * may have declared `draft: true`, in which case something *was* found and a
+ * previously published Project must still be pruned. The caller is the only
+ * one who knows which case this is — `rows.length` alone cannot say — so it
+ * passes `anyFilesFound` for the files it walked, drafts included.
  */
-export function buildProjectSeedSql(rows: SeededRow[]): string {
-  if (rows.length === 0) {
+export function buildProjectSeedSql(
+  rows: SeededRow[],
+  { anyFilesFound = false }: { anyFilesFound?: boolean } = {},
+): string {
+  if (rows.length === 0 && !anyFilesFound) {
     return "";
   }
 

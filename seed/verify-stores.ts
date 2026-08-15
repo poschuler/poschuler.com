@@ -81,7 +81,8 @@ function d1Query<T>(sql: string, wranglerArgs: string[]): T[] {
  *
  * The rule mirrors `generate-seed-sql.ts` exactly, including what it skips: a
  * Post whose filename carries no Locale is not seeded, so it is not expected
- * here either. `…​.en-old.md` is one such file.
+ * here either — `…​.en-old.md` is one such file — and neither is any document
+ * declaring `draft: true`, whatever its type.
  */
 async function expectedFromMarkdown(): Promise<Expectation> {
     const expectation: Expectation = {
@@ -122,11 +123,21 @@ async function expectedFromMarkdown(): Promise<Expectation> {
                 type?: string;
                 tags?: unknown;
                 sections?: Array<{ slug: string }>;
+                draft?: unknown;
             }>(await fsPromise.readFile(full, "utf-8"));
 
+            // `draft: true` produces no row, of any type — mirrored leniently:
+            // this script's job is comparing what publishes against what is
+            // stored, not re-validating that the flag is a boolean, which the
+            // build already refuses to seed from if it is not.
+            if (attributes.draft === true) {
+                continue;
+            }
+
             if (attributes.type === "post") {
-                // A Post with no Locale in its filename is a draft: no row, and
-                // so no Tag rows either. The rule is the generator's, mirrored.
+                // A Post with no Locale in its filename is a draft under the
+                // `.en-old.md` convention: no row, and so no Tag rows either.
+                // The rule is the generator's, mirrored.
                 if (locale) {
                     expectation.content.add(`${slug}:${locale}`);
                     addTags(slug, locale, attributes.tags);
