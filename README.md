@@ -6,15 +6,17 @@ The whole site is a single Cloudflare Worker. There is no separate API, no origi
 
 ## What's inside
 
-| Page         | What it shows                                                        |
-| ------------ | -------------------------------------------------------------------- |
-| `/`          | Landing page — who he is, the flagship project, the newest writing    |
-| `/projects`  | Software he built and runs, weighted by tier                          |
-| `/blog`      | Long-form articles and the series they belong to                      |
-| `/series`    | Subjects worked through in order — each with a contract and an arc     |
-| `/bookmarks` | External articles worth endorsing, credited to their source           |
-| `/timeline`  | Posts and Bookmarks interleaved, newest first                         |
-| `/resume`    | Structured professional history, plus a PDF download                  |
+| Page          | What it shows                                                        |
+| ------------- | -------------------------------------------------------------------- |
+| `/`           | Landing page — who he is, the flagship project, the newest writing    |
+| `/projects`   | Software he built and runs, weighted by tier                          |
+| `/blog`       | Long-form articles and the series they belong to                      |
+| `/series`     | Subjects worked through in order — each with a contract and an arc     |
+| `/bookmarks`  | External articles worth endorsing, credited to their source           |
+| `/timeline`   | Posts and Bookmarks interleaved, newest first                         |
+| `/tags`       | Every subject some Post covers, heaviest first, with its count        |
+| `/tags/<tag>` | The Posts on one subject, newest first — `noindex, follow`            |
+| `/resume`     | Structured professional history, plus a PDF download                  |
 
 ## How content works
 
@@ -24,7 +26,7 @@ The whole site is a single Cloudflare Worker. There is no separate API, no origi
 app/content/<tree>/**/*.md     ← authored here, versioned in git
    │                             the tree — blog, bookmarks, projects, series — says what it is
    │                             and how deep it sits says whether it is the item or lives inside one
-   ├─ front matter ──▶ D1 (content, project, series, series_section)
+   ├─ front matter ──▶ D1 (content, content_tag, project, series, series_section)
    └─ body ──────────▶ KV  (blog:… , project:… , series:…)   pre-rendered HTML
 ```
 
@@ -89,6 +91,8 @@ updates:                             # optional, newest first, curated
     note: 'Updated for Node 24; the Express 4 examples now use Express 5.'
 ---
 ```
+
+`tags` is drawn from a closed vocabulary: `app/content/tags.json` lists every Tag this site may use, and one that is not declared there fails the build — as does one that is not a lower-case kebab-case slug, with a different message. A Tag is written exactly one way and that same string is its URL, so writing about a new subject means adding a line to that file first. Each Tag some Post carries gets a page at `/tags/<tag>` with no route to declare; a Tag no Post carries is a 404, and the index at `/tags` never lists it. See [ADR 0008](docs/adr/0008-a-tag-is-its-slug-and-the-vocabulary-is-declared.md).
 
 `updates` is what the author says changed, not a commit log — the fine-grained history is already in git. It never reorders the Timeline, and it does date the page in the sitemap. See [ADR 0005](docs/adr/0005-revisions-are-a-curated-list-in-the-content.md).
 

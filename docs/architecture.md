@@ -36,7 +36,8 @@ app/content/<tree>/**/*.md                ← source of truth, versioned in git
    │                                        the tree decides what a file is — ADR 0004
    │
    ├─ front matter ──▶ seed/d1/generate-seed-sql.ts ──▶ seed/d1/seed.sql ──▶ D1 `content`
-   │                     (front-matter)                   (committed)          `project`
+   │                     (front-matter)                   (committed)          `content_tag`
+   │                     (app/content/tags.json)                               `project`
    │                                                                           `series`
    │                                                                           `series_section`
    │
@@ -98,7 +99,19 @@ The `content` table holds every Content Item. `type` discriminates `'post'` from
 
 plus a `CHECK` that a `'post'` row must carry a lang. This is the schema-level encoding of "a Post is identified by `(Slug, Locale)`, a Bookmark by Slug alone".
 
-`tags` is a JSON string and nothing parses it, so `ContentRowType["tags"]` is typed `string`. Parse it in `content.server.ts` — not in a component — when something finally reads Tags.
+The `content_tag` table holds the Tags, one row per Tag per Content Item, for Posts and Bookmarks alike:
+
+| Column | Notes |
+| ------ | ----- |
+| `slug` | with `lang`, the natural key of the Content Item |
+| `lang` | `NULL` for a Bookmark, as in `content` |
+| `tag`  | the Tag itself, which is its own slug — `app/content/tags.json` declares the closed set the generator checks against (ADR 0008) |
+
+The primary key is `(slug, lang, tag)`, plus a partial unique index on `(slug, tag)` where `lang IS NULL`, because SQLite treats NULLs in a key as distinct and a Bookmark's `lang` is one. It is deliberately **not** keyed on `content.id_content`: that is an `AUTOINCREMENT` and the seed upserts with `INSERT OR REPLACE`, which deletes and re-inserts on a conflict — so the id changes on every run and a child row pointing at it would be stale by the next deploy. `(slug, lang)` is what all the existing prunes already key on.
+
+Rows exist for both kinds, and which of them a page lists is a policy of the page: `app/models/tag.server.ts` filters to `type = 'post'` in both queries, so a Tag page and its count on the index describe the same set. Deciding at render is what lets that policy change without a migration.
+
+`content.tags` is the JSON string the front matter used to be seeded into, and it now has **no reader** — the queries use `content_tag`, and the chips on a Post render from the front matter that travels in KV. It is still selected by a Worker that is already deployed, so it is dropped in a later publication than the one that stopped reading it; `schema.sql` says so at the column, and ADR 0006's amendment says why.
 
 The row types encode the same split as the indexes: `ContentRowType` is `PostRowType | BookmarkRowType`, discriminated on `type`, so the columns a kind does not carry are typed `null` rather than `string`.
 
@@ -131,6 +144,8 @@ Routes are declared explicitly in `app/routes.ts` (config-based, not file-system
 | `/series`        | D1     | none           | `findAllSeries` — every Series, including one with nothing published |
 | `/series/:seriesSlug` | D1 + KV | none      | the contract and the arc from D1, the prose from `series:` |
 | `/series/:seriesSlug/:partSlug` | D1 + KV | none | position derived from the arc; a Part the arc does not hold is a 404 |
+| `/tags`          | D1     | none           | `findTagsWithPostCounts` — every Tag some Post carries, by count then alphabetically; indexed, and the only `/tags` URL in the sitemap |
+| `/tags/:tag`     | D1     | none           | `findPostsByTag` — Posts only, newest first; a Tag no Post carries is a 404. `noindex, follow`, and absent from the sitemap |
 | `/projects`      | D1     | none           | `findAllProjects` — flagship first, supporting in a grid |
 | `/projects/:project` | D1 + KV | none      | row frames the page, KV carries the body; Locale hardcoded to `en` |
 | `/resume`        | none   | none           | no loader — sections import `resume.json` directly      |

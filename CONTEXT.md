@@ -27,7 +27,7 @@ The publication or author a Bookmark is credited to. A Post has no Source, becau
 _Avoid_: publisher, author, site
 
 **Tag**:
-A topic label attached to a Content Item. Tags describe subject matter, not format — `ddd` is a Tag, `post` is not.
+A subject a Content Item is about, drawn from a closed vocabulary declared beside the content in `app/content/tags.json` — a Tag that is not declared fails the build. It is written as its own slug, and that one string is what the front matter carries, what the URL serves and what a chip displays; nothing is derived from anything. Tags describe subject matter, not format — `ddd` is a Tag, `post` is not. A Tag has a page only while some Post carries it, and that page lists Posts and never Bookmarks, which is what keeps the Timeline entry above true.
 _Avoid_: category, keyword, topic
 
 **Published At**:
