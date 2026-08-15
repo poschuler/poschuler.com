@@ -113,18 +113,28 @@ describe("placementOf — content inside a Container", () => {
   });
 
   /**
-   * Field Notes are 1b, and they need a `project_slug` on `content` to be
-   * linkable. Accepting one today would seed a Post with no Container.
+   * 1b generalises the depth rule to `projects/`: depth 2 stays the Project
+   * itself, and depth 3 is a Field Note whose Container is the folder above —
+   * the same rule a Part already follows under `series/`.
    */
-  it("fails a Field Note under a Project, which arrives in 1b", () => {
-    const result = placementOf("projects/chekalo/a-field-note/a-field-note.en.md");
-
-    expect(isMisplaced(result)).toBe(true);
-    expect((result as { error: string }).error).toMatch(/nothing nests under projects/);
+  it("reads a Field Note as a Post whose Container is the Project above", () => {
+    expect(placement("projects/chekalo/product-matching/product-matching.en.md")).toEqual({
+      tree: "projects",
+      type: "post",
+      container: "chekalo",
+    });
   });
 
   it("fails anything nested deeper than a Container", () => {
     const result = placementOf("series/api/part-one/deeper/deeper.en.md");
+
+    expect(isMisplaced(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/deeper than a Container/);
+  });
+
+  /** The same rule, the same message, on the other tree that holds a Container. */
+  it("fails a Field Note nested deeper than its Project", () => {
+    const result = placementOf("projects/chekalo/product-matching/deeper/deeper.en.md");
 
     expect(isMisplaced(result)).toBe(true);
     expect((result as { error: string }).error).toMatch(/deeper than a Container/);
@@ -168,6 +178,7 @@ describe("declaredTypeMatches", () => {
     ["project", "projects/a/a.en.md"],
     ["series", "series/a/a.en.md"],
     ["post", "series/a/part/part.en.md"],
+    ["post", "projects/a/note/note.en.md"],
   ])("accepts type %s at %s", (type, relativePath) => {
     expect(declaredTypeMatches(type, placement(relativePath))).toBe(true);
   });

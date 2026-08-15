@@ -49,6 +49,33 @@ export interface PartPlacement {
   order: number;
 }
 
+/**
+ * Where a Field Note sits in its Project — `PartPlacement`'s sibling, with no
+ * section: a Project's manifest is a flat list, not an arc (Part 8 of
+ * `evolution-plan/14-phase-1b-field-notes.md`). A Project accumulates because
+ * the problems turn up when they turn up; a Series orders because it promised
+ * a Destination.
+ */
+export interface NotePlacement {
+  projectSlug: string;
+  /** The position in the manifest's list — an index, never written by hand. */
+  order: number;
+}
+
+/**
+ * A Post's Container, as the manifest that holds it hands it over: a Part's
+ * placement in its Series, or a Field Note's in its Project — never both, the
+ * same way `content.series_slug` and `content.project_slug` never both hold a
+ * value (`schema.sql`). Which one a value is is read structurally, by the
+ * field only that kind carries, rather than by a `kind` tag neither manifest
+ * writes.
+ */
+export type ContainerPlacement = PartPlacement | NotePlacement;
+
+function isPartPlacement(container: ContainerPlacement): container is PartPlacement {
+  return "seriesSlug" in container;
+}
+
 /** A row that will be seeded, and the identity used to decide it survives a prune. */
 export type SeededRow = {
   statement: string;
@@ -208,9 +235,11 @@ VALUES (${escapeSql(slug)}, ${escapeSql(lang)}, ${escapeSql(tag)});
  * shape every other front-matter mistake already fails in, rather than in a path
  * of its own.
  *
- * `part` is supplied by the caller for a Post that lives inside a Series,
- * because only the manifest knows where it sits. A nested Post without one is a
- * Part nothing indexes, which is a failure rather than a loose Post.
+ * `container` is supplied by the caller for a Post that lives inside a Series
+ * or a Project, because only the manifest knows where it sits — a Part's
+ * placement or a Field Note's, never both. A nested Post without one is a Part
+ * or a Field Note nothing indexes, which is a failure rather than a loose
+ * Post.
  *
  * `options.includeDrafts` is `preview:drafts`'s hook (see `DraftOptions`): every
  * check above the two Draft checks below still runs unconditionally, so a
@@ -220,7 +249,7 @@ export function contentRowFor(
   relativePath: string,
   attributes: FrontMatterAttributes,
   vocabulary: TagVocabulary,
-  part?: PartPlacement,
+  container?: ContainerPlacement,
   options?: DraftOptions,
 ): ContentFileResult {
   const placed = placementOf(relativePath);
@@ -282,8 +311,8 @@ export function contentRowFor(
     // After the Locale check, deliberately: a draft that carries no Locale is
     // not seeded at all, so the manifest has no reason to list it. A draft
     // declared with `draft: true`, by contrast, is listed exactly like a
-    // published Part — see the check at the end of this branch.
-    if (placed.container !== null && !part) {
+    // published Part or Field Note — see the check at the end of this branch.
+    if (placed.container !== null && !container) {
       return {
         error: `${relativePath} is not listed in the ${placed.container} manifest — a Part nothing indexes cannot be reached or ordered`,
       };
@@ -304,9 +333,11 @@ export function contentRowFor(
       return { reason: `${relativePath} is a draft` };
     }
 
-    // Written here or written as NULL, never read from front matter. The three
-    // always travel together, which is why the invariant that they are all
-    // present or all absent is not checked anywhere: it is not representable.
+    // Written here or written as NULL, never read from front matter. The
+    // three Series columns always travel together, and so do the two Project
+    // ones — a Post's Container is a Part's placement or a Field Note's,
+    // never both — which is why the invariant that they are all present or
+    // all absent is not checked anywhere: it is not representable.
     //
     // The position is written twice, once per order column: `container_order`
     // is the one every query reads, and `section_order` is written beside it,
@@ -314,14 +345,16 @@ export function contentRowFor(
     // that name during this publication's migrate-then-deploy window (ADR
     // 0006's amendment). Dropped, and this duplication with it, once that
     // publication is confirmed live.
-    const container = part
-      ? `${escapeSql(part.seriesSlug)}, ${escapeSql(part.section)}, ${part.order}, ${part.order}`
-      : "NULL, NULL, NULL, NULL";
+    const containerColumns = !container
+      ? "NULL, NULL, NULL, NULL, NULL"
+      : isPartPlacement(container)
+        ? `${escapeSql(container.seriesSlug)}, ${escapeSql(container.section)}, NULL, ${container.order}, ${container.order}`
+        : `NULL, NULL, ${escapeSql(container.projectSlug)}, ${container.order}, ${container.order}`;
 
     return {
       statement: `
-INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, section_order, container_order, updated_at)
-VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attributes.description)}, ${publishedAt}, ${escapeSql(attributes.repository)}, ${escapeSql(JSON.stringify(revisions.revisions))}, ${container}, CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, project_slug, section_order, container_order, updated_at)
+VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attributes.description)}, ${publishedAt}, ${escapeSql(attributes.repository)}, ${escapeSql(JSON.stringify(revisions.revisions))}, ${containerColumns}, CURRENT_TIMESTAMP);
 `,
       key: `${slug}:${lang}`,
       tags: tagRowsFor(slug, lang, attributes.tags),

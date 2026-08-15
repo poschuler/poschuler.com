@@ -25,8 +25,7 @@ CREATE TABLE content (
     -- The Container, when this Post has one — a Series or a Project, never
     -- both. Written by the generator from the Series or Project manifest and
     -- never appears in front matter: a Part or a Field Note does not know
-    -- where it is, the manifest says (ADR 0007). `project_slug` arrives with
-    -- this column; nothing writes it yet, that is a later ticket.
+    -- where it is, the manifest says (ADR 0007).
     --
     -- Two Container slugs, not one generic pair: `series_section` does not
     -- generalise — a Field Note has no section and never will — so a

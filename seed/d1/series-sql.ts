@@ -15,6 +15,7 @@
  */
 
 import { basenameOf, declaredTypeMatches, isMisplaced, placementOf } from "./content-tree.ts";
+import { containerContradictionError, reconcileManifest } from "./manifest.ts";
 import {
   draftError,
   escapeSql,
@@ -187,13 +188,18 @@ function sectionsError(
  * shared position — which stopped being representable the moment order became a
  * list. It catches the thing that actually happens: writing a Part and
  * forgetting to index it, which would publish a page nothing links to.
+ *
+ * The emptiness check stays here, because the message it produces names the
+ * section — `manifest.ts`'s shared `reconcileManifest` takes over once every
+ * entry is known to be a real Slug, and is where 1b's Project manifest
+ * reconciles the same way (Part 8 of the field notes).
  */
 function reconcileError(
   relativePath: string,
   sections: SeriesSectionFrontMatter[],
   partFiles: SeriesPartFile[],
 ): string | null {
-  const listed = new Map<string, string>();
+  const entries: { slug: string; where: string }[] = [];
 
   for (const section of sections) {
     for (const slug of section.parts ?? []) {
@@ -201,62 +207,11 @@ function reconcileError(
         return `${relativePath} section '${section.slug}' lists an empty Part`;
       }
 
-      const already = listed.get(slug);
-
-      if (already !== undefined) {
-        return `${relativePath} lists the Part '${slug}' in both '${already}' and '${section.slug}' — a Part belongs to one section`;
-      }
-
-      listed.set(slug, section.slug);
+      entries.push({ slug, where: section.slug });
     }
   }
 
-  const onDisk = new Set(partFiles.map((file) => file.slug));
-
-  for (const slug of listed.keys()) {
-    if (!onDisk.has(slug)) {
-      return `${relativePath} lists the Part '${slug}', which has no file`;
-    }
-  }
-
-  for (const file of partFiles) {
-    // The rule from `content-tree.ts`: the file named after its folder is that
-    // folder. Everything downstream builds the path back from the Slug — the KV
-    // generator reads the body from `<slug>/<slug>.<lang>.md` — so a Part whose
-    // filename and folder disagree is a body nothing can find.
-    if (file.folder !== file.slug) {
-      return `${file.relativePath} is not named after its folder '${file.folder}' — nothing could find its body from the Slug`;
-    }
-
-    if (!listed.has(file.slug)) {
-      return `${file.relativePath} is not listed in ${relativePath} — a Part nothing indexes cannot be reached or ordered`;
-    }
-  }
-
-  return null;
-}
-
-/**
- * A Container may be a Draft only while it holds no published content (Part 5
- * of `evolution-plan/14-phase-1b-field-notes.md`). There is no cascade: a
- * drafted Series does not hide its published Parts, it refuses to coexist
- * with them.
- *
- * `partFiles` here is only ever the files that would otherwise be reconciled
- * against this manifest, so an unlisted or misfiled Part has already failed
- * elsewhere by the time this runs.
- */
-function containerContradictionError(
-  relativePath: string,
-  partFiles: SeriesPartFile[],
-): string | null {
-  const published = partFiles.find((file) => !file.draft);
-
-  if (!published) {
-    return null;
-  }
-
-  return `${relativePath} is a draft, but '${published.slug}' is published — a Post cannot be reached through a Container that is not.`;
+  return reconcileManifest(relativePath, entries, partFiles, "Part");
 }
 
 /**

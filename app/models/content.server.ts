@@ -29,7 +29,8 @@ export const CONTENT_COLUMNS = `
       description as "description",
       external_url as "externalUrl",
       source as "source",
-      series_slug as "seriesSlug"`;
+      series_slug as "seriesSlug",
+      project_slug as "projectSlug"`;
 
 type ContentRowBase = {
   idContent: number;
@@ -48,12 +49,14 @@ export type PostRowType = ContentRowBase & {
   externalUrl: null;
   source: null;
   /**
-   * The Container, when the Post is a Part of a Series — and `null` when it is
-   * a loose Post. It is what makes a correct link possible from anywhere:
-   * `/timeline`, the home page and `/blog` all interleave the two, and each
-   * takes a different prefix. `postHref` is the one place that reads it.
+   * The Container, when the Post is a Part of a Series or a Field Note of a
+   * Project — and `null` when it is a loose Post. Never both at once
+   * (`schema.sql`). It is what makes a correct link possible from anywhere:
+   * `/timeline`, the home page and `/blog` all interleave the three, and each
+   * takes a different prefix. `postHref` is the one place that reads them.
    */
   seriesSlug: string | null;
+  projectSlug: string | null;
 };
 
 /** A Bookmark: identified by Slug alone, body stays at the Source. */
@@ -65,6 +68,7 @@ export type BookmarkRowType = ContentRowBase & {
   source: string;
   /** A Bookmark has no Container: nothing about it is Paul's to arrange. */
   seriesSlug: null;
+  projectSlug: null;
 };
 
 /**
@@ -97,16 +101,23 @@ export function findAllPosts(db: D1Database) {
 }
 
 /**
- * Posts that belong to no Series.
+ * Posts that belong to no Container — no Series, no Project.
  *
  * `/blog` lists these plus each Series as a **single entry**, because that page
- * answers *what has this person written* and a series is one thing written, not
- * fifteen. Publishing part nine should update a row there, not lengthen the
- * page. Every other list — the Timeline, the home page — keeps Parts
- * individually, because their question is *what happened lately*.
+ * answers *what has this person written* and a Container is one thing written,
+ * not fifteen. Publishing part nine should update a row there, not lengthen the
+ * page. Every other list — the Timeline, the home page — keeps Parts and Field
+ * Notes individually, because their question is *what happened lately*.
+ *
+ * `/blog` does not list a Project-with-notes as an entry of its own yet — this
+ * query only guarantees a Field Note is not double-counted as a loose Post the
+ * day that lands (1b/6, `evolution-plan/14-phase-1b-field-notes.md` Part 10).
  */
 export function findLoosePosts(db: D1Database) {
-  return findContent<PostRowType>(db, "where type = 'post' and series_slug is null");
+  return findContent<PostRowType>(
+    db,
+    "where type = 'post' and series_slug is null and project_slug is null",
+  );
 }
 
 /**

@@ -135,15 +135,15 @@ describe("contentRowFor — Posts", () => {
       VOCABULARY,
     ) as SeededRow;
 
-    expect(row.statement).toContain("(slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, section_order, container_order, updated_at)");
+    expect(row.statement).toContain("(slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, project_slug, section_order, container_order, updated_at)");
     expect(row.statement).not.toContain("external_url");
   });
 
   /**
    * The Container columns travel together or not at all, which is why nothing
-   * checks that they do: a loose Post is written with four NULLs rather than
-   * with the columns omitted, so a Post that leaves a Series cannot keep half
-   * of one.
+   * checks that they do: a loose Post is written with five NULLs rather than
+   * with the columns omitted, so a Post that leaves a Series or a Project
+   * cannot keep half of one.
    */
   it("writes a loose Post with no Container rather than with none of the columns", () => {
     const row = contentRowFor(
@@ -152,7 +152,7 @@ describe("contentRowFor — Posts", () => {
       VOCABULARY,
     ) as SeededRow;
 
-    expect(row.statement).toContain("'[]', NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'[]', NULL, NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP)");
   });
 
   /**
@@ -396,7 +396,7 @@ describe("contentRowFor — Parts of a Series", () => {
     const row = contentRowFor(partPath, post(), VOCABULARY, placement) as SeededRow;
 
     expect(row.key).toBe("project-setup:en");
-    expect(row.statement).toContain("'pragmatic-nodejs-api', 'fundamentals', 1, 1, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'pragmatic-nodejs-api', 'fundamentals', NULL, 1, 1, CURRENT_TIMESTAMP)");
   });
 
   /** Zero is a position, and a falsy one. It must survive the round trip. */
@@ -406,7 +406,7 @@ describe("contentRowFor — Parts of a Series", () => {
       order: 0,
     }) as SeededRow;
 
-    expect(row.statement).toContain("'fundamentals', 0, 0, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'fundamentals', NULL, 0, 0, CURRENT_TIMESTAMP)");
   });
 
   /**
@@ -422,7 +422,7 @@ describe("contentRowFor — Parts of a Series", () => {
       order: 3,
     }) as SeededRow;
 
-    expect(row.statement).toContain("'fundamentals', 3, 3, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'fundamentals', NULL, 3, 3, CURRENT_TIMESTAMP)");
   });
 
   /**
@@ -469,6 +469,63 @@ describe("contentRowFor — Parts of a Series", () => {
       post(),
       VOCABULARY,
     );
+
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/does not belong in the content table/);
+  });
+});
+
+/**
+ * A Field Note is a Post whose Container is a Project — `PartPlacement`'s
+ * sibling, `NotePlacement`, written from the Project manifest's flat list
+ * rather than from an arc (Part 2 and Part 6 of the field notes).
+ */
+describe("contentRowFor — Field Notes of a Project", () => {
+  const notePath = "projects/chekalo/product-matching/product-matching.en.md";
+  const placement = { projectSlug: "chekalo", order: 0 };
+
+  it("writes the Container the manifest supplies, with no Series columns", () => {
+    const row = contentRowFor(notePath, post(), VOCABULARY, placement) as SeededRow;
+
+    expect(row.key).toBe("product-matching:en");
+    expect(row.statement).toContain("NULL, NULL, 'chekalo', 0, 0, CURRENT_TIMESTAMP)");
+  });
+
+  /** Both order columns carry the same value, as a Part's do. */
+  it("writes both order columns with the same value", () => {
+    const row = contentRowFor(notePath, post(), VOCABULARY, {
+      ...placement,
+      order: 2,
+    }) as SeededRow;
+
+    expect(row.statement).toContain("'chekalo', 2, 2, CURRENT_TIMESTAMP)");
+  });
+
+  /**
+   * A note listed in the manifest while it is a Draft is accepted — the
+   * Container check above already passed, because reconciliation does not
+   * distinguish a Draft file from a published one (Part 9 of the field
+   * notes) — and only then does it produce nothing.
+   */
+  it("skips a draft Field Note that is listed in its manifest, after the Container check passes", () => {
+    const result = contentRowFor(notePath, post({ draft: true }), VOCABULARY, placement);
+
+    expect(isSkipped(result)).toBe(true);
+  });
+
+  /**
+   * The other half of *manifest and disk reconcile*: a note nothing indexes
+   * would be seeded with no Container, so no listing could link to it.
+   */
+  it("fails a Field Note its manifest does not list", () => {
+    const result = contentRowFor(notePath, post(), VOCABULARY);
+
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/not listed in the chekalo manifest/);
+  });
+
+  it("fails a Project handed to the content generator", () => {
+    const result = contentRowFor("projects/chekalo/chekalo.en.md", post(), VOCABULARY);
 
     expect(isInvalid(result)).toBe(true);
     expect((result as { error: string }).error).toMatch(/does not belong in the content table/);

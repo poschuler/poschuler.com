@@ -15,6 +15,7 @@ export default [
         route("/blog/:blogSlug", "routes/blog-slug/_$blog-slug.tsx"),
         route("/projects", "routes/projects/_projects.tsx"),
         route("/projects/:projectSlug", "routes/project-slug/_$project-slug.tsx"),
+        route("/projects/:projectSlug/:noteSlug", "routes/project-note/_$project-note.tsx"),
 
         // The whole `/series` namespace at once. An index of one entry earns
         // its place by closing the namespace: the alternative was a temporary

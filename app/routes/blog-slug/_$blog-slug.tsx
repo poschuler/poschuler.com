@@ -42,12 +42,12 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     const { env } = context.get(cloudflareContext);
 
     /**
-     * The row before the body, for one reason: a Part is served under its
-     * Series, and its payload sits under the same `blog:` key as any other Post
-     * — the prefix says what kind of payload it is, not which URL serves it. So
-     * KV alone would answer this URL with a page that also exists at
-     * `/series/…`, and two addresses for one article is a canonical nobody
-     * declared.
+     * The row before the body, for one reason: a Part or a Field Note is
+     * served under its Container, and its payload sits under the same `blog:`
+     * key as any other Post — the prefix says what kind of payload it is, not
+     * which URL serves it. So KV alone would answer this URL with a page that
+     * also exists at `/series/…` or `/projects/…`, and two addresses for one
+     * article is a canonical nobody declared.
      *
      * Not the historical redirects: those are a table of URLs that no longer
      * exist and belong in `app/lib/redirects.ts`, consulted in the Worker. This
@@ -59,7 +59,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
         throw new Response("Not Found", { status: 404 });
     }
 
-    if (post.seriesSlug) {
+    if (post.seriesSlug || post.projectSlug) {
         // The query string travels, for the reason `app/lib/redirects.ts`
         // states for the hop before this one: it is what tells the author the
         // redirect is being used at all. The two land on the same page, so

@@ -1,17 +1,27 @@
 import { describe, expect, it } from "vitest";
 
-import { isInvalid, isSkipped, type SeededRow } from "../../../seed/d1/seed-sql";
+import type { SeededRow } from "../../../seed/d1/seed-sql";
 import {
   buildProjectSeedSql,
+  isInvalidProject,
   projectRowFor,
   type ProjectFrontMatter,
+  type ProjectNoteFile,
+  type ProjectRows,
 } from "../../../seed/d1/project-sql";
 
 /**
  * A Project is not a Content Item — no Published At, no place in the Timeline —
  * so it has its own table and its own rules. What it shares with `content` is
  * the shape of the seed: upserts first, prune last, never a leading delete.
+ *
+ * 1b adds the manifest: which Field Notes a Project holds, and in what order
+ * (Part 8 of `evolution-plan/14-phase-1b-field-notes.md`) — a flat list, not
+ * an arc, reconciled against the notes on disk the same way a Series' Parts
+ * are (`manifest.ts`, shared rather than copied).
  */
+
+const MANIFEST = "projects/chekalo/chekalo.en.md";
 
 const project = (overrides: Partial<ProjectFrontMatter> = {}): ProjectFrontMatter => ({
   type: "project",
@@ -27,9 +37,42 @@ const project = (overrides: Partial<ProjectFrontMatter> = {}): ProjectFrontMatte
   ...overrides,
 });
 
+const noteFile = (slug: string, overrides: Partial<ProjectNoteFile> = {}): ProjectNoteFile => ({
+  slug,
+  lang: "en",
+  folder: slug,
+  relativePath: `projects/chekalo/${slug}/${slug}.en.md`,
+  draft: false,
+  ...overrides,
+});
+
+const rowsFor = (
+  attributes: ProjectFrontMatter = project(),
+  noteFiles: ProjectNoteFile[] = [],
+): ProjectRows => {
+  const result = projectRowFor(MANIFEST, attributes, noteFiles);
+
+  if (isInvalidProject(result)) {
+    throw new Error(`expected rows, got: ${result.error}`);
+  }
+
+  return result;
+};
+
+const errorFor = (
+  attributes: ProjectFrontMatter,
+  noteFiles: ProjectNoteFile[] = [],
+): string => {
+  const result = projectRowFor(MANIFEST, attributes, noteFiles);
+
+  expect(isInvalidProject(result)).toBe(true);
+
+  return (result as { error: string }).error;
+};
+
 describe("projectRowFor", () => {
   it("emits an upsert keyed by (Slug, Locale), with the slug from the filename", () => {
-    const row = projectRowFor("projects/chekalo/chekalo.en.md", project()) as SeededRow;
+    const { project: row } = rowsFor();
 
     expect(row.key).toBe("chekalo:en");
     expect(row.statement).toContain("INSERT OR REPLACE INTO project");
@@ -37,21 +80,15 @@ describe("projectRowFor", () => {
   });
 
   it("serialises the stack as JSON and an absent one as an empty array", () => {
-    const withStack = projectRowFor("projects/a/a.en.md", project()) as SeededRow;
-    const without = projectRowFor(
-      "projects/a/a.en.md",
-      project({ stack: undefined }),
-    ) as SeededRow;
+    const withStack = rowsFor().project;
+    const without = rowsFor(project({ stack: undefined })).project;
 
     expect(withStack.statement).toContain(`'["TypeScript","Node.js"]'`);
     expect(without.statement).toContain(`'[]'`);
   });
 
   it("defaults sort_order rather than letting it be null", () => {
-    const row = projectRowFor(
-      "projects/a/a.en.md",
-      project({ sortOrder: undefined }),
-    ) as SeededRow;
+    const row = rowsFor(project({ sortOrder: undefined })).project;
 
     expect(row.statement).toMatch(/, 0,/);
   });
@@ -62,16 +99,13 @@ describe("projectRowFor", () => {
    * to the generic date for the whole site.
    */
   it("fails a Project with no revisions at all", () => {
-    const result = projectRowFor("projects/a/a.en.md", project({ updates: [] }));
-
-    expect(isInvalid(result)).toBe(true);
-    expect((result as { error: string }).error).toMatch(/at least one/);
+    expect(errorFor(project({ updates: [] }))).toMatch(/at least one/);
   });
 
   it("fails a Project whose language is not in its filename", () => {
-    const result = projectRowFor("projects/a/a.md", project());
+    const result = projectRowFor("projects/a/a.md", project(), []);
 
-    expect(isSkipped(result) || isInvalid(result)).toBe(true);
+    expect(isInvalidProject(result)).toBe(true);
   });
 
   it.each([
@@ -79,10 +113,7 @@ describe("projectRowFor", () => {
     ["status", { status: "live" as never }, /status/],
     ["summary", { summary: "  " }, /summary/],
   ])("fails an unusable %s", (_field, overrides, message) => {
-    const result = projectRowFor("projects/a/a.en.md", project(overrides));
-
-    expect(isInvalid(result)).toBe(true);
-    expect((result as { error: string }).error).toMatch(message);
+    expect(errorFor(project(overrides))).toMatch(message);
   });
 
   /**
@@ -91,134 +122,196 @@ describe("projectRowFor", () => {
    * recreating the table by hand in production.
    */
   it("accepts experiment, which the schema allows before anything uses it", () => {
-    const result = projectRowFor("projects/a/a.en.md", project({ tier: "experiment" }));
+    const result = projectRowFor(MANIFEST, project({ tier: "experiment" }), []);
 
-    expect(isInvalid(result)).toBe(false);
+    expect(isInvalidProject(result)).toBe(false);
   });
 
   it("fails a file handed to it from outside the projects tree", () => {
-    const result = projectRowFor("blog/a/a.en.md", project());
+    const result = projectRowFor("blog/a/a.en.md", project(), []);
 
-    expect(isInvalid(result)).toBe(true);
+    expect(isInvalidProject(result)).toBe(true);
   });
 });
 
-/** A Project landing can be a Draft exactly like a Post can. */
-describe("projectRowFor — Drafts", () => {
-  it("skips a Project landing declaring itself a draft, after every other check has passed", () => {
-    const result = projectRowFor("projects/chekalo/chekalo.en.md", project({ draft: true }));
-
-    expect(isSkipped(result)).toBe(true);
-    expect((result as { reason: string }).reason).toBe("projects/chekalo/chekalo.en.md is a draft");
+/**
+ * The manifest declares which Field Notes the Project holds, and in what
+ * order — a flat list, not an arc: no sections, no Destination, nothing that
+ * checks contiguity (Part 8).
+ */
+describe("projectRowFor — the notes", () => {
+  it("has no notes when the manifest declares none, which is a Project's state before its first one", () => {
+    expect(rowsFor().notes.size).toBe(0);
   });
 
-  it("still fails a draft Project for every reason a published one would", () => {
-    const result = projectRowFor(
-      "projects/chekalo/chekalo.en.md",
-      project({ draft: true, tier: "featured" as never }),
+  it("reads a note's position out of the list", () => {
+    const attributes = project({ notes: ["product-matching", "alias-flip"] });
+    const files = [noteFile("product-matching"), noteFile("alias-flip")];
+
+    const { notes } = rowsFor(attributes, files);
+
+    expect(notes.get("product-matching")).toEqual({ projectSlug: "chekalo", order: 0 });
+    expect(notes.get("alias-flip")).toEqual({ projectSlug: "chekalo", order: 1 });
+  });
+
+  /** Reordering is a line moved in one file, the same property a Series has. */
+  it("renumbers every note when the list is reordered, with nothing else edited", () => {
+    const attributes = project({ notes: ["alias-flip", "product-matching"] });
+    const files = [noteFile("product-matching"), noteFile("alias-flip")];
+
+    const { notes } = rowsFor(attributes, files);
+
+    expect(notes.get("alias-flip")?.order).toBe(0);
+    expect(notes.get("product-matching")?.order).toBe(1);
+  });
+
+  it("fails a notes list that is not a list", () => {
+    expect(errorFor(project({ notes: "product-matching" as never }))).toMatch(
+      /not a list/,
     );
-
-    expect(isInvalid(result)).toBe(true);
   });
 
-  it("fails a non-boolean draft value rather than reading it as truthy", () => {
-    const result = projectRowFor("projects/chekalo/chekalo.en.md", project({ draft: "true" as never }));
-
-    expect(isInvalid(result)).toBe(true);
-    expect((result as { error: string }).error).toMatch(/draft must be true or false/);
-  });
-
-  it("behaves exactly as today when the flag is absent", () => {
-    const result = projectRowFor("projects/chekalo/chekalo.en.md", project());
-
-    expect(isSkipped(result)).toBe(false);
-    expect(isInvalid(result)).toBe(false);
+  it("fails a manifest listing an empty Field Note", () => {
+    expect(errorFor(project({ notes: [""] }))).toMatch(/lists an empty Field Note/);
   });
 
   /**
-   * The round trip: the existing prune removes what the walk no longer hands
-   * it. A second, always-published Project keeps the row list non-empty
-   * throughout — `buildProjectSeedSql([])` is deliberately a no-op (see its
-   * own tests below), so a lone Project's own draft round trip has to be
-   * proven with company, the way the site is never down to zero Projects.
+   * A note listed in the manifest while it is a Draft is accepted, and does
+   * not break reconciliation: `reconcileManifest` does not distinguish a
+   * Draft file from a published one, so a Project with published notes can
+   * list a Draft alongside them and still hold its position (Part 9).
+   */
+  it("accepts a note listed in the manifest while it is a Draft, without breaking reconciliation", () => {
+    const attributes = project({ notes: ["product-matching", "alias-flip"] });
+    const files = [noteFile("product-matching"), noteFile("alias-flip", { draft: true })];
+
+    const { notes } = rowsFor(attributes, files);
+
+    expect(notes.get("alias-flip")).toEqual({ projectSlug: "chekalo", order: 1 });
+  });
+});
+
+/**
+ * The invariant `manifest.ts` shares with `series-sql.ts`: a listed note with
+ * no file fails, a file no manifest lists fails, and a note listed twice fails.
+ */
+describe("projectRowFor — manifest and disk must reconcile", () => {
+  it("fails a listed note with no file", () => {
+    expect(errorFor(project({ notes: ["product-matching"] }), [])).toMatch(
+      /lists the Field Note 'product-matching', which has no file/,
+    );
+  });
+
+  it("fails a file no manifest lists", () => {
+    expect(errorFor(project(), [noteFile("product-matching")])).toMatch(
+      /product-matching.en.md is not listed/,
+    );
+  });
+
+  it("fails a note listed twice", () => {
+    const attributes = project({ notes: ["product-matching", "product-matching"] });
+
+    expect(errorFor(attributes, [noteFile("product-matching")])).toMatch(
+      /lists the Field Note 'product-matching' twice/,
+    );
+  });
+
+  /** Everything downstream builds the path back from the Slug. */
+  it("fails a note whose filename and folder disagree", () => {
+    const attributes = project({ notes: ["renamed"] });
+    const files = [{ ...noteFile("renamed"), folder: "product-matching" }];
+
+    expect(errorFor(attributes, files)).toMatch(/is not named after its folder/);
+  });
+});
+
+/**
+ * `draft: true` on a Project landing. Part 5's rule is stricter here than on a
+ * Post — a Container may be a Draft only while it holds no published content.
+ */
+describe("projectRowFor — Drafts", () => {
+  it("marks the result a draft when every listed note is a draft too, after every other check has passed", () => {
+    const attributes = project({ draft: true, notes: ["product-matching"] });
+    const files = [noteFile("product-matching", { draft: true })];
+
+    const { draft, project: row, notes } = rowsFor(attributes, files);
+
+    expect(draft).toBe(true);
+    // Still built, so a caller needing the placements has them — see
+    // `generate-seed-sql.ts`. Whether to seed `project` is the caller's
+    // decision, driven by `draft`.
+    expect(row.statement).toContain("INSERT OR REPLACE INTO project");
+    expect(notes.get("product-matching")).toEqual({ projectSlug: "chekalo", order: 0 });
+  });
+
+  it("marks the result published when the flag is absent, exactly as today", () => {
+    expect(rowsFor().draft).toBe(false);
+  });
+
+  /** A Draft passes every check a published one would. */
+  it("still fails a draft Project for every reason a published one would", () => {
+    expect(errorFor(project({ draft: true, tier: "featured" as never }))).toMatch(/tier/);
+  });
+
+  it("fails a non-boolean draft value rather than reading it as truthy", () => {
+    expect(errorFor(project({ draft: "true" as never }))).toMatch(/draft must be true or false/);
+  });
+
+  /**
+   * The rule this ticket adds: no cascade. A drafted Container does not hide
+   * its published children, it refuses to coexist with them, and the message
+   * names both.
+   */
+  it("fails a Project marked draft while one of its notes is published, naming the Container and the child", () => {
+    const attributes = project({ draft: true, notes: ["product-matching", "alias-flip"] });
+    const files = [
+      noteFile("product-matching", { draft: false }),
+      noteFile("alias-flip", { draft: true }),
+    ];
+
+    expect(errorFor(attributes, files)).toBe(
+      `${MANIFEST} is a draft, but 'product-matching' is published — a Post cannot be reached through a Container that is not.`,
+    );
+  });
+
+  it("passes when a drafted Project has no notes at all yet", () => {
+    expect(rowsFor(project({ draft: true }), []).draft).toBe(true);
+  });
+
+  /**
+   * The round trip: publishing inserted this Project's row through
+   * `buildProjectSeedSql`'s upsert; marking it a draft removes it from the
+   * rows the generator hands that function, so the existing prune deletes it.
    */
   it("removes a previously published Project's row through the existing prune once it becomes a draft", () => {
-    const chekalo = projectRowFor("projects/chekalo/chekalo.en.md", project()) as SeededRow;
+    const chekalo = rowsFor().project;
     const other = projectRowFor(
       "projects/poschuler-com/poschuler-com.en.md",
       project({ sortOrder: 2 }),
-    ) as SeededRow;
+      [],
+    ) as ProjectRows;
 
-    const sqlWhilePublished = buildProjectSeedSql([chekalo, other]);
+    const sqlWhilePublished = buildProjectSeedSql([chekalo, other.project]);
     expect(sqlWhilePublished).toContain(
       "DELETE FROM project WHERE slug || ':' || lang NOT IN ('chekalo:en', 'poschuler-com:en')",
     );
 
-    const draftResult = projectRowFor("projects/chekalo/chekalo.en.md", project({ draft: true }));
-    expect(isSkipped(draftResult)).toBe(true);
+    const draftResult = rowsFor(project({ draft: true }));
+    expect(draftResult.draft).toBe(true);
 
-    // The generator's walk now hands only `other` to the builder — the same
-    // keep-list mechanism, with chekalo's key excluded.
-    const sqlAfterDraft = buildProjectSeedSql([other]);
+    // The generator's walk now hands only `other`'s row to the builder — the
+    // same keep-list mechanism, with chekalo's key excluded.
+    const sqlAfterDraft = buildProjectSeedSql([other.project]);
     expect(sqlAfterDraft).toContain("DELETE FROM project WHERE slug || ':' || lang NOT IN ('poschuler-com:en')");
-  });
-
-  /**
-   * `preview:drafts` (Part 3 of the field notes) — see the matching block in
-   * `seed-sql.test.ts` for the reasoning.
-   */
-  describe("includeDrafts", () => {
-    it("emits a row for a draft Project instead of skipping it", () => {
-      const result = projectRowFor(
-        "projects/chekalo/chekalo.en.md",
-        project({ draft: true }),
-        { includeDrafts: true },
-      );
-
-      expect(isSkipped(result)).toBe(false);
-      expect(isInvalid(result)).toBe(false);
-      expect((result as SeededRow).key).toBe("chekalo:en");
-    });
-
-    it("still skips a draft Project when the option is false", () => {
-      const result = projectRowFor(
-        "projects/chekalo/chekalo.en.md",
-        project({ draft: true }),
-        { includeDrafts: false },
-      );
-
-      expect(isSkipped(result)).toBe(true);
-    });
-
-    it("still fails a draft Project for every reason a published one would, drafts included", () => {
-      const result = projectRowFor(
-        "projects/chekalo/chekalo.en.md",
-        project({ draft: true, tier: "featured" as never }),
-        { includeDrafts: true },
-      );
-
-      expect(isInvalid(result)).toBe(true);
-    });
-
-    it("does not affect a published Project — the same row either way", () => {
-      const withoutOption = projectRowFor("projects/chekalo/chekalo.en.md", project());
-      const withOption = projectRowFor(
-        "projects/chekalo/chekalo.en.md",
-        project(),
-        { includeDrafts: true },
-      );
-
-      expect((withoutOption as SeededRow).statement).toBe((withOption as SeededRow).statement);
-    });
   });
 });
 
 describe("buildProjectSeedSql", () => {
-  const rows = () =>
-    [
-      projectRowFor("projects/chekalo/chekalo.en.md", project()) as SeededRow,
-      projectRowFor("projects/poschuler-com/poschuler-com.en.md", project()) as SeededRow,
-    ] satisfies SeededRow[];
+  const rows = (): SeededRow[] => [
+    rowsFor().project,
+    (projectRowFor("projects/poschuler-com/poschuler-com.en.md", project(), []) as ProjectRows)
+      .project,
+  ];
 
   it("puts every insert before the prune", () => {
     const sql = buildProjectSeedSql(rows());
