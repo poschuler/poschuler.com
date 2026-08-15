@@ -4,9 +4,10 @@
  * page's `Person` structured data, whose `sameAs` is derived from this rather
  * than restated so a crawler and a reader cannot be told different things.
  *
- * X is deliberately absent. It is in `resume.json` because the Resume's
- * command palette offers it, and it is not here because it is not one of the
- * three links this site leads with.
+ * Two profiles and an address, and the same two the Resume links to. X used to
+ * be on the Resume alone — its icon row, its command palette, its `sameAs` —
+ * and is now nowhere, so there is one answer to "where does this person
+ * publish" rather than one per page.
  */
 export const CONTACT_LINKS = [
   { label: "poschuler@gmail.com", href: "mailto:poschuler@gmail.com" },

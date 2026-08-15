@@ -2,7 +2,7 @@ import type { SVGProps } from "react";
 
 /**
  * Brand marks the icon libraries no longer ship: Lucide dropped every logo in
- * v1 over trademark concerns. These are the three networks this site links to,
+ * v1 over trademark concerns. These are the two networks this site links to,
  * inlined so no extra icon dependency is needed.
  *
  * They are decorative — every call site pairs them with a visible or
@@ -41,18 +41,9 @@ function LinkedInIcon(props: BrandIconProps) {
   );
 }
 
-function XIcon(props: BrandIconProps) {
-  return (
-    <BrandIcon {...props}>
-      <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298L17.61 20.644Z" />
-    </BrandIcon>
-  );
-}
-
 const brandIcons = {
   GitHub: GitHubIcon,
   LinkedIn: LinkedInIcon,
-  X: XIcon,
 } as const;
 
 export type BrandNetwork = keyof typeof brandIcons;
