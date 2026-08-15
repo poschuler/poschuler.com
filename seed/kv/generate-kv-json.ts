@@ -24,7 +24,7 @@ import resume from "../../app/routes/resume/resume.json" with { type: "json" };
 const CONTENT_DIR = path.join(process.cwd(), "app", "content", "blog");
 const PROJECT_CONTENT_DIR = path.join(process.cwd(), "app", "content", "projects");
 const SERIES_CONTENT_DIR = path.join(process.cwd(), "app", "content", "series");
-const TEMP_JSON_DIR = path.join(process.cwd(), "seed", "kv", "kv_payloads");
+const DEFAULT_OUTPUT_DIR = path.join(process.cwd(), "seed", "kv", "kv_payloads");
 const D1_BINDING_NAME = "poschuler";
 const PUBLIC_HOST = "https://poschuler.com";
 
@@ -186,7 +186,19 @@ async function writePayload(
     );
 }
 
-async function generateKvJsonFiles() {
+/**
+ * Reads the *already seeded* local D1, writes every payload and the sitemap
+ * into `outputDir`.
+ *
+ * One parameter, not a second pipeline (Part 3 of the field notes): called
+ * with none, this is byte-for-byte what it always was. `preview:drafts` is
+ * the only caller that passes one — a directory outside `seed/kv/`, so
+ * nothing tracked is touched. There is no `includeDrafts` here: this
+ * generator does not decide what is published, it renders whatever `content`
+ * already holds, and `generate-seed-sql.ts --include-drafts` is what put a
+ * Draft's row there in the first place.
+ */
+async function generateKvJsonFiles(outputDir: string = DEFAULT_OUTPUT_DIR) {
     console.log("⚙️ Starting content processing and JSON file generation...");
 
     const allContentItems = fetchAll();
@@ -195,10 +207,10 @@ async function generateKvJsonFiles() {
     const series = fetchAllSeries();
     const tags = fetchTaggedPostTags();
 
-    await fs.rm(TEMP_JSON_DIR, { recursive: true, force: true });
-    await fs.mkdir(TEMP_JSON_DIR, { recursive: true });
+    await fs.rm(outputDir, { recursive: true, force: true });
+    await fs.mkdir(outputDir, { recursive: true });
 
-    console.log(`\n2. 📄 Found ${posts.length} posts, ${projects.length} projects and ${series.length} series. Writing JSON files to ${TEMP_JSON_DIR}...`);
+    console.log(`\n2. 📄 Found ${posts.length} posts, ${projects.length} projects and ${series.length} series. Writing JSON files to ${outputDir}...`);
 
     for (const post of posts) {
         const { slug, lang, seriesSlug } = post;
@@ -209,7 +221,7 @@ async function generateKvJsonFiles() {
             ? path.join(SERIES_CONTENT_DIR, seriesSlug, slug, `${slug}.${lang}.md`)
             : path.join(CONTENT_DIR, slug, `${slug}.${lang}.md`);
 
-        await writePayload(sourcePath, path.join(TEMP_JSON_DIR, "blog"), slug, lang);
+        await writePayload(sourcePath, path.join(outputDir, "blog"), slug, lang);
 
         console.log(`   -> ✅ JSON written for key: blog:${slug}:${lang}`);
     }
@@ -217,7 +229,7 @@ async function generateKvJsonFiles() {
     for (const { slug, lang } of series) {
         await writePayload(
             path.join(SERIES_CONTENT_DIR, slug, `${slug}.${lang}.md`),
-            path.join(TEMP_JSON_DIR, "series"),
+            path.join(outputDir, "series"),
             slug,
             lang,
         );
@@ -230,7 +242,7 @@ async function generateKvJsonFiles() {
 
         await writePayload(
             path.join(PROJECT_CONTENT_DIR, slug, `${slug}.${lang}.md`),
-            path.join(TEMP_JSON_DIR, "projects"),
+            path.join(outputDir, "projects"),
             slug,
             lang,
         );
@@ -256,7 +268,7 @@ async function generateKvJsonFiles() {
     });
 
     await fs.writeFile(
-        path.join(TEMP_JSON_DIR, `sitemap.json`),
+        path.join(outputDir, `sitemap.json`),
         JSON.stringify({ sitemap }, null, 2),
         "utf-8",
     );
@@ -266,7 +278,25 @@ async function generateKvJsonFiles() {
     console.log(`\n\n🎉 JSON generation complete! Files are ready for upload.`);
 }
 
-generateKvJsonFiles().catch((e) => {
+/**
+ * `--output-dir <dir>`, optional. Hand-parsed for the same reason as
+ * `generate-seed-sql.ts`'s — this file sits outside the coverage target.
+ */
+function parseArgs(argv: string[]): { outputDir?: string } {
+    let outputDir: string | undefined;
+
+    for (let i = 0; i < argv.length; i++) {
+        if (argv[i] === "--output-dir") {
+            outputDir = argv[++i];
+        }
+    }
+
+    return { outputDir };
+}
+
+const { outputDir } = parseArgs(process.argv.slice(2));
+
+generateKvJsonFiles(outputDir ? path.resolve(process.cwd(), outputDir) : undefined).catch((e) => {
     console.error("JSON generation failed at the top level:");
     console.error(e);
     process.exit(1);

@@ -289,6 +289,78 @@ describe("contentRowFor — Drafts", () => {
     const sqlAfterDraft = buildSeedSql([]);
     expect(sqlAfterDraft).toContain("DELETE FROM content WHERE slug || ':' || ifnull(lang, '') NOT IN ()");
   });
+
+  /**
+   * `preview:drafts` (Part 3 of the field notes) — a Draft read as though it
+   * were published, so it can be seeded into the local stores without ever
+   * touching a tracked file. Both switch values are covered here, at the
+   * generator seam; the script's own wiring is verified by running it.
+   */
+  describe("includeDrafts", () => {
+    it("emits a row for a draft Post instead of skipping it", () => {
+      const result = contentRowFor(
+        "blog/a/a.en.md",
+        post({ draft: true }),
+        VOCABULARY,
+        undefined,
+        { includeDrafts: true },
+      );
+
+      expect(isSkipped(result)).toBe(false);
+      expect(isInvalid(result)).toBe(false);
+      expect((result as ContentRow).key).toBe("a:en");
+    });
+
+    it("emits a row for a draft Bookmark instead of skipping it", () => {
+      const result = contentRowFor(
+        "bookmarks/a.md",
+        bookmark({ draft: true }),
+        VOCABULARY,
+        undefined,
+        { includeDrafts: true },
+      );
+
+      expect(isSkipped(result)).toBe(false);
+      expect((result as ContentRow).key).toBe("a:");
+    });
+
+    it("still skips a draft Post when the option is false", () => {
+      const result = contentRowFor(
+        "blog/a/a.en.md",
+        post({ draft: true }),
+        VOCABULARY,
+        undefined,
+        { includeDrafts: false },
+      );
+
+      expect(isSkipped(result)).toBe(true);
+    });
+
+    it("still fails a draft Post for every reason a published one would, drafts included", () => {
+      const result = contentRowFor(
+        "blog/a/a.en.md",
+        post({ draft: true, tags: ["not-a-declared-tag"] }),
+        VOCABULARY,
+        undefined,
+        { includeDrafts: true },
+      );
+
+      expect(isInvalid(result)).toBe(true);
+    });
+
+    it("does not affect a published Post — the same row either way", () => {
+      const withoutOption = contentRowFor("blog/a/a.en.md", post(), VOCABULARY);
+      const withOption = contentRowFor(
+        "blog/a/a.en.md",
+        post(),
+        VOCABULARY,
+        undefined,
+        { includeDrafts: true },
+      );
+
+      expect((withoutOption as ContentRow).statement).toBe((withOption as ContentRow).statement);
+    });
+  });
 });
 
 describe("contentRowFor — Bookmarks", () => {

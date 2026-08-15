@@ -158,6 +158,18 @@ export function isDraft(draft: unknown): boolean {
 }
 
 /**
+ * The one switch every row builder in this file and its siblings takes, and
+ * the whole of what `preview:drafts` (Part 3 of the field notes) adds to the
+ * generators: with it unset or `false`, a Draft is skipped exactly as it is
+ * today. Set, a Draft is read as though it were published — checked the same
+ * way, emitted instead of skipped — which is what lets it render at its real
+ * address without touching a tracked file.
+ */
+export interface DraftOptions {
+  includeDrafts?: boolean;
+}
+
+/**
  * One `content_tag` row per Tag the file carries.
  *
  * Written for Posts and Bookmarks alike, and for a Part exactly as for a loose
@@ -199,12 +211,17 @@ VALUES (${escapeSql(slug)}, ${escapeSql(lang)}, ${escapeSql(tag)});
  * `part` is supplied by the caller for a Post that lives inside a Series,
  * because only the manifest knows where it sits. A nested Post without one is a
  * Part nothing indexes, which is a failure rather than a loose Post.
+ *
+ * `options.includeDrafts` is `preview:drafts`'s hook (see `DraftOptions`): every
+ * check above the two Draft checks below still runs unconditionally, so a
+ * broken draft fails the build in preview exactly as it would on publish.
  */
 export function contentRowFor(
   relativePath: string,
   attributes: FrontMatterAttributes,
   vocabulary: TagVocabulary,
   part?: PartPlacement,
+  options?: DraftOptions,
 ): ContentFileResult {
   const placed = placementOf(relativePath);
 
@@ -281,8 +298,9 @@ export function contentRowFor(
     // The last check in the branch, deliberately: a Draft passes every check
     // a published document passes — its type against its placement, its Tags
     // against the vocabulary, its manifest listing, its revisions — and only
-    // once all of them pass does it produce nothing.
-    if (isDraft(attributes.draft)) {
+    // once all of them pass does it produce nothing, unless the caller asked
+    // for Drafts to be included.
+    if (isDraft(attributes.draft) && !options?.includeDrafts) {
       return { reason: `${relativePath} is a draft` };
     }
 
@@ -329,7 +347,7 @@ VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attrib
   }
 
   // The last check, as on a Post: every other rule has already run.
-  if (isDraft(attributes.draft)) {
+  if (isDraft(attributes.draft) && !options?.includeDrafts) {
     return { reason: `${relativePath} is a draft` };
   }
 

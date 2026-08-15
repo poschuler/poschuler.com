@@ -12,6 +12,7 @@ import {
     isSkipped,
     parseContentFilename,
     type ContentRow,
+    type DraftOptions,
     type FrontMatterAttributes,
     type PartPlacement,
     type SeededRow,
@@ -55,7 +56,7 @@ const CONTENT_TABLE_TREES = ["blog", "bookmarks"] as const;
  */
 
 const CONTENT_DIR = path.join(process.cwd(), "app", "content");
-const OUTPUT_SQL_FILE = path.join(process.cwd(), "seed", "d1", "seed.sql");
+const DEFAULT_OUTPUT_DIR = path.join(process.cwd(), "seed", "d1");
 
 async function getMarkdownFilePaths(dir: string): Promise<string[]> {
     // A tree that does not exist yet is empty, not an error: `projects/` has no
@@ -89,7 +90,9 @@ async function getMarkdownFilePaths(dir: string): Promise<string[]> {
  * invariants. The only thing they share is the tree that decides which one runs
  * (ADR 0004).
  */
-async function collectProjectRows(): Promise<{ rows: SeededRow[]; anyFilesFound: boolean }> {
+async function collectProjectRows(
+    options: DraftOptions,
+): Promise<{ rows: SeededRow[]; anyFilesFound: boolean }> {
     const filePaths = await getMarkdownFilePaths(path.join(CONTENT_DIR, "projects"));
     const rows: SeededRow[] = [];
 
@@ -100,7 +103,7 @@ async function collectProjectRows(): Promise<{ rows: SeededRow[]; anyFilesFound:
         const fileContent = await fs.readFile(filePath, "utf-8");
         const { attributes } = fm<ProjectFrontMatter>(fileContent);
 
-        const result = projectRowFor(relativePath, attributes);
+        const result = projectRowFor(relativePath, attributes, options);
 
         if (isInvalid(result)) {
             throw new Error(result.error);
@@ -215,7 +218,7 @@ async function readSeriesFolders(): Promise<Map<string, SeriesFolder>> {
  * Part sits — see ADR 0007 — so a Part's row cannot be written until its
  * Series has been validated and its lists turned into positions.
  */
-async function collectSeriesRows(vocabulary: TagVocabulary): Promise<{
+async function collectSeriesRows(vocabulary: TagVocabulary, options: DraftOptions): Promise<{
     series: SeededRow[];
     sections: SeededRow[];
     content: ContentRow[];
@@ -272,7 +275,7 @@ async function collectSeriesRows(vocabulary: TagVocabulary): Promise<{
                 placements.set(`${slug}:${locale}`, placement);
             }
 
-            if (result.draft) {
+            if (result.draft && !options.includeDrafts) {
                 console.warn(`- Skipping: ${manifest.relativePath} is a draft`);
                 continue;
             }
@@ -299,7 +302,7 @@ async function collectSeriesRows(vocabulary: TagVocabulary): Promise<{
                 ? placements.get(`${parsed.slug}:${parsed.lang}`)
                 : undefined;
 
-            const result = contentRowFor(file.relativePath, file.attributes, vocabulary, placement);
+            const result = contentRowFor(file.relativePath, file.attributes, vocabulary, placement, options);
 
             if (isInvalid(result)) {
                 throw new Error(result.error);
@@ -364,8 +367,23 @@ async function readTagVocabulary(): Promise<TagVocabulary> {
     return result.vocabulary;
 }
 
-async function generateSqlSeed() {
+/**
+ * Reads `app/content`, writes `<outputDir>/seed.sql`.
+ *
+ * Two parameters, not a second pipeline (Part 3 of the field notes): called
+ * with neither, this is byte-for-byte what it always was. `preview:drafts` is
+ * the only caller that passes either — an output directory outside
+ * `seed/d1/`, so nothing tracked is touched, and `includeDrafts`, so a Draft
+ * is read like a published document instead of being skipped.
+ */
+async function generateSqlSeed({
+    outputDir = DEFAULT_OUTPUT_DIR,
+    includeDrafts = false,
+}: { outputDir?: string; includeDrafts?: boolean } = {}) {
     console.log("🌱 Starting content analysis for SQL generation...");
+
+    const options: DraftOptions = { includeDrafts };
+    const outputSqlFile = path.join(outputDir, "seed.sql");
 
     await assertEveryTreeIsClaimed(CONTENT_DIR);
 
@@ -392,7 +410,7 @@ async function generateSqlSeed() {
         const fileContent = await fs.readFile(filePath, "utf-8");
         const { attributes } = fm<FrontMatterAttributes>(fileContent);
 
-        const result = contentRowFor(relativePath, attributes, vocabulary);
+        const result = contentRowFor(relativePath, attributes, vocabulary, undefined, options);
 
         if (isInvalid(result)) {
             throw new Error(result.error);
@@ -407,8 +425,8 @@ async function generateSqlSeed() {
         console.log(`✅ Generated SQL for ${attributes.type}: ${result.key}`);
     }
 
-    const projectRows = await collectProjectRows();
-    const seriesRows = await collectSeriesRows(vocabulary);
+    const projectRows = await collectProjectRows(options);
+    const seriesRows = await collectSeriesRows(vocabulary, options);
 
     rows.push(...seriesRows.content);
 
@@ -441,20 +459,46 @@ async function generateSqlSeed() {
         });
 
     try {
-        await fs.mkdir(path.dirname(OUTPUT_SQL_FILE), { recursive: true });
-        await fs.writeFile(OUTPUT_SQL_FILE, sqlCommands, "utf-8");
+        await fs.mkdir(path.dirname(outputSqlFile), { recursive: true });
+        await fs.writeFile(outputSqlFile, sqlCommands, "utf-8");
 
-        console.log(`\n\n🌳 SQL generation complete! File saved to: ${OUTPUT_SQL_FILE}`);
+        console.log(`\n\n🌳 SQL generation complete! File saved to: ${outputSqlFile}`);
         console.log("-----------------------------------------------------------------");
         console.log(`>>> Seed with:`);
-        console.log(`pnpm exec wrangler d1 execute poschuler --remote --file ${path.relative(process.cwd(), OUTPUT_SQL_FILE)}`);
+        console.log(`pnpm exec wrangler d1 execute poschuler --remote --file ${path.relative(process.cwd(), outputSqlFile)}`);
 
     } catch (e) {
         console.error("Failed to write SQL file:", e);
     }
 }
 
-generateSqlSeed().catch((e) => {
+/**
+ * `--output-dir <dir>` and `--include-drafts`, both optional. This file sits
+ * outside the coverage target for the same reason the other seed scripts do
+ * — it is disk and subprocess wiring around the tested pure functions above —
+ * so the flags are parsed by hand rather than pulled in a dependency.
+ */
+function parseArgs(argv: string[]): { outputDir?: string; includeDrafts: boolean } {
+    let outputDir: string | undefined;
+    let includeDrafts = false;
+
+    for (let i = 0; i < argv.length; i++) {
+        if (argv[i] === "--output-dir") {
+            outputDir = argv[++i];
+        } else if (argv[i] === "--include-drafts") {
+            includeDrafts = true;
+        }
+    }
+
+    return { outputDir, includeDrafts };
+}
+
+const { outputDir, includeDrafts } = parseArgs(process.argv.slice(2));
+
+generateSqlSeed({
+    outputDir: outputDir ? path.resolve(process.cwd(), outputDir) : undefined,
+    includeDrafts,
+}).catch((e) => {
     console.error("SQL generation failed:");
     console.error(e);
     process.exit(1);

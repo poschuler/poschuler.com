@@ -41,6 +41,11 @@ ralph-logs/
 
 /handoff/
 
+# `preview:drafts` renders Drafts into these, then applies them to the local
+# D1 and KV. Never the committed fixtures (`seed/d1/seed.sql`,
+# `seed/kv/kv_payloads/`) — that separation is the whole point of the command.
+/preview/
+
 
 
 /evolution-plan/

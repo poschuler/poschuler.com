@@ -14,6 +14,7 @@ import {
   escapeSql,
   isDraft,
   parseContentFilename,
+  type DraftOptions,
   type FileResult,
   type SeededRow,
 } from "./seed-sql.ts";
@@ -49,10 +50,16 @@ function isOneOf<T extends readonly string[]>(
   return typeof candidate === "string" && (values as readonly string[]).includes(candidate);
 }
 
-/** The `INSERT OR REPLACE` for one Project, or why the build should stop. */
+/**
+ * The `INSERT OR REPLACE` for one Project, or why the build should stop.
+ *
+ * `options.includeDrafts` is `preview:drafts`'s hook (see `DraftOptions` on
+ * `seed-sql.ts`) — every other check still runs unconditionally.
+ */
 export function projectRowFor(
   relativePath: string,
   attributes: ProjectFrontMatter,
+  options?: DraftOptions,
 ): FileResult {
   if (treeOf(relativePath) !== "projects") {
     return { error: `${relativePath} is not in the projects tree` };
@@ -109,8 +116,9 @@ export function projectRowFor(
   }
 
   // The last check, as on a Post: a Draft passes every check a published
-  // Project landing passes, and only then produces nothing.
-  if (isDraft(attributes.draft)) {
+  // Project landing passes, and only then produces nothing, unless the caller
+  // asked for Drafts to be included.
+  if (isDraft(attributes.draft) && !options?.includeDrafts) {
     return { reason: `${relativePath} is a draft` };
   }
 

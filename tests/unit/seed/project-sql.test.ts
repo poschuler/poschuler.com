@@ -162,6 +162,55 @@ describe("projectRowFor — Drafts", () => {
     const sqlAfterDraft = buildProjectSeedSql([other]);
     expect(sqlAfterDraft).toContain("DELETE FROM project WHERE slug || ':' || lang NOT IN ('poschuler-com:en')");
   });
+
+  /**
+   * `preview:drafts` (Part 3 of the field notes) — see the matching block in
+   * `seed-sql.test.ts` for the reasoning.
+   */
+  describe("includeDrafts", () => {
+    it("emits a row for a draft Project instead of skipping it", () => {
+      const result = projectRowFor(
+        "projects/chekalo/chekalo.en.md",
+        project({ draft: true }),
+        { includeDrafts: true },
+      );
+
+      expect(isSkipped(result)).toBe(false);
+      expect(isInvalid(result)).toBe(false);
+      expect((result as SeededRow).key).toBe("chekalo:en");
+    });
+
+    it("still skips a draft Project when the option is false", () => {
+      const result = projectRowFor(
+        "projects/chekalo/chekalo.en.md",
+        project({ draft: true }),
+        { includeDrafts: false },
+      );
+
+      expect(isSkipped(result)).toBe(true);
+    });
+
+    it("still fails a draft Project for every reason a published one would, drafts included", () => {
+      const result = projectRowFor(
+        "projects/chekalo/chekalo.en.md",
+        project({ draft: true, tier: "featured" as never }),
+        { includeDrafts: true },
+      );
+
+      expect(isInvalid(result)).toBe(true);
+    });
+
+    it("does not affect a published Project — the same row either way", () => {
+      const withoutOption = projectRowFor("projects/chekalo/chekalo.en.md", project());
+      const withOption = projectRowFor(
+        "projects/chekalo/chekalo.en.md",
+        project(),
+        { includeDrafts: true },
+      );
+
+      expect((withoutOption as SeededRow).statement).toBe((withOption as SeededRow).statement);
+    });
+  });
 });
 
 describe("buildProjectSeedSql", () => {
