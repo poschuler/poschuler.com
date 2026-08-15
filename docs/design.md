@@ -8,7 +8,9 @@ The site is a developer's notebook, not a marketing page. That reads through in 
 
 **Each page is one column, centred, `max-w-measure` wide** — home, blog, projects, bookmarks, timeline, resume and the article bodies alike. An index and an article are the same column; only what is stacked in it differs. Nothing is multi-column; nothing is above the fold in a way that pushes content down. A Content Item in a list is a title, a date, and — for a Bookmark — its source. There are no cards, no excerpts, no thumbnails, no read-time estimates.
 
-The width lives in one place, `--container-measure` in `app.css`, and that is the point of it. It was four values before it was one: `max-w-[650px]` on the home page, `max-w-2xl` on Projects and the Resume, `72ch` inside `prose`, and `lg:max-w-4xl xl:max-w-5xl 2xl:max-w-7xl` on Blog, Bookmarks and Timeline — which grew a list of dates and titles to 1280px on a wide screen and left a thousand pixels of nothing beside each one.
+**The height lives in the layout, not in the routes.** `routes/layouts/_layout.tsx` is `min-h-screen flex flex-col` and a route's `<main>` is `flex-1`, so the page fills the viewport whatever the header and footer measure. Nine routes used to subtract the header's height from `100vh` themselves — the same arithmetic written out nine times, hard-coding a number belonging to a component none of them render, and all nine wrong the moment a footer existed. They did it through Tailwind's `theme()`, which v4 keeps for compatibility and which no new code should reach for.
+
+The width lives in one place too, `--container-measure` in `app.css`, and that is the point of it. It was four values before it was one: `max-w-[650px]` on the home page, `max-w-2xl` on Projects and the Resume, `72ch` inside `prose`, and `lg:max-w-4xl xl:max-w-5xl 2xl:max-w-7xl` on Blog, Bookmarks and Timeline — which grew a list of dates and titles to 1280px on a wide screen and left a thousand pixels of nothing beside each one.
 
 ### The home page is the exception, on purpose
 
@@ -224,6 +226,10 @@ They describe the same person and do not have to be identical: `/resume` adds `a
 Internal links are `<Link>`. Not `<a href>`, and not `reloadDocument` — both throw away the client-side router the site already ships. `reloadDocument` is for resource routes that are not React at all, like the `/resume.pdf` download in `routes/resume/hero.tsx`.
 
 One consequence to remember inside the mobile sheet: client-side navigation leaves the panel mounted, so a link in there has to dismiss it as well. `<SheetClose render={<Link to="…" />}>` does both.
+
+**The footer is on every page and holds only contact.** A reader who has just finished an article is at the moment they are most likely to want to reach him, and until it existed the only route to that was back to the home page to find the contact row in the hero. Three links and the timezone, `bg-subtle` like the header so the two bookend the column between them. No copyright line, no year, no "built with" — those name the site rather than serving the reader.
+
+`app/lib/contact.ts` holds those links once. The home page renders them in its hero **and derives its `Person` structured data's `sameAs` from the same array**, so a crawler and a reader cannot be told different things; a second copy in the footer would have been a third place for them to drift.
 
 **The header is one row that reflows**, not a desktop header and a mobile header hidden past each other. `NAV_ITEMS` is declared once and rendered twice — as the row above `lg`, as the panel below it — and everything else in the header appears exactly once. It was two full `<nav>`s at one point, each with its own wordmark and theme toggle, with the panel trigger outside both; the wordmark rendered three times, and the only navigation landmark on a phone was one that did not contain the navigation.
 

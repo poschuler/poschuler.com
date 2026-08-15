@@ -34,7 +34,7 @@ export default function Blog() {
   const { posts } = useLoaderData<typeof loader>();
 
   return (
-    <main className="flex flex-col min-h-[calc(100vh_-_theme(spacing.16))] flex-1 gap-4 p-4 md:gap-8 md:p-10 font-mono bg-ui">
+    <main className="flex flex-col flex-1 gap-4 p-4 md:gap-8 md:p-10 font-mono bg-ui">
       <section className="w-full">
 
         <div className="text-center">

@@ -6,6 +6,7 @@ import { ContentItem } from "~/components/content-item";
 import type { Route } from "./+types/_home";
 import { cloudflareContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
+import { CONTACT_LINKS, LOCATION } from "~/lib/contact";
 
 /**
  * Enough to show that the writing exists and is current, without turning the
@@ -39,11 +40,6 @@ export async function loader({ context }: Route.LoaderArgs) {
 
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
-const CONTACT_LINKS = [
-  { label: "poschuler@gmail.com", href: "mailto:poschuler@gmail.com" },
-  { label: "GitHub", href: "https://github.com/poschuler" },
-  { label: "LinkedIn", href: "https://www.linkedin.com/in/poschuler/" },
-] as const;
 
 /**
  * Tells a crawler that this page describes a *person*, and that the person is
@@ -103,7 +99,7 @@ export default function Home() {
   const { recentPosts, flagship } = useLoaderData<typeof loader>();
 
   return (
-    <main className="flex flex-col min-h-[calc(100vh_-_theme(spacing.16))] flex-1 gap-4 p-4 md:gap-8 md:p-10 font-mono bg-ui">
+    <main className="flex flex-col flex-1 gap-4 p-4 md:gap-8 md:p-10 font-mono bg-ui">
       <section className="mx-auto w-full max-w-measure pt-4">
         <div className="mx-auto relative flex size-32 overflow-hidden rounded-full">
           {/* Local, not the GitHub avatar: this is the one image the page cannot
@@ -128,7 +124,7 @@ export default function Home() {
 
           {/* A fact about where the work happens, not a signal that he is
             * looking: the timezone is what a distributed team screens on. */}
-          <p className="mt-1 text-sm text-low">Lima, Peru · UTC-5</p>
+          <p className="mt-1 text-sm text-low">{LOCATION}</p>
         </div>
 
         {/* Left-aligned on purpose: centred prose past one line is harder to

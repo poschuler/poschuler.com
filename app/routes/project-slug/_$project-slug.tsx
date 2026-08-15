@@ -80,7 +80,7 @@ export default function Project() {
     useLoaderData<typeof loader>();
 
   return (
-    <main className="min-h-[calc(100vh_-_theme(spacing.16))] flex-1 gap-4 bg-ui p-4 font-mono md:gap-8 md:p-10">
+    <main className="flex-1 gap-4 bg-ui p-4 font-mono md:gap-8 md:p-10">
       <article className="prose mx-auto py-8">
         <h1 className="mb-2">{title}</h1>
 

@@ -122,7 +122,7 @@ export default function Projects() {
   const rest = projects.filter((project) => project.tier !== "flagship");
 
   return (
-    <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-ui p-4 font-mono md:gap-8 md:p-10">
+    <main className="flex flex-1 flex-col gap-4 bg-ui p-4 font-mono md:gap-8 md:p-10">
       <section className="w-full">
         <div className="text-center">
           <h1 className="scroll-m-20 text-3xl font-semibold tracking-tight lg:text-4xl mt-8">
