@@ -64,6 +64,15 @@ mapfile -t PART_SLUGS < <(
 	if [[ "${#SERIES_PARTS[@]}" -gt 0 ]]; then printf '%s\n' "${SERIES_PARTS[@]}" | cut -f2; fi
 )
 
+# Every Project, from its payload. `/projects` and a Project landing are live
+# routes that read both stores, and they do not wait for a Field Note to exist —
+# so they are discovered here, unconditionally, and not from the notes below.
+# Gating them on a published note is what made this whole namespace a no-op the
+# day the block was written, on a site whose most-linked page is a Project.
+mapfile -t PROJECT_SLUGS < <(
+	find seed/kv/kv_payloads/projects -name '*.en.json' -exec basename {} .en.json \; | sort
+)
+
 # The same pair, for a Project's Field Notes — read from its `notes:` manifest,
 # which lists a Draft note exactly as it lists a published one (1b/2). A Draft
 # produces no `blog:` payload at all, so PROJECT_NOTES is filtered below to the
@@ -168,15 +177,35 @@ if [[ "${#SERIES_PARTS[@]}" -gt 0 ]]; then
 	ROUTES+=(/series "/series/${SERIES_SLUG}" "/series/${SERIES_SLUG}/${PART_SLUG}")
 fi
 
-# The Project namespace, when a published Field Note exists to probe — mirrors
-# the Series block above. Nothing today publishes one (the first note enters as
-# a Draft, per the phase's own field notes), so this block is a no-op until it
-# does; the moment it does, the route this phase adds is covered without this
-# script needing another edit.
-if [[ "${#PUBLISHED_PROJECT_NOTES[@]}" -gt 0 ]]; then
-	IFS=$'\t' read -r PROJECT_SLUG NOTE_SLUG <<<"${PUBLISHED_PROJECT_NOTES[0]}"
+# The Project namespace. The index and a landing are probed always: they read
+# D1 for the row and KV for the body, exactly the pair a missing binding takes
+# down, and neither depends on a Field Note existing.
+#
+# Loud rather than skipped, as the Tag and loose-Post checks above are. This
+# repository ships three Projects and the landing is the address that goes in a
+# CV, so no payload here means the payloads are stale or the Project generator
+# has stopped writing — both worth failing over. A probe that quietly covers
+# nothing is how a gate ends up green while testing nothing.
+if [[ "${#PROJECT_SLUGS[@]}" -eq 0 ]]; then
+	echo "error: no payload under seed/kv/kv_payloads/projects for a Project." >&2
+	echo "       Regenerate the payloads, or edit this check on purpose." >&2
+	exit 1
+fi
 
-	ROUTES+=(/projects "/projects/${PROJECT_SLUG}" "/projects/${PROJECT_SLUG}/${NOTE_SLUG}")
+PROJECT_SLUG="${PROJECT_SLUGS[0]}"
+
+ROUTES+=(/projects "/projects/${PROJECT_SLUG}")
+
+# The note route on top, only when a published Field Note exists to probe.
+# Nothing publishes one today — the first note enters as a Draft — so this is
+# the one part of the namespace that stays conditional, and it covers itself the
+# moment a note goes live, without this script needing another edit. The Project
+# is taken from the pair rather than from PROJECT_SLUG: the note has to be
+# probed under the Project that actually holds it.
+if [[ "${#PUBLISHED_PROJECT_NOTES[@]}" -gt 0 ]]; then
+	IFS=$'\t' read -r NOTE_PROJECT_SLUG NOTE_SLUG <<<"${PUBLISHED_PROJECT_NOTES[0]}"
+
+	ROUTES+=("/projects/${NOTE_PROJECT_SLUG}/${NOTE_SLUG}")
 fi
 
 if [[ ! -d build/client ]]; then
@@ -294,6 +323,12 @@ echo "==> Those pages carry content, not just a status code"
 # own page is that Post.
 expect_mention /blog "${POST_SLUG}"
 expect_mention "/blog/${POST_SLUG}" "${POST_SLUG}"
+
+# The Projects index, for the reason this block exists at all: every entry on it
+# comes from one query, so a 200 survives the query returning nothing. Asked for
+# the Slug of a Project whose payload is on disk, which is the only thing that
+# guarantees the row should be there.
+expect_mention /projects "${PROJECT_SLUG}"
 
 # The Tag page answers 404 for a Tag no Post carries, so a 200 already says the
 # query found something — but not that the row reached the page. The Post the
