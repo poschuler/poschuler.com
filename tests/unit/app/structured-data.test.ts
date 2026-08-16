@@ -103,6 +103,12 @@ describe("blogPosting", () => {
     expect(blogPosting({ ...NOTE, projectSlug: null })).not.toHaveProperty("isPartOf");
     expect(blogPosting({ ...NOTE, projectSlug: undefined })).not.toHaveProperty("isPartOf");
   });
+
+  /** Part 10 of `evolution-plan/15-phase-3-spanish.md`: the claim follows the article, not the default. */
+  it("states its own Locale rather than always English", () => {
+    expect(blogPosting(PART).inLanguage).toBe("en");
+    expect(blogPosting({ ...PART, locale: "es" }).inLanguage).toBe("es");
+  });
 });
 
 describe("breadcrumbList", () => {
@@ -165,6 +171,12 @@ describe("creativeWorkSeries", () => {
     const series = creativeWorkSeries({ ...SERIES, parts: [] }) as { hasPart: unknown[] };
 
     expect(series.hasPart).toEqual([]);
+  });
+
+  /** Part 10 of `evolution-plan/15-phase-3-spanish.md`: the claim follows the landing, not the default. */
+  it("states its own Locale rather than always English", () => {
+    expect(creativeWorkSeries(SERIES).inLanguage).toBe("en");
+    expect(creativeWorkSeries({ ...SERIES, locale: "es" }).inLanguage).toBe("es");
   });
 
   it("matches the identifier a Part uses for its Container", () => {

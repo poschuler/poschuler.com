@@ -110,7 +110,7 @@ export function blogPosting({
     datePublished,
     dateModified: dateRevised ?? datePublished,
     image: `${SITE}/og.png`,
-    inLanguage: "en",
+    inLanguage: locale,
     // The same entity twice, and both named: he is the author and there is no
     // publisher between him and the reader. The shared `@id` is what merges
     // these with the full `Person` on the home page and the Resume.
@@ -167,7 +167,7 @@ export function creativeWorkSeries({ slug, title, description, locale, parts }: 
     name: title,
     description,
     url: `${SITE}${seriesHref(slug, locale)}`,
-    inLanguage: "en",
+    inLanguage: locale,
     author: AUTHOR,
     hasPart: parts.map((part, index) => {
       const partUrl = `${SITE}${postHref({ slug: part.slug, seriesSlug: slug }, locale)}`;

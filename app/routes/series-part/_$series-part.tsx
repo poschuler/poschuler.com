@@ -1,6 +1,7 @@
 import { useLoaderData } from "react-router";
 import { PostArticle } from "~/components/post-article";
 import { cloudflareContext, localeContext } from "~/context";
+import { formatPostDate } from "~/lib/dates";
 import { postHref, seriesHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { validateRevisions } from "~/lib/revisions";
@@ -82,7 +83,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     // Out of the payload above. This route reads the arc and never the content
     // row, so D1 would be a new query for what KV has just handed over.
     tags: attributes.tags ?? [],
-    publishedAt: new Date(attributes.publishedAt).toLocaleDateString(),
+    publishedAt: formatPostDate(attributes.publishedAt, series.lang),
     // The same date, unformatted. What a reader sees is written for their
     // locale; what a crawler is told has to stay `YYYY-MM-DD`.
     datePublished: attributes.publishedAt,

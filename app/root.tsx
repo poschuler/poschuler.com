@@ -11,7 +11,7 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 import { getColorScheme } from "./color-scheme-cookie";
-import { cloudflareContext, localeContext } from "./context";
+import { cloudflareContext, localeContext, useLocale } from "./context";
 
 // Imported for their hashed build URLs. The `@font-face` rules live in
 // `app/app.css`; these two are the latin faces every page needs — the
@@ -60,9 +60,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 export function Layout({ children }: { children: React.ReactNode }) {
   const rootData = useRouteLoaderData<typeof loader>("root");
   const colorScheme = rootData?.colorScheme ?? "system";
+  // `useLocale` reads the same `useRouteLoaderData("root")` bridge this
+  // component reads `colorScheme` off, and degrades to `"en"` the same way if
+  // the root loader failed.
+  const locale = useLocale();
 
   return (
-    <html lang="en" className={colorScheme}>
+    <html lang={locale} className={colorScheme}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />

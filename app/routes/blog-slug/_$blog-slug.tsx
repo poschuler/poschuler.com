@@ -2,6 +2,7 @@ import { redirect, useLoaderData } from "react-router";
 import type { Route } from "./+types/_$blog-slug";
 import { cloudflareContext, localeContext } from "~/context";
 import { PostArticle } from "~/components/post-article";
+import { formatPostDate } from "~/lib/dates";
 import { postHref } from "~/lib/hrefs";
 import { documentAddresses } from "~/lib/seo/alternates";
 import { blogPosting, breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
@@ -101,7 +102,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
         title: attributes.title,
         description: attributes.description,
         tags: attributes.tags ?? [],
-        publishedAt: new Date(attributes.publishedAt).toLocaleDateString(),
+        publishedAt: formatPostDate(attributes.publishedAt, post.lang),
         // The same date, unformatted. What a reader sees is written for their
         // locale; what a crawler is told has to stay `YYYY-MM-DD`.
         datePublished: attributes.publishedAt,

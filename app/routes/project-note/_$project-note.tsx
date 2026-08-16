@@ -1,6 +1,7 @@
 import { useLoaderData } from "react-router";
 import { PostArticle } from "~/components/post-article";
 import { cloudflareContext, localeContext } from "~/context";
+import { formatPostDate } from "~/lib/dates";
 import { postHref, projectHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { validateRevisions } from "~/lib/revisions";
@@ -85,7 +86,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     title: attributes.title,
     description: attributes.description,
     tags: attributes.tags ?? [],
-    publishedAt: new Date(attributes.publishedAt).toLocaleDateString(),
+    publishedAt: formatPostDate(attributes.publishedAt, post.lang),
     // The same date, unformatted. What a reader sees is written for their
     // locale; what a crawler is told has to stay `YYYY-MM-DD`.
     datePublished: attributes.publishedAt,
