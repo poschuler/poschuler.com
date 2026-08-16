@@ -28,18 +28,21 @@ BASE="http://localhost:${PORT}"
 # Two lists, because two questions. `/` shows the newest Posts whatever they
 # belong to, so it is asked about all of them. The Post probed by URL has to be
 # one with **no Container**: the `blog:` key space holds every
-# Post body, a Part of a Series included — the prefix says what kind of payload
-# it is, not which URL serves it — but a Part answers 301 at `/blog/<slug>` and
-# `/blog` collapses its whole Series into one row. Both checks below would fail
-# on correct code. Picking the first payload alphabetically works today only
-# because the one loose Post happens to sort first; the next Part published
+# Post body, a Part of a Series or a Field Note of a Project included — the
+# prefix says what kind of payload it is, not which URL serves it — but a Part
+# or a Field Note answers 301 at `/blog/<slug>` and `/blog` collapses its whole
+# Series or Project into one row. Both checks below would fail on correct code.
+# Picking the first payload alphabetically works today only because the one
+# loose Post happens to sort first; the next Part or Field Note published
 # under a slug starting `a`–`h` would break CI and point at nothing.
 #
-# Which slugs are Parts is read from the Series manifests, the same place the
-# generators read the arc from (ADR 0007).
-# Each line is `<series>\t<part>`, so the pair that probes a Part below can be
-# taken whole — a Part read from one manifest and a Series read from another
-# would produce a URL that correctly answers 404.
+# Which slugs are Parts or Field Notes is read from the Series and Project
+# manifests, the same place the generators read the arc and the notes list
+# from (ADR 0007, amended).
+# Each line is `<series-or-project>\t<part-or-note>`, so the pair that probes a
+# Part or a Field Note below can be taken whole — one read from one manifest
+# and its Container read from another would produce a URL that correctly
+# answers 404.
 mapfile -t SERIES_PARTS < <(
 	node --input-type=module -e '
 		import { readdir, readFile } from "node:fs/promises";
@@ -61,13 +64,50 @@ mapfile -t PART_SLUGS < <(
 	if [[ "${#SERIES_PARTS[@]}" -gt 0 ]]; then printf '%s\n' "${SERIES_PARTS[@]}" | cut -f2; fi
 )
 
+# The same pair, for a Project's Field Notes — read from its `notes:` manifest,
+# which lists a Draft note exactly as it lists a published one (1b/2). A Draft
+# produces no `blog:` payload at all, so PROJECT_NOTES is filtered below to the
+# ones that do before it is used for anything — the manifest is not, on its
+# own, proof that a note is live.
+mapfile -t PROJECT_NOTES < <(
+	node --input-type=module -e '
+		import { readdir, readFile } from "node:fs/promises";
+
+		const directory = "seed/kv/kv_payloads/projects";
+
+		for (const file of await readdir(directory).catch(() => [])) {
+			const { attributes } = JSON.parse(await readFile(`${directory}/${file}`, "utf-8"));
+			const project = file.replace(/\.[^.]+\.json$/, "");
+
+			for (const note of attributes.notes ?? []) console.log(`${project}\t${note}`);
+		}
+	'
+)
+
+PUBLISHED_PROJECT_NOTES=()
+
+for pair in "${PROJECT_NOTES[@]}"; do
+	note="${pair#*$'\t'}"
+	[[ -f "seed/kv/kv_payloads/blog/${note}.en.json" ]] && PUBLISHED_PROJECT_NOTES+=("${pair}")
+done
+
+mapfile -t NOTE_SLUGS < <(
+	if [[ "${#PUBLISHED_PROJECT_NOTES[@]}" -gt 0 ]]; then printf '%s\n' "${PUBLISHED_PROJECT_NOTES[@]}" | cut -f2; fi
+)
+
 mapfile -t POST_SLUGS < <(
 	find seed/kv/kv_payloads/blog -name '*.en.json' -exec basename {} .en.json \; | sort
 )
 
 mapfile -t LOOSE_POST_SLUGS < <(
 	printf '%s\n' "${POST_SLUGS[@]}" |
-		{ if [[ "${#PART_SLUGS[@]}" -gt 0 ]]; then grep -vxF "$(printf '%s\n' "${PART_SLUGS[@]}")"; else cat; fi; }
+		{
+			if [[ "${#PART_SLUGS[@]}" -gt 0 || "${#NOTE_SLUGS[@]}" -gt 0 ]]; then
+				grep -vxF "$(printf '%s\n' "${PART_SLUGS[@]}" "${NOTE_SLUGS[@]}")"
+			else
+				cat
+			fi
+		}
 )
 
 if [[ "${#LOOSE_POST_SLUGS[@]}" -eq 0 ]]; then
@@ -126,6 +166,17 @@ if [[ "${#SERIES_PARTS[@]}" -gt 0 ]]; then
 	IFS=$'\t' read -r SERIES_SLUG PART_SLUG <<<"${SERIES_PARTS[0]}"
 
 	ROUTES+=(/series "/series/${SERIES_SLUG}" "/series/${SERIES_SLUG}/${PART_SLUG}")
+fi
+
+# The Project namespace, when a published Field Note exists to probe — mirrors
+# the Series block above. Nothing today publishes one (the first note enters as
+# a Draft, per the phase's own field notes), so this block is a no-op until it
+# does; the moment it does, the route this phase adds is covered without this
+# script needing another edit.
+if [[ "${#PUBLISHED_PROJECT_NOTES[@]}" -gt 0 ]]; then
+	IFS=$'\t' read -r PROJECT_SLUG NOTE_SLUG <<<"${PUBLISHED_PROJECT_NOTES[0]}"
+
+	ROUTES+=(/projects "/projects/${PROJECT_SLUG}" "/projects/${PROJECT_SLUG}/${NOTE_SLUG}")
 fi
 
 if [[ ! -d build/client ]]; then

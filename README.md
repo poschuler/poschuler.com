@@ -155,6 +155,19 @@ sections:
 
 A **part** is then an ordinary Post one level deeper, `app/content/series/<series>/<part>/<part>.en.md`, with the same front matter any Post has. It declares nothing about the series: its container is the folder it sits in, and its position is wherever the manifest lists it. A section with no parts is planned and a section with parts is in progress, so neither is ever written down. See [ADR 0007](docs/adr/0007-the-manifest-declares-the-arc-a-part-does-not-know-where-it-is.md).
 
+A **Field Note** is the same idea under a Project instead of a Series: an ordinary Post, one level deeper, `app/content/projects/<project>/<note>/<note>.en.md`, served at `/projects/<project>/<note>`. A Project's own front matter declares which notes it holds and in what order, in a flat `notes:` list rather than a Series' sections and destination — a Project accumulates what happened; it does not promise where it is going:
+
+```yaml
+# app/content/projects/chekalo/chekalo.en.md, alongside its existing front matter
+notes:
+  - 'product-matching'
+  - 'alias-flip-vs-reindex-in-place'
+```
+
+Reconciliation is bidirectional, the same check a Series' manifest already runs: a listed note with no file fails the build, a file the manifest does not list fails, and the same note listed twice fails. Recorded on `content` as `project_slug` and `container_order` — the second replacing `section_order`, renamed because that name meant two different things on two tables. See the amendment to [ADR 0007](docs/adr/0007-the-manifest-declares-the-arc-a-part-does-not-know-where-it-is.md) and the comments in `seed/d1/schema.sql`.
+
+Any document under `app/content/` — a loose Post, a Part, a Field Note, a Project or a Series landing — can carry `draft: true`. It is checked exactly as strictly as a published document, and only then produces no row, no payload and no address; publishing is deleting that one line. It is not privacy — the repository is public — it is a state between *absent* and *live* the tree previously had no way to express. `pnpm run preview:drafts` renders every Draft into a gitignored `preview/` directory and applies it to the local D1 and KV, so a Draft reads at its real address without touching a tracked file. See [ADR 0009](docs/adr/0009-a-draft-is-a-document-the-build-validates-and-refuses-to-publish.md).
+
 The filename is the Slug, and it never changes once published — it is the URL. If one has to move anyway, add the old address to `app/lib/redirects.ts`; a test walks that map against the database, so a redirect pointing at a page that no longer exists fails the build. Re-run both seed scripts after adding a file; the KV upload replaces every `blog:` key rather than merging.
 
 ## Commands
@@ -173,6 +186,7 @@ The filename is the Slug, and it never changes once published — it is the URL.
 | `pnpm run d1:reset:local` | Rebuild the local D1 from `schema.sql` (KV is left alone)  |
 | `pnpm run d1:seed:local` | Regenerate `seed.sql` and apply it locally                 |
 | `pnpm run kv:seed:local` | Regenerate KV payloads and upload them locally             |
+| `pnpm run preview:drafts` | Render Drafts into the local D1 and KV, touching no tracked file |
 | `pnpm run verify:stores:local` | Read D1 and KV back and check they match the repo    |
 | `pnpm run check:fixtures` | Regenerate the fixtures and fail if anything changed       |
 | `pnpm run verify:schema:local` | Check the migration chain arrives at `schema.sql`     |

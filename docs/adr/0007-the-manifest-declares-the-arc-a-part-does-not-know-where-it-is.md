@@ -34,3 +34,18 @@ sections:
 - **Nothing on the site states a total.** "Part 3 of 5" needs a number nobody has — the manifest lists what exists, so nothing knows *Fundamentals* will reach five — and "Part 3 of 3" is available and worse than useless: in a Section still being written it tells the reader they have reached the end, and they have not. What is rendered instead is the list of titles, which cannot lie and grows only when something is published.
 - **`series_section` is a table with rows for Sections that hold nothing.** A planned Section is a row with a title and a summary and no Parts pointing at it, because the arc is the thing being published, not a by-product of the Posts that exist so far.
 - **The manifest is where a mistake is loud.** One file, in the order it renders, is a file a reader of the diff can check. That was the deciding argument over the distributed alternative: not that it is less typing, but that it is reviewable.
+
+## Amendment (Phase 1b): the manifest governs a second Container
+
+A Project declares which Field Notes it holds, and in what order, the same way a Series declares its Parts — a list in its own front matter, reconciled against the folder beneath it by the same two checks: a listed note with no file fails, a file the manifest does not list fails, and the same note listed twice fails. `seed/d1/manifest.ts` is that reconciliation pulled out of `series-sql.ts` into a function both Containers call, rather than copied — a check with two implementations has two chances to drift the day one of them is fixed and the other is not.
+
+What a Project's manifest deliberately does not declare is everything this ADR's opening settled for a Series: no Sections, no Destination, no `complete` status, no contiguity check. The reason is the boundary between the two Containers, and it is worth stating on its own:
+
+> A Series orders because it promised a Destination; a Project accumulates because the problems turn up when they turn up. Both declare what they hold; only one declares where it is going.
+
+A Series' arc is a promise a reader can rely on — Part five costs less if Part two was read first, because the Series said so on its landing before either existed. A Project's notes carry no such claim: each one is self-contained, and the manifest orders them for curation, not for a sequence a reader has to follow. That is also why a Project's manifest carries no status derivation — a Section's *planned* / *in progress* / *complete* states exist because a Section is a stage of an arc moving toward a Destination, and a Project's list of notes is not moving toward anything, only accumulating what happened.
+
+Two supporting consequences:
+
+- **A note listed in the manifest while it is a Draft reconciles normally and renders nothing** — Draft is an orthogonal state (ADR 0009), and the manifest lists a note the day it is declared, not the day it is finished, so a Draft's presence in the list is not a special case the reconciliation has to know about.
+- **The Container-contradiction check (ADR 0009) applies identically to both Containers** — a Project marked as a Draft while one of its notes is published fails the build exactly as a Series landing would, through the same `containerContradictionError`.
