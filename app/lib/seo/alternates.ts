@@ -1,6 +1,13 @@
-import type { Locale } from "~/context";
-import { postHref, projectHref, seriesHref, withLocale } from "~/lib/hrefs";
-import { SITE } from "./person";
+/**
+ * Relative, and every import below it too, `.ts` extension included —
+ * `seed/kv/sitemap-routes.ts` imports this module directly, and Node runs that
+ * script with no alias resolution (`tsconfig.test.json`'s own note on the same
+ * constraint). An alias would work everywhere this module is bundled and break
+ * the one place it is not.
+ */
+import type { Locale } from "../../context.ts";
+import { postHref, projectHref, seriesHref, withLocale } from "../hrefs.ts";
+import { SITE } from "./person.ts";
 
 /**
  * A document's canonical, its reciprocal alternates and the default — one

@@ -22,7 +22,14 @@
  * bundled for the browser and cannot reach into `~/models/*.server`.
  */
 
-import { ES_PREFIX, type Locale } from "~/context";
+/**
+ * Relative, not `~/context` — `app/lib/seo/alternates.ts` is imported directly
+ * by `seed/kv/sitemap-routes.ts`, which Node runs as a plain script with no
+ * alias resolution (`tsconfig.test.json`'s own note on the same constraint).
+ * An alias here would work everywhere this module is bundled and break the one
+ * place it is not.
+ */
+import { ES_PREFIX, type Locale } from "../context.ts";
 
 /**
  * The `/es` prefix every function below funnels through, so the two branches

@@ -12,13 +12,52 @@ import { generateSitemap } from "~/lib/seo/sitemap";
  */
 
 describe("generateSitemap", () => {
-  it("wraps the urls in a single-namespace urlset", () => {
+  it("wraps the urls in a two-namespace urlset — sitemaps.org and xhtml", () => {
     const xml = generateSitemap({ domain: "https://poschuler.com", routes: [{ url: "/blog" }] });
 
     expect(xml).toContain('<?xml version="1.0" encoding="UTF-8"?>');
-    expect(xml).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">');
+    expect(xml).toContain(
+      '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">',
+    );
     expect(xml).toContain("<loc>https://poschuler.com/blog</loc>");
     expect(xml.endsWith("</urlset>")).toBe(true);
+  });
+
+  it("emits one xhtml:link per alternate, inside the url it belongs to", () => {
+    const xml = generateSitemap({
+      domain: "https://poschuler.com",
+      routes: [
+        {
+          url: "/blog/foo",
+          alternates: [
+            { hreflang: "en", href: "https://poschuler.com/blog/foo" },
+            { hreflang: "es", href: "https://poschuler.com/es/blog/foo" },
+            { hreflang: "x-default", href: "https://poschuler.com/blog/foo" },
+          ],
+        },
+      ],
+    });
+
+    expect(xml).toContain(
+      '<xhtml:link rel="alternate" hreflang="en" href="https://poschuler.com/blog/foo"/>',
+    );
+    expect(xml).toContain(
+      '<xhtml:link rel="alternate" hreflang="es" href="https://poschuler.com/es/blog/foo"/>',
+    );
+    expect(xml).toContain(
+      '<xhtml:link rel="alternate" hreflang="x-default" href="https://poschuler.com/blog/foo"/>',
+    );
+  });
+
+  it("emits no xhtml:link for a route with no alternates — a Tag page, were it ever advertised", () => {
+    const withNone = generateSitemap({ domain: "https://poschuler.com", routes: [{ url: "/blog" }] });
+    const withEmpty = generateSitemap({
+      domain: "https://poschuler.com",
+      routes: [{ url: "/blog", alternates: [] }],
+    });
+
+    expect(withNone).not.toContain("xhtml:link");
+    expect(withEmpty).not.toContain("xhtml:link");
   });
 
   it("escapes XML entities in a location", () => {

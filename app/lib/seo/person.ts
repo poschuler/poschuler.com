@@ -1,4 +1,6 @@
-import { CONTACT_LINKS } from "~/lib/contact";
+// Relative — see the note in `alternates.ts`, which reaches this module
+// transitively from `seed/kv/sitemap-routes.ts`, a plain Node script.
+import { CONTACT_LINKS } from "../contact.ts";
 
 /** Everything structured data says about this site is rooted here. */
 export const SITE = "https://poschuler.com";
