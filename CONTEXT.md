@@ -19,7 +19,7 @@ An external article Paul read and chose to endorse. Only its metadata lives here
 _Avoid_: link, read, favourite
 
 **Timeline**:
-The single reverse-chronological listing that interleaves Posts and Bookmarks. It is the only place the two kinds appear together. It lives at `/timeline`; it used to be the front page, and the home page now carries a short, Post-only excerpt that is **not** a Timeline — a listing without Bookmarks in it is something else.
+The reverse-chronological listing that interleaves Posts and Bookmarks. It is the only place the two kinds appear together. It lives at `/timeline`; it used to be the front page, and the home page now carries a short, Post-only excerpt that is **not** a Timeline — a listing without Bookmarks in it is something else. There is one per Locale, each interleaving that Locale's Posts with **every** Bookmark, because a Bookmark has none.
 _Avoid_: feed, stream, activity
 
 **Source**:
@@ -27,7 +27,7 @@ The publication or author a Bookmark is credited to. A Post has no Source, becau
 _Avoid_: publisher, author, site
 
 **Tag**:
-A subject a Content Item is about, drawn from a closed vocabulary declared beside the content in `app/content/tags.json` — a Tag that is not declared fails the build. It is written as its own slug, and that one string is what the front matter carries, what the URL serves and what a chip displays; nothing is derived from anything. Tags describe subject matter, not format — `ddd` is a Tag, `post` is not. A Tag has a page only while some Post carries it, and that page lists Posts and never Bookmarks, which is what keeps the Timeline entry above true.
+A subject a Content Item is about, drawn from a closed vocabulary declared beside the content in `app/content/tags.json` — a Tag that is not declared fails the build. It is written as its own slug, and that one string is what the front matter carries, what the URL serves and what a chip displays; nothing is derived from anything. Tags describe subject matter, not format — `ddd` is a Tag, `post` is not. And it does not vary by Locale: a Tag is a subject, and subjects have no language — what has a language is what is written about them. A Tag has a page only while some Post carries it, and that page lists Posts and never Bookmarks, which is what keeps the Timeline entry above true.
 _Avoid_: category, keyword, topic
 
 **Published At**:
@@ -79,7 +79,7 @@ The stable, human-readable identifier for a Content Item, used verbatim in its U
 _Avoid_: id, permalink, path
 
 **Locale**:
-A language a Post is written in, as an IETF-style code (`en`, `es`). A Bookmark has no Locale — it is a pointer, and pointers aren't translated.
+A language a Post is written in, as an IETF-style code drawn from a closed vocabulary — today `en` and `es`. Every document except a Bookmark carries exactly one, and a Bookmark carries none: it is a pointer, and pointers aren't translated. Both halves are checked — an unrecognised Locale fails the build rather than being absorbed into the Slug, and so does a Bookmark that declares one.
 _Avoid_: lang, language, i18n
 
 **Translation**:
