@@ -212,11 +212,12 @@ describe("/blog/:blogSlug", () => {
   });
 
   /**
-   * The route hardcodes `:en`. The KV key layout is Locale-aware even though no
-   * URL carries one, so this pins the known limitation: whoever serves a second
-   * Translation has to change this test on purpose.
+   * The KV read is keyed off the resolved row's own Locale, not the request's
+   * — the same rule every sibling Post route already follows. `postSlug` is
+   * English-only in the fixtures, so the key still reads `:en` here; a Spanish
+   * fixture would read `:es` without this test changing at all.
    */
-  it("reads the en Translation, because no URL carries a Locale yet", async () => {
+  it("reads the KV body at the resolved row's own Locale", async () => {
     const keys: string[] = [];
     const spy = platformWith(platform, {
       BLOG_KV: {

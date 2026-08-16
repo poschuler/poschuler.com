@@ -70,7 +70,11 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     }
 
     const BLOG_KV = env.BLOG_KV;
-    const kv_key = `blog:${blogSlug}:en`;
+    // Keyed off the resolved row's own Locale, the way every sibling route
+    // already reads its body (`/projects/:project`, `/series/:seriesSlug`,
+    // `/series/:seriesSlug/:partSlug`) — not off the request's, which a Post
+    // with no Translation in that Locale would never have found a row for.
+    const kv_key = `blog:${blogSlug}:${post.lang}`;
     const contentPayload = await BLOG_KV.get<BlogContentPayload>(kv_key, {
         type: "json",
         // A Post body only changes when the seed pipeline runs, so let the colo

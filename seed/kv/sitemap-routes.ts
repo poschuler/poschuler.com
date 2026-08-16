@@ -248,7 +248,7 @@ export function buildSitemapRoutes(
 
   return [
     { url: "/", lastmod: lastModOf(items), changefreq: "monthly", priority: 1.0 },
-    { url: "/resume", lastmod: resumeLastmod, changefreq: "monthly", priority: 0.8 },
+    { url: "/cv", lastmod: resumeLastmod, changefreq: "monthly", priority: 0.8 },
     { url: "/blog", lastmod: lastModOf(posts), changefreq: "monthly", priority: 0.6 },
     { url: "/bookmarks", lastmod: lastModOf(bookmarks), changefreq: "monthly", priority: 0.5 },
     // Dated from everything, because it is everything: the Timeline is the one

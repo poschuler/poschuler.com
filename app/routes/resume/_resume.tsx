@@ -26,7 +26,7 @@ import { basics, certificates, education, languages } from "~/routes/resume/resu
  */
 const PERSON = {
   ...PERSON_CORE,
-  mainEntityOfPage: `${SITE}/resume`,
+  mainEntityOfPage: `${SITE}/cv`,
   email: `mailto:${basics.email}`,
   knowsLanguage: languages.map(({ language }) => language),
   alumniOf: education.map(({ institution, url }) => ({
@@ -53,7 +53,7 @@ const RESUME_DESCRIPTION =
  *
  * Routing it through a loader instead sent the whole document down twice in
  * every single response — once as the rendered HTML, once again as the
- * hydration payload underneath it, 12 kB of the 70 kB `/resume` weighs. As a
+ * hydration payload underneath it, 12 kB of the 70 kB `/cv` weighs. As a
  * plain import it travels inside the hashed route chunk, which a browser
  * fetches once and caches.
  */
@@ -61,13 +61,14 @@ const RESUME_DESCRIPTION =
 /**
  * No loader, so no `locale` arrives from `localeContext` the way every other
  * page's does — deliberately, for the reason above this file's `meta` used to
- * carry alone. This page has exactly one address until Phase 3's Part 8 gives
- * the Resume its Spanish text (`evolution-plan/15-phase-3-spanish.md`), so the
- * Locale it canonicalises at is written here rather than threaded through a
+ * carry alone. The route is mounted at `/cv` in both Locales (ADR 0010), but
+ * this page still canonicalises at the English one until Phase 3's Part 8
+ * gives the Resume its Spanish text (`evolution-plan/15-phase-3-spanish.md`),
+ * so the Locale it renders is written here rather than threaded through a
  * loader added for this alone.
  */
 export const meta: MetaFunction = () => {
-  const { canonical } = documentAddresses({ kind: "index", path: "/resume" }, "en", ["en"]);
+  const { canonical } = documentAddresses({ kind: "index", path: "/cv" }, "en", ["en"]);
 
   return [
     { title: RESUME_TITLE },

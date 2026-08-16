@@ -33,7 +33,7 @@ const NAV_ITEMS = [
   { to: "/blog", key: "blog", Icon: NotebookPen },
   { to: "/bookmarks", key: "bookmarks", Icon: BookMarked },
   { to: "/timeline", key: "timeline", Icon: Clock },
-  { to: "/resume", key: "resume", Icon: FileCode2 },
+  { to: "/cv", key: "resume", Icon: FileCode2 },
 ] as const;
 
 /**

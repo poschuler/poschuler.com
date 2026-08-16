@@ -223,13 +223,13 @@ Every user-facing route exports its own `meta`, and each one supplies the full s
 
 **Two routes emit `Person` JSON-LD**, both through the same `meta` export, using React Router's `script:ld+json` descriptor. Each derives its fields from what that page already renders rather than restating them — the home from its contact links, the Resume from `resume.json` — so the structured data cannot drift from the page carrying it.
 
-They describe the same person and do not have to be identical: `/resume` adds `alumniOf`, `hasCredential` and `knowsLanguage`, because that is where the credentials are, and sets `mainEntityOfPage` to itself while leaving `url` pointing at the site. A crawler reading both takes the union, which is the intended result. Neither carries `worksFor`.
+They describe the same person and do not have to be identical: `/cv` adds `alumniOf`, `hasCredential` and `knowsLanguage`, because that is where the credentials are, and sets `mainEntityOfPage` to itself while leaving `url` pointing at the site. A crawler reading both takes the union, which is the intended result. Neither carries `worksFor`.
 
 **Write metadata the way the rest of the site is written.** Titles name the page — `Blog | Paul Osorio Schuler`, not `Paul Osorio Schuler's Blog | Software Architecture, Node.js & Azure`. Descriptions say what is on the page, in plain words, and only claim what the page actually contains: the blog once advertised Azure while no Post mentioned it. No "advanced", no "insights", no "essential reading". This is a notebook, and the metadata is part of its voice.
 
 ## Navigation
 
-Internal links are `<Link>`. Not `<a href>`, and not `reloadDocument` — both throw away the client-side router the site already ships. `reloadDocument` is for resource routes that are not React at all, like the `/resume.pdf` download in `routes/resume/hero.tsx`.
+Internal links are `<Link>`. Not `<a href>`, and not `reloadDocument` — both throw away the client-side router the site already ships. `reloadDocument` is for resource routes that are not React at all, like the `/cv.pdf` download in `routes/resume/hero.tsx`.
 
 One consequence to remember inside the mobile sheet: client-side navigation leaves the panel mounted, so a link in there has to dismiss it as well. `<SheetClose render={<Link to="…" />}>` does both.
 

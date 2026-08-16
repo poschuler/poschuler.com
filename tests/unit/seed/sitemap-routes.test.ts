@@ -72,7 +72,7 @@ describe("buildSitemapRoutes", () => {
   it("lists the five static routes and one per Post", () => {
     expect(urlsOf(routesFor(items))).toEqual([
       "/",
-      "/resume",
+      "/cv",
       "/blog",
       "/bookmarks",
       "/timeline",
@@ -114,20 +114,20 @@ describe("buildSitemapRoutes", () => {
   it("still lists the static routes when the store is empty", () => {
     const routes = routesFor([]);
 
-    expect(urlsOf(routes)).toEqual(["/", "/resume", "/blog", "/bookmarks", "/timeline"]);
-    expect(routes.every((route) => route.lastmod === FALLBACK || route.url === "/resume")).toBe(true);
+    expect(urlsOf(routes)).toEqual(["/", "/cv", "/blog", "/bookmarks", "/timeline"]);
+    expect(routes.every((route) => route.lastmod === FALLBACK || route.url === "/cv")).toBe(true);
   });
 
   /** Read from `resume.json`'s own `meta.lastModified`, not from any content. */
-  it("dates /resume from the date the Resume itself carries", () => {
+  it("dates /cv from the date the Resume itself carries", () => {
     const routes = routesFor(items, FALLBACK, "2026-02-02");
 
-    expect(routes.find((route) => route.url === "/resume")?.lastmod).toBe("2026-02-02");
+    expect(routes.find((route) => route.url === "/cv")?.lastmod).toBe("2026-02-02");
   });
 
   it("does not let the Resume's date leak into any other section", () => {
     const routes = routesFor(items, FALLBACK, "2026-02-02");
-    const others = routes.filter((route) => route.url !== "/resume");
+    const others = routes.filter((route) => route.url !== "/cv");
 
     expect(others.every((route) => route.lastmod !== "2026-02-02")).toBe(true);
   });
@@ -191,7 +191,7 @@ describe("buildSitemapRoutes", () => {
     const priorityOf = (url: string) => routes.find((route) => route.url === url)?.priority;
 
     expect(priorityOf("/")).toBe(1.0);
-    expect(priorityOf("/resume")).toBe(0.8);
+    expect(priorityOf("/cv")).toBe(0.8);
     expect(priorityOf("/blog/newest-post")).toBe(0.7);
     expect(priorityOf("/bookmarks")).toBe(0.5);
   });

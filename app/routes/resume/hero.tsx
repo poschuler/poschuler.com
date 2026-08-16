@@ -72,7 +72,7 @@ export function Hero() {
 
           <Button
             variant="outline"
-            render={<Link to="/resume.pdf" reloadDocument />}
+            render={<Link to="/cv.pdf" reloadDocument />}
           >
             <Download className="mr-2 size-4" />
             Download as PDF

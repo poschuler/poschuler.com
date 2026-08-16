@@ -126,7 +126,7 @@ fi
 
 POST_SLUG="${LOOSE_POST_SLUGS[0]}"
 
-ROUTES=(/ /blog /bookmarks /resume /robots.txt /sitemap.xml "/blog/${POST_SLUG}")
+ROUTES=(/ /blog /bookmarks /cv /robots.txt /sitemap.xml "/blog/${POST_SLUG}")
 
 # A Tag page, probed with a Tag some Post actually carries — read from the Post
 # payloads, which is the only place that guarantees it. A hardcoded Tag would
@@ -372,7 +372,7 @@ curl -s -o /dev/null -X POST "${BASE}/set-theme" \
 	-H "Content-Type: application/x-www-form-urlencoded" \
 	-d "color-scheme=dark" || true
 
-for route in / /resume; do
+for route in / /cv; do
 	status=$(curl -s -o /dev/null -w "%{http_code}" "${BASE}${route}")
 
 	if [[ "${status}" == "200" ]]; then

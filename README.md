@@ -16,7 +16,7 @@ The whole site is a single Cloudflare Worker. There is no separate API, no origi
 | `/timeline`   | Posts and Bookmarks interleaved, newest first                         |
 | `/tags`       | Every subject some Post covers, heaviest first, with its count        |
 | `/tags/<tag>` | The Posts on one subject, newest first — `noindex, follow`            |
-| `/resume`     | Structured professional history, plus a PDF download                  |
+| `/cv`         | Structured professional history, plus a PDF download                  |
 
 ## How content works
 
