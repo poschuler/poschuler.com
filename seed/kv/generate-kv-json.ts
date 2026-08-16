@@ -24,7 +24,7 @@ import resume from "../../app/routes/resume/resume.json" with { type: "json" };
 const CONTENT_DIR = path.join(process.cwd(), "app", "content", "blog");
 const PROJECT_CONTENT_DIR = path.join(process.cwd(), "app", "content", "projects");
 const SERIES_CONTENT_DIR = path.join(process.cwd(), "app", "content", "series");
-const TEMP_JSON_DIR = path.join(process.cwd(), "seed", "kv", "kv_payloads");
+const DEFAULT_OUTPUT_DIR = path.join(process.cwd(), "seed", "kv", "kv_payloads");
 const D1_BINDING_NAME = "poschuler";
 const PUBLIC_HOST = "https://poschuler.com";
 
@@ -51,9 +51,11 @@ type ContentRowType = SitemapContentItem & {
     source: string;
     /**
      * The Container, when the Post has one. It is what says where the Markdown
-     * is: a Part lives under its Series, not under `blog/`.
+     * is: a Part lives under its Series, a Field Note under its Project,
+     * neither under `blog/`.
      */
     seriesSlug: string | null;
+    projectSlug: string | null;
 };
 
 type SeriesRowType = {
@@ -88,13 +90,11 @@ function fetchAll(): ContentRowType[] {
     // by accident. Fixing it means single-quoting the aliases, not adding
     // backslashes.
     //
-    // No `tags`, for the reason `CONTENT_COLUMNS` states at length: the column
-    // is still written and no longer read, so that dropping it is a deploy of
-    // its own rather than one that strands the Worker already serving. Nothing
+    // No `tags`: `content` has no such column since migration 0005. Nothing
     // here ever used it — a payload's Tags come from the front matter below,
     // verbatim, and the index at `/tags` is built from `content_tag`.
     const rows = queryD1<ContentRowType>(
-        `select id_content as "idContent", slug as "slug", lang as "lang", type as "type", title as "title", published_at as "publishedAt", strftime('%Y-%m-%d', published_at) AS "publishedStringDate", description as "description", external_url as "externalUrl", source as "source", updates as "updates", series_slug as "seriesSlug" from content order by published_at desc`,
+        `select id_content as "idContent", slug as "slug", lang as "lang", type as "type", title as "title", published_at as "publishedAt", strftime('%Y-%m-%d', published_at) AS "publishedStringDate", description as "description", external_url as "externalUrl", source as "source", updates as "updates", series_slug as "seriesSlug", project_slug as "projectSlug" from content order by published_at desc`,
     );
 
     if (!rows.length) {
@@ -131,9 +131,9 @@ function fetchAllSeries(): SeriesRowType[] {
 /**
  * The Tags that reach a page — the entries the index at `/tags` lists.
  *
- * Read from `content_tag` rather than from the `tags` column selected above:
- * that column has no reader left and is scheduled for removal, and the sitemap
- * would be the one thing keeping it alive.
+ * Read from `content_tag`, which is where a Tag lives. `content` carried a JSON
+ * copy until migration 0005; had the sitemap read that instead, it would have
+ * been the one thing keeping a column with no other reader alive.
  *
  * **Posts only**, because a Tag page lists Posts only — the join on `lang` does
  * that on its own (a Bookmark's is NULL in both tables and SQLite matches no
@@ -188,7 +188,19 @@ async function writePayload(
     );
 }
 
-async function generateKvJsonFiles() {
+/**
+ * Reads the *already seeded* local D1, writes every payload and the sitemap
+ * into `outputDir`.
+ *
+ * One parameter, not a second pipeline (Part 3 of the field notes): called
+ * with none, this is byte-for-byte what it always was. `preview:drafts` is
+ * the only caller that passes one — a directory outside `seed/kv/`, so
+ * nothing tracked is touched. There is no `includeDrafts` here: this
+ * generator does not decide what is published, it renders whatever `content`
+ * already holds, and `generate-seed-sql.ts --include-drafts` is what put a
+ * Draft's row there in the first place.
+ */
+async function generateKvJsonFiles(outputDir: string = DEFAULT_OUTPUT_DIR) {
     console.log("⚙️ Starting content processing and JSON file generation...");
 
     const allContentItems = fetchAll();
@@ -197,21 +209,25 @@ async function generateKvJsonFiles() {
     const series = fetchAllSeries();
     const tags = fetchTaggedPostTags();
 
-    await fs.rm(TEMP_JSON_DIR, { recursive: true, force: true });
-    await fs.mkdir(TEMP_JSON_DIR, { recursive: true });
+    await fs.rm(outputDir, { recursive: true, force: true });
+    await fs.mkdir(outputDir, { recursive: true });
 
-    console.log(`\n2. 📄 Found ${posts.length} posts, ${projects.length} projects and ${series.length} series. Writing JSON files to ${TEMP_JSON_DIR}...`);
+    console.log(`\n2. 📄 Found ${posts.length} posts, ${projects.length} projects and ${series.length} series. Writing JSON files to ${outputDir}...`);
 
     for (const post of posts) {
-        const { slug, lang, seriesSlug } = post;
+        const { slug, lang, seriesSlug, projectSlug } = post;
 
         // Where the Markdown is, which is not where the payload goes: a Part
-        // lives under its Series on disk and under `blog:` in KV.
+        // lives under its Series on disk, a Field Note under its Project, and
+        // both under `blog:` in KV — the prefix says what kind of payload it
+        // is, not which URL serves it.
         const sourcePath = seriesSlug
             ? path.join(SERIES_CONTENT_DIR, seriesSlug, slug, `${slug}.${lang}.md`)
-            : path.join(CONTENT_DIR, slug, `${slug}.${lang}.md`);
+            : projectSlug
+                ? path.join(PROJECT_CONTENT_DIR, projectSlug, slug, `${slug}.${lang}.md`)
+                : path.join(CONTENT_DIR, slug, `${slug}.${lang}.md`);
 
-        await writePayload(sourcePath, path.join(TEMP_JSON_DIR, "blog"), slug, lang);
+        await writePayload(sourcePath, path.join(outputDir, "blog"), slug, lang);
 
         console.log(`   -> ✅ JSON written for key: blog:${slug}:${lang}`);
     }
@@ -219,7 +235,7 @@ async function generateKvJsonFiles() {
     for (const { slug, lang } of series) {
         await writePayload(
             path.join(SERIES_CONTENT_DIR, slug, `${slug}.${lang}.md`),
-            path.join(TEMP_JSON_DIR, "series"),
+            path.join(outputDir, "series"),
             slug,
             lang,
         );
@@ -232,7 +248,7 @@ async function generateKvJsonFiles() {
 
         await writePayload(
             path.join(PROJECT_CONTENT_DIR, slug, `${slug}.${lang}.md`),
-            path.join(TEMP_JSON_DIR, "projects"),
+            path.join(outputDir, "projects"),
             slug,
             lang,
         );
@@ -258,7 +274,7 @@ async function generateKvJsonFiles() {
     });
 
     await fs.writeFile(
-        path.join(TEMP_JSON_DIR, `sitemap.json`),
+        path.join(outputDir, `sitemap.json`),
         JSON.stringify({ sitemap }, null, 2),
         "utf-8",
     );
@@ -268,7 +284,25 @@ async function generateKvJsonFiles() {
     console.log(`\n\n🎉 JSON generation complete! Files are ready for upload.`);
 }
 
-generateKvJsonFiles().catch((e) => {
+/**
+ * `--output-dir <dir>`, optional. Hand-parsed for the same reason as
+ * `generate-seed-sql.ts`'s — this file sits outside the coverage target.
+ */
+function parseArgs(argv: string[]): { outputDir?: string } {
+    let outputDir: string | undefined;
+
+    for (let i = 0; i < argv.length; i++) {
+        if (argv[i] === "--output-dir") {
+            outputDir = argv[++i];
+        }
+    }
+
+    return { outputDir };
+}
+
+const { outputDir } = parseArgs(process.argv.slice(2));
+
+generateKvJsonFiles(outputDir ? path.resolve(process.cwd(), outputDir) : undefined).catch((e) => {
     console.error("JSON generation failed at the top level:");
     console.error(e);
     process.exit(1);

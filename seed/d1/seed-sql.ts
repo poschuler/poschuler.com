@@ -27,6 +27,11 @@ export interface FrontMatterAttributes {
    * what turns it into a list.
    */
   updates?: unknown;
+  /**
+   * `unknown` for the same reason as `updates`. `draftError` is what turns it
+   * into a boolean or a build failure.
+   */
+  draft?: unknown;
 }
 
 /**
@@ -42,6 +47,33 @@ export interface PartPlacement {
   section: string;
   /** The position in its section's list — an index, never written by hand. */
   order: number;
+}
+
+/**
+ * Where a Field Note sits in its Project — `PartPlacement`'s sibling, with no
+ * section: a Project's manifest is a flat list, not an arc (Part 8 of
+ * `evolution-plan/14-phase-1b-field-notes.md`). A Project accumulates because
+ * the problems turn up when they turn up; a Series orders because it promised
+ * a Destination.
+ */
+export interface NotePlacement {
+  projectSlug: string;
+  /** The position in the manifest's list — an index, never written by hand. */
+  order: number;
+}
+
+/**
+ * A Post's Container, as the manifest that holds it hands it over: a Part's
+ * placement in its Series, or a Field Note's in its Project — never both, the
+ * same way `content.series_slug` and `content.project_slug` never both hold a
+ * value (`schema.sql`). Which one a value is is read structurally, by the
+ * field only that kind carries, rather than by a `kind` tag neither manifest
+ * writes.
+ */
+export type ContainerPlacement = PartPlacement | NotePlacement;
+
+function isPartPlacement(container: ContainerPlacement): container is PartPlacement {
+  return "seriesSlug" in container;
 }
 
 /** A row that will be seeded, and the identity used to decide it survives a prune. */
@@ -129,6 +161,42 @@ export function parseContentFilename(
 }
 
 /**
+ * `draft: true` in front matter (see `evolution-plan/14-phase-1b-field-notes.md`
+ * Part 3) is the whole mechanism: a file declares itself a Draft, is read,
+ * classified and checked exactly like a published one, and only at the very
+ * end does it produce nothing.
+ *
+ * JavaScript's own truthiness is not trusted for the flag. `draft` is a YAML
+ * field, so `draft: 'true'` or `draft: yes` must fail the build rather than
+ * being read as the boolean it merely looks like — a document silently
+ * unpublished by a typo is worse than one that fails loudly.
+ */
+export function draftError(relativePath: string, draft: unknown): string | null {
+  if (draft === undefined || typeof draft === "boolean") {
+    return null;
+  }
+
+  return `${relativePath} declares draft: ${JSON.stringify(draft)} — draft must be true or false, nothing else`;
+}
+
+/** Whether a document is a Draft. `true` and nothing else counts — see `draftError`. */
+export function isDraft(draft: unknown): boolean {
+  return draft === true;
+}
+
+/**
+ * The one switch every row builder in this file and its siblings takes, and
+ * the whole of what `preview:drafts` (Part 3 of the field notes) adds to the
+ * generators: with it unset or `false`, a Draft is skipped exactly as it is
+ * today. Set, a Draft is read as though it were published — checked the same
+ * way, emitted instead of skipped — which is what lets it render at its real
+ * address without touching a tracked file.
+ */
+export interface DraftOptions {
+  includeDrafts?: boolean;
+}
+
+/**
  * One `content_tag` row per Tag the file carries.
  *
  * Written for Posts and Bookmarks alike, and for a Part exactly as for a loose
@@ -167,15 +235,22 @@ VALUES (${escapeSql(slug)}, ${escapeSql(lang)}, ${escapeSql(tag)});
  * shape every other front-matter mistake already fails in, rather than in a path
  * of its own.
  *
- * `part` is supplied by the caller for a Post that lives inside a Series,
- * because only the manifest knows where it sits. A nested Post without one is a
- * Part nothing indexes, which is a failure rather than a loose Post.
+ * `container` is supplied by the caller for a Post that lives inside a Series
+ * or a Project, because only the manifest knows where it sits — a Part's
+ * placement or a Field Note's, never both. A nested Post without one is a Part
+ * or a Field Note nothing indexes, which is a failure rather than a loose
+ * Post.
+ *
+ * `options.includeDrafts` is `preview:drafts`'s hook (see `DraftOptions`): every
+ * check above the two Draft checks below still runs unconditionally, so a
+ * broken draft fails the build in preview exactly as it would on publish.
  */
 export function contentRowFor(
   relativePath: string,
   attributes: FrontMatterAttributes,
   vocabulary: TagVocabulary,
-  part?: PartPlacement,
+  container?: ContainerPlacement,
+  options?: DraftOptions,
 ): ContentFileResult {
   const placed = placementOf(relativePath);
 
@@ -203,21 +278,30 @@ export function contentRowFor(
   }
 
   const { slug, lang } = parsed;
-  const tagsJson = escapeSql(JSON.stringify(attributes.tags || []));
   const escapedSlug = escapeSql(slug);
   const publishedAt = escapeSql(attributes.publishedAt);
   const title = escapeSql(attributes.title);
+
+  // Checked once, ahead of the branch: both a Post and a Bookmark can declare
+  // themselves a Draft, and a bad value is a mistake regardless of which one
+  // this file is.
+  const draftProblem = draftError(relativePath, attributes.draft);
+
+  if (draftProblem) {
+    return { error: draftProblem };
+  }
 
   if (attributes.type === "post") {
     if (!lang) {
       return { reason: `post ${filename} must have a language in its filename` };
     }
 
-    // Also after the Locale check, and for the same reason: a draft is never
-    // seeded, so it is never measured against the vocabulary either. That is
-    // what leaves `project-setup.en-old.md` holding the pre-vocabulary
-    // spellings without stopping the build — and what turns renaming it into a
-    // build failure, which is the honest outcome.
+    // Also after the Locale check, and for the same reason: a draft with no
+    // recognised Locale — the `.en-old.md` convention — is never seeded, so it
+    // is never measured against the vocabulary either. That is what leaves
+    // `project-setup.en-old.md` holding the pre-vocabulary spellings without
+    // stopping the build — and what turns renaming it into a build failure,
+    // which is the honest outcome.
     const badTag = tagError(relativePath, attributes.tags, vocabulary);
 
     if (badTag) {
@@ -225,8 +309,10 @@ export function contentRowFor(
     }
 
     // After the Locale check, deliberately: a draft that carries no Locale is
-    // not seeded at all, so the manifest has no reason to list it.
-    if (placed.container !== null && !part) {
+    // not seeded at all, so the manifest has no reason to list it. A draft
+    // declared with `draft: true`, by contrast, is listed exactly like a
+    // published Part or Field Note — see the check at the end of this branch.
+    if (placed.container !== null && !container) {
       return {
         error: `${relativePath} is not listed in the ${placed.container} manifest — a Part nothing indexes cannot be reached or ordered`,
       };
@@ -238,17 +324,37 @@ export function contentRowFor(
       return { error: `${relativePath}: ${revisions.error}` };
     }
 
-    // Written here or written as NULL, never read from front matter. The three
-    // always travel together, which is why the invariant that they are all
-    // present or all absent is not checked anywhere: it is not representable.
-    const container = part
-      ? `${escapeSql(part.seriesSlug)}, ${escapeSql(part.section)}, ${part.order}`
-      : "NULL, NULL, NULL";
+    // The last check in the branch, deliberately: a Draft passes every check
+    // a published document passes — its type against its placement, its Tags
+    // against the vocabulary, its manifest listing, its revisions — and only
+    // once all of them pass does it produce nothing, unless the caller asked
+    // for Drafts to be included.
+    if (isDraft(attributes.draft) && !options?.includeDrafts) {
+      return { reason: `${relativePath} is a draft` };
+    }
+
+    // Written here or written as NULL, never read from front matter. The
+    // three Series columns always travel together, and so do the two Project
+    // ones — a Post's Container is a Part's placement or a Field Note's,
+    // never both — which is why the invariant that they are all present or
+    // all absent is not checked anywhere: it is not representable.
+    //
+    // The position is written twice, once per order column: `container_order`
+    // is the one every query reads, and `section_order` is written beside it,
+    // unread, only because the previously deployed Worker still asks for it by
+    // that name during this publication's migrate-then-deploy window (ADR
+    // 0006's amendment). Dropped, and this duplication with it, once that
+    // publication is confirmed live.
+    const containerColumns = !container
+      ? "NULL, NULL, NULL, NULL, NULL"
+      : isPartPlacement(container)
+        ? `${escapeSql(container.seriesSlug)}, ${escapeSql(container.section)}, NULL, ${container.order}, ${container.order}`
+        : `NULL, NULL, ${escapeSql(container.projectSlug)}, ${container.order}, ${container.order}`;
 
     return {
       statement: `
-INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, tags, repository, updates, series_slug, series_section, section_order, updated_at)
-VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attributes.description)}, ${publishedAt}, ${tagsJson}, ${escapeSql(attributes.repository)}, ${escapeSql(JSON.stringify(revisions.revisions))}, ${container}, CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, project_slug, section_order, container_order, updated_at)
+VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attributes.description)}, ${publishedAt}, ${escapeSql(attributes.repository)}, ${escapeSql(JSON.stringify(revisions.revisions))}, ${containerColumns}, CURRENT_TIMESTAMP);
 `,
       key: `${slug}:${lang}`,
       tags: tagRowsFor(slug, lang, attributes.tags),
@@ -262,21 +368,26 @@ VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attrib
     return { error: `${relativePath} is a Bookmark and cannot carry updates — the body is not here` };
   }
 
-  // Checked here rather than above the branch, because a Bookmark has no draft
-  // state to step around: it is a single file with no Locale, so every one of
-  // them is seeded and every one of them is measured. The vocabulary covers
-  // Bookmarks even though no Tag page lists them, so the day that question is
-  // reopened there is nothing to clean up first.
+  // A Bookmark has no Locale to hide behind, unlike the `.en-old.md`
+  // convention a Post can use — `draft: true` is the only way one goes
+  // unpublished. The vocabulary covers Bookmarks even though no Tag page
+  // lists them, so the day that question is reopened there is nothing to
+  // clean up first.
   const badTag = tagError(relativePath, attributes.tags, vocabulary);
 
   if (badTag) {
     return { error: badTag };
   }
 
+  // The last check, as on a Post: every other rule has already run.
+  if (isDraft(attributes.draft) && !options?.includeDrafts) {
+    return { reason: `${relativePath} is a draft` };
+  }
+
   return {
     statement: `
-INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, tags, updated_at)
-VALUES (${escapedSlug}, NULL, 'link', ${title}, ${escapeSql(attributes.externalUrl)}, ${escapeSql(attributes.source)}, ${publishedAt}, ${tagsJson}, CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO content (slug, lang, type, title, external_url, source, published_at, updated_at)
+VALUES (${escapedSlug}, NULL, 'link', ${title}, ${escapeSql(attributes.externalUrl)}, ${escapeSql(attributes.source)}, ${publishedAt}, CURRENT_TIMESTAMP);
 `,
     key: `${slug}:`,
     tags: tagRowsFor(slug, null, attributes.tags),

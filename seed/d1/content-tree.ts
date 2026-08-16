@@ -16,6 +16,7 @@
  *     projects/<project>/<project>.en.md                 depth 2
  *     series/<series>/<series>.en.md                     depth 2
  *     series/<series>/<part>/<part>.en.md                depth 3
+ *     projects/<project>/<note>/<note>.en.md              depth 3
  *
  * The file named after its folder *is* that folder; a subfolder is content
  * living inside it. So depth 1 and 2 are the tree's own item, and depth 3 is
@@ -34,15 +35,16 @@ export type ContentType = "post" | "link" | "project" | "series";
  * — if anything — may live nested inside one of its items.
  *
  * `nested: null` means *nothing nests here*. A subfolder under `blog/` fails
- * the build rather than acquiring an invented meaning, and `projects/` says the
- * same for now on purpose: a Field Note needs a `project_slug` on `content` to
- * be linkable, and that column arrives in 1b. Accepting one today would seed a
- * Post with no Container — the silent shape ADR 0004 exists to remove.
+ * the build rather than acquiring an invented meaning. `projects/` used to say
+ * the same, before `project_slug` existed on `content` to make a nested Post
+ * linkable — 1b (`evolution-plan/14-phase-1b-field-notes.md`) is the column's
+ * arrival, and this line is the branch it was reserved for: depth 3 under a
+ * Project is a Field Note, the same depth rule `series/` already generalised.
  */
 export const CONTENT_TREES = {
   blog: { item: "post", nested: null },
   bookmarks: { item: "link", nested: null },
-  projects: { item: "project", nested: null },
+  projects: { item: "project", nested: "post" },
   series: { item: "series", nested: "post" },
 } as const satisfies Record<string, { item: ContentType; nested: ContentType | null }>;
 

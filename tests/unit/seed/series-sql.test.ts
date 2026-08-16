@@ -39,11 +39,13 @@ const manifest = (overrides: Partial<SeriesFrontMatter> = {}): SeriesFrontMatter
   ...overrides,
 });
 
-const partFile = (slug: string): SeriesPartFile => ({
+const partFile = (slug: string, overrides: Partial<SeriesPartFile> = {}): SeriesPartFile => ({
   slug,
   lang: "en",
   folder: slug,
   relativePath: `series/api/${slug}/${slug}.en.md`,
+  draft: false,
+  ...overrides,
 });
 
 const FILES = [partFile("project-setup"), partFile("error-handling")];
@@ -310,12 +312,121 @@ describe("seriesRowsFor — the path decides what the file is", () => {
     expect(isInvalidSeries(result)).toBe(true);
   });
 
-  /** A landing has no draft state: it is one page, revised in place. */
+  /**
+   * A landing has no `.en-old.md` convention to hide behind, as a Post does:
+   * it is one page, revised in place, so a missing Locale is a mistake.
+   * `draft: true` is the only way one goes unpublished — see below.
+   */
   it("fails a manifest with no Locale in its filename", () => {
     const result = seriesRowsFor("series/api/api.md", manifest(), BODY, FILES);
 
     expect(isInvalidSeries(result)).toBe(true);
     expect((result as { error: string }).error).toMatch(/must have a language/);
+  });
+});
+
+/**
+ * `draft: true` on a Series manifest. Part 5's rule is stricter here
+ * than on a Post — a Container may be a Draft only while it holds no
+ * published content, checked below.
+ */
+describe("seriesRowsFor — Drafts", () => {
+  it("marks the result a draft when every listed Part is a draft too, after every other check has passed", () => {
+    const files = [
+      partFile("project-setup", { draft: true }),
+      partFile("error-handling", { draft: true }),
+    ];
+
+    const { draft, series, sections } = rowsFor(manifest({ draft: true }), files);
+
+    expect(draft).toBe(true);
+    // Still built, so a caller needing the placements has them — see
+    // `generate-seed-sql.ts`. Whether to seed `series`/`sections` is the
+    // caller's decision, driven by `draft`.
+    expect(series.statement).toContain("INSERT OR REPLACE INTO series");
+    expect(sections).toHaveLength(2);
+  });
+
+  it("marks the result published when the flag is absent, exactly as today", () => {
+    expect(rowsFor().draft).toBe(false);
+  });
+
+  /** Part 12's promise: a Draft passes every check a published one would. */
+  it("still fails a draft manifest for every reason a published one would", () => {
+    expect(errorFor(manifest({ draft: true, startingPoint: "  " }))).toMatch(/has no startingPoint/);
+  });
+
+  it("fails a non-boolean draft value rather than reading it as truthy", () => {
+    expect(errorFor(manifest({ draft: "true" as never }))).toMatch(/draft must be true or false/);
+  });
+
+  /**
+   * The rule this ticket adds: no cascade. A drafted Container does not hide
+   * its published children, it refuses to coexist with them, and the message
+   * names both.
+   */
+  it("fails a Series marked draft while one of its Parts is published, naming the Container and the child", () => {
+    const files = [
+      partFile("project-setup", { draft: false }),
+      partFile("error-handling", { draft: true }),
+    ];
+
+    const error = errorFor(manifest({ draft: true }), files);
+
+    expect(error).toBe(
+      `${MANIFEST} is a draft, but 'project-setup' is published — a Post cannot be reached through a Container that is not.`,
+    );
+  });
+
+  it("passes when a drafted Series has no Parts at all yet", () => {
+    const attributes = manifest({
+      draft: true,
+      sections: [{ slug: "fundamentals", title: "Fundamentals", summary: "Where the code goes." }],
+    });
+
+    expect(rowsFor(attributes, []).draft).toBe(true);
+  });
+
+  /**
+   * The round trip (Part 12's last rule): publishing inserted this Series's
+   * rows through `buildSeriesSeedSql`'s upsert; marking it a draft removes it
+   * from the rows the generator hands that function, so the existing prune —
+   * `DELETE FROM series WHERE … NOT IN (keyList)` — deletes it. A second,
+   * always-published Series keeps the row list non-empty throughout, the way
+   * `buildSeriesSeedSql([], [])` is deliberately a no-op for the day nothing
+   * has ever been written (see its own tests below).
+   */
+  it("removes a previously published Series's rows through the existing prune once it becomes a draft", () => {
+    const otherFiles = [
+      partFile("project-setup", { relativePath: "series/other/project-setup/project-setup.en.md" }),
+      partFile("error-handling", { relativePath: "series/other/error-handling/error-handling.en.md" }),
+    ];
+    const otherResult = seriesRowsFor("series/other/other.en.md", manifest(), BODY, otherFiles);
+
+    if (isInvalidSeries(otherResult)) {
+      throw new Error(`expected rows, got: ${otherResult.error}`);
+    }
+
+    const api = rowsFor();
+
+    const sqlWhilePublished = buildSeriesSeedSql([api.series, otherResult.series], [
+      ...api.sections,
+      ...otherResult.sections,
+    ]);
+    expect(sqlWhilePublished).toContain(
+      "DELETE FROM series WHERE slug || ':' || lang NOT IN ('api:en', 'other:en')",
+    );
+
+    const draftResult = rowsFor(
+      manifest({ draft: true }),
+      [partFile("project-setup", { draft: true }), partFile("error-handling", { draft: true })],
+    );
+    expect(draftResult.draft).toBe(true);
+
+    // The generator's walk now hands only `other`'s rows to the builder — the
+    // same keep-list mechanism, with the drafted manifest's key excluded.
+    const sqlAfterDraft = buildSeriesSeedSql([otherResult.series], otherResult.sections);
+    expect(sqlAfterDraft).toContain("DELETE FROM series WHERE slug || ':' || lang NOT IN ('other:en')");
   });
 });
 
@@ -354,5 +465,18 @@ describe("buildSeriesSeedSql", () => {
    */
   it("emits nothing at all when there are no Series", () => {
     expect(buildSeriesSeedSql([], [] as SeededRow[])).toBe("");
+  });
+
+  /**
+   * The bug an empty list alone cannot rule out: the site's one Series going
+   * draft looks identical, from `seriesRows.length`, to no Series ever having
+   * been written — unless the caller says otherwise. Without `anyFilesFound`,
+   * this would leave a previously published Series's rows live in D1 forever.
+   */
+  it("prunes everything when every Series the walk found is a draft", () => {
+    const sql = buildSeriesSeedSql([], [] as SeededRow[], { anyFilesFound: true });
+
+    expect(sql).toContain("DELETE FROM series WHERE slug || ':' || lang NOT IN ()");
+    expect(sql).toContain("DELETE FROM series_section WHERE series_slug || ':' || lang || ':' || slug NOT IN ()");
   });
 });

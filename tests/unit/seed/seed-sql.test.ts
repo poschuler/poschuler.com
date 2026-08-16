@@ -135,15 +135,15 @@ describe("contentRowFor — Posts", () => {
       VOCABULARY,
     ) as SeededRow;
 
-    expect(row.statement).toContain("(slug, lang, type, title, description, published_at, tags, repository, updates, series_slug, series_section, section_order, updated_at)");
+    expect(row.statement).toContain("(slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, project_slug, section_order, container_order, updated_at)");
     expect(row.statement).not.toContain("external_url");
   });
 
   /**
    * The Container columns travel together or not at all, which is why nothing
-   * checks that they do: a loose Post is written with three NULLs rather than
-   * with the columns omitted, so a Post that leaves a Series cannot keep half
-   * of one.
+   * checks that they do: a loose Post is written with five NULLs rather than
+   * with the columns omitted, so a Post that leaves a Series or a Project
+   * cannot keep half of one.
    */
   it("writes a loose Post with no Container rather than with none of the columns", () => {
     const row = contentRowFor(
@@ -152,17 +152,7 @@ describe("contentRowFor — Posts", () => {
       VOCABULARY,
     ) as SeededRow;
 
-    expect(row.statement).toContain("'[]', NULL, NULL, NULL, CURRENT_TIMESTAMP)");
-  });
-
-  it("serialises absent tags as an empty JSON array, not as NULL", () => {
-    const row = contentRowFor(
-      "blog/x/x.en.md",
-      post({ tags: undefined }),
-      VOCABULARY,
-    ) as SeededRow;
-
-    expect(row.statement).toContain(`'[]'`);
+    expect(row.statement).toContain("'[]', NULL, NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP)");
   });
 
   /**
@@ -183,6 +173,196 @@ describe("contentRowFor — Posts", () => {
   });
 });
 
+/**
+ * ADR 0009: `draft: true` in front matter. The file is read, classified and
+ * checked exactly like a published one, and only then produces nothing.
+ */
+describe("contentRowFor — Drafts", () => {
+  it("skips a Post declaring itself a draft, after every other check has passed", () => {
+    const result = contentRowFor("blog/a/a.en.md", post({ draft: true }), VOCABULARY);
+
+    expect(isSkipped(result)).toBe(true);
+    expect((result as { reason: string }).reason).toBe("blog/a/a.en.md is a draft");
+  });
+
+  /**
+   * Part 12's promise: a Draft passes every check a published document
+   * passes. An undeclared Tag still fails the build, draft or not.
+   */
+  it("still fails a draft Post for every reason a published one would", () => {
+    const result = contentRowFor(
+      "blog/a/a.en.md",
+      post({ draft: true, tags: ["not-a-declared-tag"] }),
+      VOCABULARY,
+    );
+
+    expect(isInvalid(result)).toBe(true);
+  });
+
+  it("fails a draft Part that is not listed in its manifest, exactly as a published one would", () => {
+    const result = contentRowFor(
+      "series/pragmatic-nodejs-api/project-setup/project-setup.en.md",
+      post({ draft: true }),
+      VOCABULARY,
+    );
+
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/not listed in the pragmatic-nodejs-api manifest/);
+  });
+
+  /**
+   * A Part that is listed and is a draft: every check a Part has to pass
+   * still runs, and only then does it produce nothing.
+   */
+  it("skips a draft Part that is listed in its manifest, after the Container check passes", () => {
+    const result = contentRowFor(
+      "series/pragmatic-nodejs-api/project-setup/project-setup.en.md",
+      post({ draft: true }),
+      VOCABULARY,
+      { seriesSlug: "pragmatic-nodejs-api", section: "fundamentals", order: 1 },
+    );
+
+    expect(isSkipped(result)).toBe(true);
+  });
+
+  /** JavaScript's own truthiness is not trusted for the flag. */
+  it.each([["true"], ["yes"], [1]])("fails a non-boolean draft value %j rather than reading it as truthy", (value) => {
+    const result = contentRowFor("blog/a/a.en.md", post({ draft: value as never }), VOCABULARY);
+
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/draft must be true or false/);
+  });
+
+  it("behaves exactly as today when the flag is absent", () => {
+    const result = contentRowFor("blog/a/a.en.md", post(), VOCABULARY);
+
+    expect(isSkipped(result)).toBe(false);
+    expect(isInvalid(result)).toBe(false);
+  });
+
+  it("skips a Bookmark declaring itself a draft, after every other check has passed", () => {
+    const result = contentRowFor("bookmarks/a.md", bookmark({ draft: true }), VOCABULARY);
+
+    expect(isSkipped(result)).toBe(true);
+    expect((result as { reason: string }).reason).toBe("bookmarks/a.md is a draft");
+  });
+
+  it("still fails a draft Bookmark for every reason a published one would", () => {
+    const result = contentRowFor(
+      "bookmarks/a.md",
+      bookmark({ draft: true, tags: ["not-a-declared-tag"] }),
+      VOCABULARY,
+    );
+
+    expect(isInvalid(result)).toBe(true);
+  });
+
+  it("fails a non-boolean draft value on a Bookmark", () => {
+    const result = contentRowFor("bookmarks/a.md", bookmark({ draft: "true" as never }), VOCABULARY);
+
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/draft must be true or false/);
+  });
+
+  /**
+   * The round trip (Part 12's last rule): publishing inserted this row
+   * through `buildSeedSql`'s upsert; marking the same file a draft removes
+   * it from the rows the generator hands that function, so the existing
+   * prune — `DELETE FROM content WHERE … NOT IN (keyList)` — deletes it. No
+   * new mechanism, the same one every removed file already goes through.
+   */
+  it("removes a previously published Post's row through the existing prune once it becomes a draft", () => {
+    const published = contentRowFor("blog/a/a.en.md", post(), VOCABULARY) as ContentRow;
+
+    expect(isSkipped(published)).toBe(false);
+
+    const sqlWhilePublished = buildSeedSql([published]);
+    expect(sqlWhilePublished).toContain("DELETE FROM content WHERE slug || ':' || ifnull(lang, '') NOT IN ('a:en')");
+
+    const draftResult = contentRowFor("blog/a/a.en.md", post({ draft: true }), VOCABULARY);
+    expect(isSkipped(draftResult)).toBe(true);
+
+    // The generator collects rows from every file it walks; a draft
+    // contributes none, so the row that survived above is gone from the list
+    // `buildSeedSql` prunes against — the same keep-list mechanism, now
+    // excluding it.
+    const sqlAfterDraft = buildSeedSql([]);
+    expect(sqlAfterDraft).toContain("DELETE FROM content WHERE slug || ':' || ifnull(lang, '') NOT IN ()");
+  });
+
+  /**
+   * `preview:drafts` (Part 3 of the field notes) — a Draft read as though it
+   * were published, so it can be seeded into the local stores without ever
+   * touching a tracked file. Both switch values are covered here, at the
+   * generator seam; the script's own wiring is verified by running it.
+   */
+  describe("includeDrafts", () => {
+    it("emits a row for a draft Post instead of skipping it", () => {
+      const result = contentRowFor(
+        "blog/a/a.en.md",
+        post({ draft: true }),
+        VOCABULARY,
+        undefined,
+        { includeDrafts: true },
+      );
+
+      expect(isSkipped(result)).toBe(false);
+      expect(isInvalid(result)).toBe(false);
+      expect((result as ContentRow).key).toBe("a:en");
+    });
+
+    it("emits a row for a draft Bookmark instead of skipping it", () => {
+      const result = contentRowFor(
+        "bookmarks/a.md",
+        bookmark({ draft: true }),
+        VOCABULARY,
+        undefined,
+        { includeDrafts: true },
+      );
+
+      expect(isSkipped(result)).toBe(false);
+      expect((result as ContentRow).key).toBe("a:");
+    });
+
+    it("still skips a draft Post when the option is false", () => {
+      const result = contentRowFor(
+        "blog/a/a.en.md",
+        post({ draft: true }),
+        VOCABULARY,
+        undefined,
+        { includeDrafts: false },
+      );
+
+      expect(isSkipped(result)).toBe(true);
+    });
+
+    it("still fails a draft Post for every reason a published one would, drafts included", () => {
+      const result = contentRowFor(
+        "blog/a/a.en.md",
+        post({ draft: true, tags: ["not-a-declared-tag"] }),
+        VOCABULARY,
+        undefined,
+        { includeDrafts: true },
+      );
+
+      expect(isInvalid(result)).toBe(true);
+    });
+
+    it("does not affect a published Post — the same row either way", () => {
+      const withoutOption = contentRowFor("blog/a/a.en.md", post(), VOCABULARY);
+      const withOption = contentRowFor(
+        "blog/a/a.en.md",
+        post(),
+        VOCABULARY,
+        undefined,
+        { includeDrafts: true },
+      );
+
+      expect((withoutOption as ContentRow).statement).toBe((withOption as ContentRow).statement);
+    });
+  });
+});
+
 describe("contentRowFor — Bookmarks", () => {
   it("emits an upsert keyed by Slug alone, with a null Locale", () => {
     const row = contentRowFor(
@@ -198,7 +378,7 @@ describe("contentRowFor — Bookmarks", () => {
   it("carries the Source and external URL a Bookmark has", () => {
     const row = contentRowFor("bookmarks/a.md", bookmark(), VOCABULARY) as SeededRow;
 
-    expect(row.statement).toContain("(slug, lang, type, title, external_url, source, published_at, tags, updated_at)");
+    expect(row.statement).toContain("(slug, lang, type, title, external_url, source, published_at, updated_at)");
     expect(row.statement).toContain("'https://example.com/a', 'Example'");
   });
 });
@@ -216,7 +396,7 @@ describe("contentRowFor — Parts of a Series", () => {
     const row = contentRowFor(partPath, post(), VOCABULARY, placement) as SeededRow;
 
     expect(row.key).toBe("project-setup:en");
-    expect(row.statement).toContain("'pragmatic-nodejs-api', 'fundamentals', 1, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'pragmatic-nodejs-api', 'fundamentals', NULL, 1, 1, CURRENT_TIMESTAMP)");
   });
 
   /** Zero is a position, and a falsy one. It must survive the round trip. */
@@ -226,7 +406,23 @@ describe("contentRowFor — Parts of a Series", () => {
       order: 0,
     }) as SeededRow;
 
-    expect(row.statement).toContain("'fundamentals', 0, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'fundamentals', NULL, 0, 0, CURRENT_TIMESTAMP)");
+  });
+
+  /**
+   * `container_order` is what every query reads now; `section_order` stays
+   * only for the previously deployed Worker, still asking for it by that name
+   * during this publication's migrate-then-deploy window. Both have to carry
+   * the same position, or that Worker and the one about to replace it would
+   * disagree about where a Part sits.
+   */
+  it("writes both order columns with the same value", () => {
+    const row = contentRowFor(partPath, post(), VOCABULARY, {
+      ...placement,
+      order: 3,
+    }) as SeededRow;
+
+    expect(row.statement).toContain("'fundamentals', NULL, 3, 3, CURRENT_TIMESTAMP)");
   });
 
   /**
@@ -273,6 +469,63 @@ describe("contentRowFor — Parts of a Series", () => {
       post(),
       VOCABULARY,
     );
+
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/does not belong in the content table/);
+  });
+});
+
+/**
+ * A Field Note is a Post whose Container is a Project — `PartPlacement`'s
+ * sibling, `NotePlacement`, written from the Project manifest's flat list
+ * rather than from an arc (Part 2 and Part 6 of the field notes).
+ */
+describe("contentRowFor — Field Notes of a Project", () => {
+  const notePath = "projects/chekalo/product-matching/product-matching.en.md";
+  const placement = { projectSlug: "chekalo", order: 0 };
+
+  it("writes the Container the manifest supplies, with no Series columns", () => {
+    const row = contentRowFor(notePath, post(), VOCABULARY, placement) as SeededRow;
+
+    expect(row.key).toBe("product-matching:en");
+    expect(row.statement).toContain("NULL, NULL, 'chekalo', 0, 0, CURRENT_TIMESTAMP)");
+  });
+
+  /** Both order columns carry the same value, as a Part's do. */
+  it("writes both order columns with the same value", () => {
+    const row = contentRowFor(notePath, post(), VOCABULARY, {
+      ...placement,
+      order: 2,
+    }) as SeededRow;
+
+    expect(row.statement).toContain("'chekalo', 2, 2, CURRENT_TIMESTAMP)");
+  });
+
+  /**
+   * A note listed in the manifest while it is a Draft is accepted — the
+   * Container check above already passed, because reconciliation does not
+   * distinguish a Draft file from a published one (Part 9 of the field
+   * notes) — and only then does it produce nothing.
+   */
+  it("skips a draft Field Note that is listed in its manifest, after the Container check passes", () => {
+    const result = contentRowFor(notePath, post({ draft: true }), VOCABULARY, placement);
+
+    expect(isSkipped(result)).toBe(true);
+  });
+
+  /**
+   * The other half of *manifest and disk reconcile*: a note nothing indexes
+   * would be seeded with no Container, so no listing could link to it.
+   */
+  it("fails a Field Note its manifest does not list", () => {
+    const result = contentRowFor(notePath, post(), VOCABULARY);
+
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/not listed in the chekalo manifest/);
+  });
+
+  it("fails a Project handed to the content generator", () => {
+    const result = contentRowFor("projects/chekalo/chekalo.en.md", post(), VOCABULARY);
 
     expect(isInvalid(result)).toBe(true);
     expect((result as { error: string }).error).toMatch(/does not belong in the content table/);
@@ -342,7 +595,13 @@ describe("contentRowFor — Tags are drawn from the declared vocabulary", () => 
     );
 
     expect(isInvalid(result)).toBe(false);
-    expect((result as SeededRow).statement).toContain(`'["nodejs","software-architecture"]'`);
+    // Against the rows, because the rows are where a declared Tag now lands.
+    // This used to read the JSON copy on `content`, which said the same thing
+    // about a column nothing queried.
+    expect((result as ContentRow).tags.map((tag) => tag.key)).toEqual([
+      "a:en:nodejs",
+      "a:en:software-architecture",
+    ]);
   });
 
   /**

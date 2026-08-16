@@ -39,13 +39,17 @@ A change to a document Paul has already published, stated in his own words: a da
 _Avoid_: update, changelog, edit, version
 
 **Publication**:
-The act that puts a Content Item in front of readers. It is all or nothing: until it has happened completely, the Content Item is not published, however finished its Markdown is and however long it has been merged. Distinct from Published At, which is a date the Content Item carries, not an event.
+The act that puts a Content Item in front of readers. It is all or nothing: until it has happened completely, the Content Item is not published, however finished its Markdown is and however long it has been merged. Distinct from Published At, which is a date the Content Item carries, not an event. Distinct from Draft, which has not gone through that door at all.
 _Avoid_: release, deploy, ship, seed
+
+**Draft**:
+A document under `app/content/` marked `draft: true` in its front matter. It is checked exactly like a published document — its type against its placement, its Tags against the vocabulary, its Container against the manifest that lists it — and then produces no row, no payload and no address: absent from the Timeline, every index and the sitemap. Not privacy: the repository is public and its history is permanent, so a Draft is out of the site, not out of view. Publishing is deleting one line.
+_Avoid_: unpublished, hidden, private, wip
 
 ### Series
 
 **Container**:
-What a Post belongs to, and what decides the address it is served at. A Post has at most one — today a Series, or none. It is read from the directory the Markdown sits in, never declared in the front matter.
+What a Post belongs to, and what decides the address it is served at. A Post has at most one — a Series, a Project, or none. It is read from the directory the Markdown sits in, never declared in the front matter.
 _Avoid_: parent, group, bucket, collection
 
 **Series**:
@@ -59,6 +63,10 @@ _Avoid_: chapter, module, phase, unit
 **Part**:
 A Post whose Container is a Series. It is an ordinary Post in every other respect — same Timeline, same tags, same body in the same key space — and it does not know where in the Series it sits: the arc is declared once, in the Series manifest.
 _Avoid_: chapter, episode, instalment, entry
+
+**Field Note**:
+A Post whose Container is a Project. It is an ordinary Post in every other respect — same Timeline, same Tags, same body in the same key space — served at `/projects/:project/:note`. Unlike a Part, it carries no arc: a Project's manifest declares which notes it holds and in what order, never a Destination or a reading order, so each note stands on its own and is read on its own.
+_Avoid_: article, entry, case study, page
 
 **Destination**:
 What a Series commits to having built by its end, stated on the landing before any index. **Immutable once the first Part ships.** Everything else about a Series may change — how many Parts, their ordering, the Section boundaries, the pace. This may not: changing it breaks the promise the reader signed up for, and a Series is finished when it reaches its Destination, not when it reaches a number of Parts.
@@ -81,7 +89,7 @@ _Avoid_: version, variant, localization
 ### Professional profile
 
 **Project**:
-Software Paul built and can be judged by, presented as a case study. Like the Resume, it is not a Content Item — no Published At, no place in the Timeline — and it is revised in place rather than published, so its most recent Revision is the only date it carries.
+Software Paul built and can be judged by, presented as a case study. Like the Resume, it is not a Content Item — no Published At, no place in the Timeline — and it is revised in place rather than published, so its most recent Revision is the only date it carries. It may hold Field Notes, declared in its own manifest and indexed at the foot of its landing.
 _Avoid_: work, portfolio item, case, demo
 
 **Project Tier**:

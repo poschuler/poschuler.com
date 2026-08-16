@@ -31,9 +31,9 @@ Adding a column is safe in that window, because nothing selects a column it does
 1. The publication that stops reading the column ships the code that no longer selects it, and leaves the column in place.
 2. A later publication drops it: the migration, the shared column list, the `INSERT` in the generator, any query in the KV pipeline, and the tests. By then no deployed Worker asks for it, so the same job order is safe.
 
-`content.tags` is the first instance and is currently between the two steps: `content_tag` is what every query reaches for, the chips on a Post render from the front matter that travels in KV, and the column is kept solely because a Worker that is already deployed still selects it. `schema.sql` says so at the column, in the imperative — *do not build on it* — because a column with no reader and no note is indistinguishable from one whose reader has not been written yet.
+`content.tags` is the first instance, and it went through both steps. Phase 2b's publication shipped the Worker and the KV generator no longer selecting the column while `0004` left it in place; the next publication dropped it in `0005`. The cost of getting the order wrong was measured rather than assumed: the two steps were nearly written as one, and the shared column list still naming `tags` is what would have made a single deploy answer `no such column` on every listing page.
 
-**The second step is scheduled, not assumed.** A "we will drop it later" that nobody writes down is how a schema accumulates columns nobody dares remove; this one is tracked as its own piece of work.
+**The second step is scheduled, not assumed.** A "we will drop it later" that nobody writes down is how a schema accumulates columns nobody dares remove; that one was tracked as its own piece of work, which is what got it done.
 
 This is a fact about how this repository changes schemas rather than about any particular column, and it will recur — which is why it amends this ADR instead of becoming one of its own. It does not touch the DDL-never-a-backfill rule above: both steps are `ALTER` and `DROP`, and the reconciling seed still fills whatever shape the migration leaves.
 

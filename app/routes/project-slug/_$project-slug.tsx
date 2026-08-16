@@ -1,12 +1,13 @@
 import { useLoaderData } from "react-router";
 import { chip } from "~/components/chip";
 import { LiveLink } from "~/components/live-link";
+import { ProjectNoteItem } from "~/components/project-note-item";
 import { GitHubIcon } from "~/components/ui/brand-icons";
 import { RevisionHistory, RevisionLine } from "~/components/revisions";
 import { cloudflareContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { cn } from "~/lib/utils";
-import { findProjectBySlug } from "~/models/project.server";
+import { findProjectBySlug, findProjectNotes } from "~/models/project.server";
 import type { Route } from "./+types/_$project-slug";
 
 const SITE = "https://poschuler.com";
@@ -29,15 +30,18 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     throw new Response("Not Found", { status: 404 });
   }
 
-  const body = await env.BLOG_KV.get<ProjectBodyPayload>(
-    `project:${project.slug}:${project.lang}`,
-    {
+  const [body, notes] = await Promise.all([
+    env.BLOG_KV.get<ProjectBodyPayload>(`project:${project.slug}:${project.lang}`, {
       type: "json",
       // A body only changes when the seed pipeline runs, so let the colo answer
       // from its own cache instead of reaching KV's central store.
       cacheTtl: 3600,
-    },
-  );
+    }),
+    // The index at the foot of the landing (Part 11 of
+    // `evolution-plan/14-phase-1b-field-notes.md`). A Draft holds no row, so
+    // it is already absent here — nothing extra to filter.
+    findProjectNotes(env.POSCHULER_BD, project.slug, project.lang),
+  ]);
 
   if (!body) {
     throw new Response("Not Found", { status: 404 });
@@ -53,6 +57,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     repoUrl: project.repoUrl,
     revisions: project.revisions,
     html: body.html,
+    notes,
   };
 }
 
@@ -78,7 +83,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function Project() {
-  const { title, summary, status, liveUrl, repoUrl, revisions, html } =
+  const { slug, title, summary, status, liveUrl, repoUrl, revisions, html, notes } =
     useLoaderData<typeof loader>();
 
   return (
@@ -126,6 +131,20 @@ export default function Project() {
           <RevisionHistory revisions={revisions} />
         </div>
       </article>
+
+      {/* Below the case study, never above it — a hiring manager reading
+        * sixty seconds and leaving must not hit an index first. Absent
+        * entirely rather than an empty heading when there is nothing
+        * published yet (Part 11 of `evolution-plan/14-phase-1b-field-notes.md`). */}
+      {notes.length > 0 && (
+        <section className="mx-auto w-full max-w-measure pb-8">
+          <h2 className="font-semibold text-xl tracking-tight">Field notes</h2>
+
+          {notes.map((note) => (
+            <ProjectNoteItem key={note.slug} note={note} projectSlug={slug} />
+          ))}
+        </section>
+      )}
     </main>
   );
 }

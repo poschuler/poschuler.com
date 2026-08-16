@@ -56,16 +56,39 @@ a payload sits in decides its key prefix.
 
 Inside a tree, **depth decides what a file is**: the file named after its folder
 *is* that folder, and a subfolder is content living inside it. So
-`series/<series>/<series>.en.md` is the Series and
-`series/<series>/<part>/<part>.en.md` is a Post whose container it is — one
-tree, two types, told apart by the path (ADR 0004, amended). What each tree
-allows to nest is declared in `CONTENT_TREES`; `blog/`, `bookmarks/` and
-`projects/` allow nothing, so a stray subfolder fails rather than acquiring a
-meaning.
+`series/<series>/<series>.en.md` is the Series,
+`series/<series>/<part>/<part>.en.md` is a Post (a Part) whose container it is,
+and `projects/<project>/<note>/<note>.en.md` is a Post (a Field Note) whose
+container is the Project above it — one tree, two types, told apart by the path
+(ADR 0004, amended). What each tree allows to nest is declared in
+`CONTENT_TREES`; `blog/` and `bookmarks/` allow nothing, so a stray subfolder
+there fails rather than acquiring a meaning. `series/` and `projects/` each
+allow one nested type — `post` — which is what makes a Part and a Field Note
+possible in the first place.
 
 The arc itself — which sections a Series has, in what order, and which Parts sit
-in each — is declared once in the Series manifest and nowhere else. A Part's
-front matter says nothing about where it is (ADR 0007).
+in each — is declared once in the Series manifest and nowhere else. A Project's
+manifest is the same idea without an arc: a flat `notes:` list, in the order its
+Field Notes should be indexed, with no Sections, no Destination and no reading
+order to promise (ADR 0007, amended). Neither a Part's nor a Field Note's own
+front matter says anything about where it is.
+
+A Post's Container is recorded on `content` as `series_slug` + `series_section`
+for a Series, or `project_slug` for a Project — never both — plus
+`container_order` for its position in whichever list holds it. `schema.sql`
+carries the reasoning for why that is two specific columns rather than one
+generic pair, and for `container_order` replacing `section_order` under an
+expand-and-contract rename still mid-flight: the previously deployed Worker
+reads the old name until the publication that switches it is confirmed live
+(ADR 0006, amended).
+
+A document under any tree may declare itself a Draft (`draft: true`) rather
+than being placed outside it — checked exactly as strictly as a published one,
+and producing no row and no payload only once every other check has passed
+(ADR 0009). `pnpm run preview:drafts` runs the same generators with Drafts
+included, writing to a gitignored `preview/` directory instead of the tracked
+fixtures, so a Draft can be read at its real address without touching a
+tracked file.
 
 Both generators are Node scripts run from the developer's machine, never in the Worker. That is why `front-matter` and `marked` appear in `dependencies` yet are absent from every runtime import. Sitemap and `robots.txt` rendering is hand-rolled in `app/lib/seo/`, with no third-party SEO dependency.
 
@@ -111,7 +134,7 @@ The primary key is `(slug, lang, tag)`, plus a partial unique index on `(slug, t
 
 Rows exist for both kinds, and which of them a page lists is a policy of the page: `app/models/tag.server.ts` filters to `type = 'post'` in both queries, so a Tag page and its count on the index describe the same set. Deciding at render is what lets that policy change without a migration.
 
-`content.tags` is the JSON string the front matter used to be seeded into, and it now has **no reader** — the queries use `content_tag`, and the chips on a Post render from the front matter that travels in KV. It is still selected by a Worker that is already deployed, so it is dropped in a later publication than the one that stopped reading it; `schema.sql` says so at the column, and ADR 0006's amendment says why.
+`content` used to carry a JSON `tags` column, seeded from the front matter and read by nothing once `content_tag` arrived. Migration `0005` dropped it, in the publication *after* the one that stopped selecting it — ADR 0006's amendment says why that order is not optional, and this column is its worked example.
 
 The row types encode the same split as the indexes: `ContentRowType` is `PostRowType | BookmarkRowType`, discriminated on `type`, so the columns a kind does not carry are typed `null` rather than `string`.
 
@@ -128,7 +151,7 @@ Read-only at runtime, written only by the seed pipeline.
 
 A Post body is one KV read. Missing key → 404, which is also how an unpublished or misspelled slug behaves.
 
-**The prefix says what kind of payload it is, not which URL serves it.** A Part of a Series is an ordinary Post with a container, so its body sits under `blog:` and is served at `/series/<series>/<part>`. A Series landing takes its own prefix because it is not a Post — a different kind of document, like a Project.
+**The prefix says what kind of payload it is, not which URL serves it.** A Part of a Series, or a Field Note of a Project, is an ordinary Post with a container, so its body sits under `blog:` and is served at `/series/<series>/<part>` or `/projects/<project>/<note>` respectively. A Series or a Project landing takes its own prefix because it is not a Post — a different kind of document.
 
 ## Routes
 
@@ -137,7 +160,7 @@ Routes are declared explicitly in `app/routes.ts` (config-based, not file-system
 | Route            | Store  | Cache-Control  | Notes                                       |
 | ---------------- | ------ | -------------- | ------------------------------------------- |
 | `/`              | D1     | none           | landing page — three newest Posts, plus the flagship Project |
-| `/blog`          | D1     | none           | loose Posts and Series as single entries, merged by date |
+| `/blog`          | D1     | none           | a Post with no Container, or a Container that holds Posts — loose Posts, Series and Projects-with-Field-Notes, one entry each, merged by date |
 | `/bookmarks`     | D1     | none           | `findAllBookmarks`                          |
 | `/timeline`      | D1     | none           | Timeline — `findAll`, Posts and Bookmarks interleaved |
 | `/blog/:blogSlug`| D1 + KV | none          | the row first: a Post with a container 301s to it. Locale hardcoded to `en`; body injected via `dangerouslySetInnerHTML` |
@@ -147,7 +170,8 @@ Routes are declared explicitly in `app/routes.ts` (config-based, not file-system
 | `/tags`          | D1     | none           | `findTagsWithPostCounts` — every Tag some Post carries, by count then alphabetically; indexed, and the only `/tags` URL in the sitemap |
 | `/tags/:tag`     | D1     | none           | `findPostsByTag` — Posts only, newest first; a Tag no Post carries is a 404. `noindex, follow`, and absent from the sitemap |
 | `/projects`      | D1     | none           | `findAllProjects` — flagship first, supporting in a grid |
-| `/projects/:project` | D1 + KV | none      | row frames the page, KV carries the body; Locale hardcoded to `en` |
+| `/projects/:project` | D1 + KV | none      | row frames the page, KV carries the body; Locale hardcoded to `en`; index of its Field Notes at the foot, via `findProjectNotes` |
+| `/projects/:project/:note` | D1 + KV | none | a Field Note — the Project named above the title, sibling notes and a link back at the foot, no previous/next; a Draft, or a note another Project's manifest lists, is a 404 |
 | `/resume`        | none   | none           | no loader — sections import `resume.json` directly      |
 | `/resume.pdf`    | fetch  | 1 day          | proxies `cdn.poschuler.dev`, forces `Content-Disposition: attachment` |
 | `/sitemap.xml`   | KV     | 1 hour         | serves the pre-generated XML verbatim       |

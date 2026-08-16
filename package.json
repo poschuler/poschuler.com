@@ -33,7 +33,8 @@
 		"verify:stores:remote": "node ./seed/verify-stores.ts remote",
 		"verify:schema:local": "node ./seed/verify-schema.ts local",
 		"verify:schema:remote": "node ./seed/verify-schema.ts remote",
-		"check:fixtures": "bash ./scripts/check-generated-fixtures.sh"
+		"check:fixtures": "bash ./scripts/check-generated-fixtures.sh",
+		"preview:drafts": "bash ./scripts/preview-drafts.sh"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.6.0",

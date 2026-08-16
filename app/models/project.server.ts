@@ -10,18 +10,18 @@ import { parseRevisions, type Revision } from "~/lib/revisions";
  * interpolated into a statement. Values still go through `.bind()`.
  */
 const PROJECT_COLUMNS = `
-      id_project as "idProject",
-      slug as "slug",
-      lang as "lang",
-      title as "title",
-      summary as "summary",
-      description as "description",
-      tier as "tier",
-      status as "status",
-      stack as "stack",
-      live_url as "liveUrl",
-      repo_url as "repoUrl",
-      updates as "updates"`;
+      project.id_project as "idProject",
+      project.slug as "slug",
+      project.lang as "lang",
+      project.title as "title",
+      project.summary as "summary",
+      project.description as "description",
+      project.tier as "tier",
+      project.status as "status",
+      project.stack as "stack",
+      project.live_url as "liveUrl",
+      project.repo_url as "repoUrl",
+      project.updates as "updates"`;
 
 /** Weight, never route shape — see ADR 0004's sibling decision in the schema. */
 export type ProjectTier = "flagship" | "supporting" | "experiment";
@@ -64,7 +64,14 @@ function parseStack(stored: string): string[] {
   }
 }
 
-function hydrate(row: StoredProjectRow): ProjectRowType {
+/**
+ * Generic over `T`, the shape `series.server.ts`'s own `hydrate` uses: a row
+ * can carry more than `StoredProjectRow`'s columns — `findProjectsWithNotes`
+ * adds `publishedAt` — and a fixed return type would silently drop it.
+ */
+function hydrate<T extends StoredProjectRow>(
+  row: T,
+): Omit<T, "stack" | "updates"> & { stack: string[]; revisions: Revision[] } {
   const { stack, updates, ...rest } = row;
 
   return { ...rest, stack: parseStack(stack), revisions: parseRevisions(updates) };
@@ -108,4 +115,89 @@ export async function findProjectBySlug(db: D1Database, slug: string, lang = "en
   );
 
   return rows[0] ? hydrate(rows[0]) : null;
+}
+
+/** A Field Note as a Project's index and sibling list need it — no more. */
+export type ProjectNoteRowType = {
+  slug: string;
+  title: string;
+  /** The line a listing shows under the title. `null` is rendered as absent. */
+  summary: string | null;
+  publishedStringDate: string;
+};
+
+/**
+ * The published Field Notes of one Project, in manifest order (Part 8 of
+ * `evolution-plan/14-phase-1b-field-notes.md`) — the order the author chose,
+ * not the order they were written, so the strongest note can lead.
+ *
+ * A Draft holds no `content` row at all, so it is absent from this list by
+ * construction, and reappears in the position it already had the moment its
+ * flag is deleted. Both the landing's index and a note's sibling list read
+ * this same query — the landing renders it whole, a note filters its own
+ * Slug out — so the order is computed once.
+ */
+export async function findProjectNotes(
+  db: D1Database,
+  projectSlug: string,
+  lang = "en",
+): Promise<ProjectNoteRowType[]> {
+  return dbQuery<ProjectNoteRowType>(
+    db,
+    `select
+        slug as "slug",
+        title as "title",
+        description as "summary",
+        strftime('%Y-%m-%d', published_at) as "publishedStringDate"
+      from content
+      where type = 'post' and project_slug = ? and lang = ?
+      order by container_order asc
+    `,
+    [projectSlug, lang],
+  );
+}
+
+/**
+ * A Project in a list, dated by the fact `/blog` needs — when it last had
+ * something new. A Project carries no Published At of its own (`project`
+ * holds a case study, not an editorial timestamp), so this is the most recent
+ * of its published Field Notes', the same reasoning `SeriesListingRowType`
+ * already applies to a Series' most recent Part.
+ */
+export type ProjectListingRowType = ProjectRowType & {
+  publishedAt: string;
+  publishedStringDate: string;
+};
+
+/**
+ * Every Project with at least one published Field Note, most recently
+ * advanced first (Part 10 of `evolution-plan/14-phase-1b-field-notes.md`).
+ *
+ * The `join` — not a `left join` — is what excludes a Project with none: unlike
+ * `findAllSeries`, which lists an announced-but-unwritten Series on `/series`
+ * and lets `/blog` filter it out on its own terms, `/blog` is the only reader
+ * of this query and it never wants a Project with nothing written about it.
+ */
+export async function findProjectsWithNotes(db: D1Database, lang = "en") {
+  const rows = await dbQuery<StoredProjectRow & { publishedAt: string }>(
+    db,
+    `select ${PROJECT_COLUMNS},
+        max(c.published_at) as "publishedAt"
+      from project
+      join content c
+        on c.project_slug = project.slug and c.lang = project.lang and c.type = 'post'
+      where project.lang = ?
+      group by project.id_project
+      order by "publishedAt" desc, project.slug asc
+    `,
+    [lang],
+  );
+
+  return rows.map((row): ProjectListingRowType => ({
+    ...hydrate(row),
+    // See `findAllSeries`: `max()` cannot be wrapped by `strftime` and
+    // grouped in the same select without repeating the aggregate, and the
+    // column is already a `YYYY-MM-DD …` string.
+    publishedStringDate: row.publishedAt.slice(0, 10),
+  }));
 }

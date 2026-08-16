@@ -17,27 +17,45 @@ CREATE TABLE content (
     external_url TEXT,
     source TEXT,
 
-    -- The Tags as they were written, a JSON array, and nothing renders it:
-    -- `content_tag` below is what a query reaches for, and the chips on a Post
-    -- render from the front matter that travels verbatim in KV. It is kept
-    -- because the Worker's shared column list and the KV generator still select
-    -- it, and migrations run before the Worker — dropping it here would leave
-    -- the previous Worker asking for a column that is gone, which is 500s on
-    -- every listing page. The column and both selections go together, in a
-    -- later deploy. Do not build on it.
-    tags TEXT,
+    -- No Tags here, deliberately. `content_tag` below holds one row per Tag per
+    -- Content Item and is what a query reaches for; a Post's own chips render
+    -- from the front matter that travels verbatim in KV. A JSON copy on this
+    -- row existed until 0005 and had no reader by the end.
 
-    -- The Container, when this Post has one. All three are written by the
-    -- generator from the Series manifest and never appear in front matter: a
-    -- Part does not know where it is, the manifest says (ADR 0007).
+    -- The Container, when this Post has one — a Series or a Project, never
+    -- both. Written by the generator from the Series or Project manifest and
+    -- never appears in front matter: a Part or a Field Note does not know
+    -- where it is, the manifest says (ADR 0007).
     --
-    -- `series_slug` is what makes a correct link possible from anywhere. Any
-    -- listing that renders a Post needs it to build the href — the Timeline
-    -- interleaves Bookmarks, loose Posts and Parts, and each takes a different
-    -- prefix.
+    -- Two Container slugs, not one generic pair: `series_section` does not
+    -- generalise — a Field Note has no section and never will — so a
+    -- `container_kind` + `container_slug` pair would leave it stranded beside
+    -- a column with nothing to say. `series_slug` and `project_slug` are what
+    -- make a correct link possible from anywhere: the Timeline interleaves
+    -- Bookmarks, loose Posts, Parts and Field Notes, and each takes a
+    -- different prefix. The invariant that at most one is set is enforced in
+    -- TypeScript, as a discriminated union over these columns, not by a
+    -- `CHECK` — SQLite cannot add one without recreating the table.
     series_slug TEXT,
-    series_section TEXT,   -- the section's slug, within that Series
-    section_order INTEGER, -- the Part's position in its section's list
+    series_section TEXT, -- the section's slug, within that Series
+    project_slug TEXT,   -- the Project, when the Container is one
+
+    -- The Container's position in its list: a Part's position within its
+    -- section, or a Field Note's position within its Project's `notes:`. Every
+    -- query orders by this column now.
+    container_order INTEGER,
+
+    -- The same fact, under the name this column used to carry alone —
+    -- `section_order`, which also names a column on `series_section` below
+    -- with a different meaning: that table's is a section's position within
+    -- the arc, not a Part's position within its section. Migration 0006 could
+    -- not rename it in place: this job applies migrations before it deploys
+    -- the Worker, and the previously deployed Worker is still asking for
+    -- `c.section_order` while that migration runs. So it stays, written by the
+    -- generator with the same value as `container_order` and read by nothing
+    -- here, until migration 0007 drops it — safe once this publication is
+    -- live, per ADR 0006's amendment.
+    section_order INTEGER,
 
     -- What the author says changed, newest first, as a JSON array of
     -- { date, note }. Distinct from `updated_at` below, which is when the

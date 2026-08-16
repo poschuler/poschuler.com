@@ -23,7 +23,7 @@ import { listPayloadFiles } from "./payload-files.ts";
  */
 
 const KV_BINDING = "BLOG_KV";
-const JSON_DIR = path.join(process.cwd(), "seed", "kv", "kv_payloads");
+const DEFAULT_JSON_DIR = path.join(process.cwd(), "seed", "kv", "kv_payloads");
 
 function wrangler(args: string[], wranglerArgs: string[]): string {
     return execFileSync("pnpm", ["exec", "wrangler", ...args, ...wranglerArgs], {
@@ -31,16 +31,21 @@ function wrangler(args: string[], wranglerArgs: string[]): string {
     });
 }
 
-async function bulkUpload(mode: string) {
+/**
+ * `jsonDir` defaults to the committed fixtures; `preview:drafts` is the only
+ * caller that passes another, so it uploads what it just generated rather
+ * than what is on disk under `seed/kv/kv_payloads/`.
+ */
+async function bulkUpload(mode: string, jsonDir: string = DEFAULT_JSON_DIR) {
     const wranglerArgs = mode === "remote" ? ["--remote"] : ["--local"];
 
     console.log(`Starting ${mode.toUpperCase()} upload to KV binding: ${KV_BINDING}`);
 
-    if (!fs.existsSync(JSON_DIR)) {
-        throw new Error(`ERROR: Directory ${JSON_DIR} does not exist. Run 'pnpm run kv:generate' first.`);
+    if (!fs.existsSync(jsonDir)) {
+        throw new Error(`ERROR: Directory ${jsonDir} does not exist. Run 'pnpm run kv:generate' first.`);
     }
 
-    const files = await listPayloadFiles(JSON_DIR);
+    const files = await listPayloadFiles(jsonDir);
     const entries: Array<{ key: string; value: string }> = [];
 
     for (const relativePath of files) {
@@ -52,12 +57,12 @@ async function bulkUpload(mode: string) {
 
         entries.push({
             key,
-            value: await fsPromise.readFile(path.join(JSON_DIR, relativePath), "utf-8"),
+            value: await fsPromise.readFile(path.join(jsonDir, relativePath), "utf-8"),
         });
     }
 
     if (entries.length === 0) {
-        throw new Error(`ERROR: no payloads found in ${JSON_DIR}.`);
+        throw new Error(`ERROR: no payloads found in ${jsonDir}.`);
     }
 
     // One request rather than one per key: less time spent half-written, and the
@@ -106,14 +111,27 @@ async function pruneOrphans(expected: string[], wranglerArgs: string[]) {
     }
 }
 
-const modeArg = process.argv[2];
+const [modeArg, ...restArgs] = process.argv.slice(2);
 
 if (modeArg !== "local" && modeArg !== "remote") {
     console.error("ERROR: pass a mode: 'local' or 'remote'.");
     process.exit(1);
 }
 
-bulkUpload(modeArg).catch((error) => {
+/**
+ * `--output-dir <path>`, optional — see `bulkUpload`'s doc comment. Named to
+ * match the flag the two generators take, not `--dir` — the same concept,
+ * the same spelling.
+ */
+function parseDirArg(argv: string[]): string | undefined {
+    const index = argv.indexOf("--output-dir");
+
+    return index === -1 ? undefined : argv[index + 1];
+}
+
+const dirArg = parseDirArg(restArgs);
+
+bulkUpload(modeArg, dirArg ? path.resolve(process.cwd(), dirArg) : undefined).catch((error) => {
     console.error(error instanceof Error ? error.message : error);
     process.exit(1);
 });

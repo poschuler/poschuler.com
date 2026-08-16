@@ -55,10 +55,12 @@ export type ArticleFacts = {
   dateRevised?: string;
   /** The Series this is a Part of, when it has one. */
   seriesSlug?: string | null;
+  /** The Project this is a Field Note of, when it has one. */
+  projectSlug?: string | null;
 };
 
 /**
- * An article, whether it stands alone or is a Part.
+ * An article, whether it stands alone, is a Part, or is a Field Note.
  *
  * `BlogPosting` rather than `TechArticle`: Google treats them the same for rich
  * results, and `BlogPosting` is what the rest of the ecosystem understands.
@@ -67,6 +69,12 @@ export type ArticleFacts = {
  * article with no Revision has not changed since it was published, which is a
  * fact worth stating — leaving the field out invites the crawler to guess from
  * the response headers, which describe the deploy rather than the writing.
+ *
+ * `seriesSlug` and `projectSlug` are mutually exclusive, the same way the two
+ * columns they are read from are: a Post has one Container or none. Both are
+ * accepted here rather than a single discriminated union because every caller
+ * already has the row shape `content.server.ts` returns, with both columns
+ * present and one of them `null`.
  */
 export function blogPosting({
   path,
@@ -75,6 +83,7 @@ export function blogPosting({
   datePublished,
   dateRevised,
   seriesSlug,
+  projectSlug,
 }: ArticleFacts): JsonLd {
   const url = `${SITE}${path}`;
 
@@ -95,13 +104,31 @@ export function blogPosting({
     // these with the full `Person` on the home page and the Resume.
     author: AUTHOR,
     publisher: AUTHOR,
-    ...(seriesSlug ? { isPartOf: { "@id": seriesId(seriesSlug) } } : {}),
+    ...(seriesSlug
+      ? { isPartOf: { "@id": seriesId(seriesSlug) } }
+      : projectSlug
+        ? { isPartOf: { "@id": projectId(projectSlug) } }
+        : {}),
   };
 }
 
 /** The identifier a Part points at, and the landing declares. */
 export function seriesId(slug: string): string {
   return `${SITE}/series/${slug}#series`;
+}
+
+/**
+ * The identifier a Field Note points at — the Project it is written about.
+ *
+ * The Project landing declares no JSON-LD of its own (out of scope for 1b/7),
+ * so this is not a fragment like `seriesId`'s: a `#project` suffix would be an
+ * `@id` nothing in the site's structured data graph ever defines, which is a
+ * dangling reference for a crawler resolving it. The landing's own URL is a
+ * real resource instead — the page a Field Note's `isPartOf` names is one that
+ * exists, even without a JSON-LD node to greet it there yet.
+ */
+export function projectId(slug: string): string {
+  return `${SITE}/projects/${slug}`;
 }
 
 export type SeriesFacts = {
