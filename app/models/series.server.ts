@@ -1,3 +1,4 @@
+import type { Locale } from "~/context";
 import { dbQuery } from "~/db.server";
 import type { ArcPart, ArcSection } from "~/lib/series-arc";
 
@@ -23,7 +24,7 @@ export type SeriesStatus = "ongoing" | "complete";
 type StoredSeriesRow = {
   idSeries: number;
   slug: string;
-  lang: string;
+  lang: Locale;
   title: string;
   description: string | null;
   status: SeriesStatus;
@@ -95,7 +96,7 @@ function hydrate<T extends StoredSeriesRow>(row: T): Omit<T, "outOfScope"> & { o
  * nothing published yet is an answer to that. `/blog` filters those out on its
  * own terms; that page lists what has been written.
  */
-export async function findAllSeries(db: D1Database, lang = "en") {
+export async function findAllSeries(db: D1Database, locale: Locale) {
   const rows = await dbQuery<StoredSeriesRow & { partCount: number; publishedAt: string | null }>(
     db,
     `select ${SERIES_COLUMNS},
@@ -108,7 +109,7 @@ export async function findAllSeries(db: D1Database, lang = "en") {
       group by series.id_series
       order by "publishedAt" is null, "publishedAt" desc, series.slug asc
     `,
-    [lang],
+    [locale],
   );
 
   return rows.map((row): SeriesListingRowType => ({
@@ -124,7 +125,7 @@ export async function findAllSeries(db: D1Database, lang = "en") {
  * One Series by Slug, in a Locale. `null` when nothing is behind it — a 404 the
  * route decides on, not a database error.
  */
-export async function findSeriesBySlug(db: D1Database, slug: string, lang = "en") {
+export async function findSeriesBySlug(db: D1Database, slug: string, locale: Locale) {
   const rows = await dbQuery<StoredSeriesRow>(
     db,
     `select ${SERIES_COLUMNS}
@@ -132,7 +133,7 @@ export async function findSeriesBySlug(db: D1Database, slug: string, lang = "en"
       where series.slug = ? and series.lang = ?
       limit 1
     `,
-    [slug, lang],
+    [slug, locale],
   );
 
   return rows[0] ? (hydrate(rows[0]) as SeriesRowType) : null;
@@ -169,7 +170,7 @@ type ArcJoinRow = {
 export async function findSeriesArc(
   db: D1Database,
   seriesSlug: string,
-  lang = "en",
+  locale: Locale,
 ): Promise<ArcSection[]> {
   const rows = await dbQuery<ArcJoinRow>(
     db,
@@ -189,7 +190,7 @@ export async function findSeriesArc(
       where ss.series_slug = ? and ss.lang = ?
       order by ss.section_order asc, c.container_order asc
     `,
-    [seriesSlug, lang],
+    [seriesSlug, locale],
   );
 
   const sections: ArcSection[] = [];

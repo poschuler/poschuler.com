@@ -1,6 +1,6 @@
 import { useLoaderData, type MetaFunction } from "react-router";
 import { SeriesItem } from "~/components/series-item";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
 import { findAllSeries } from "~/models/series.server";
@@ -27,7 +27,8 @@ const SERIES_DESCRIPTION =
  */
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
-  const series = await findAllSeries(env.POSCHULER_BD);
+  const locale = context.get(localeContext);
+  const series = await findAllSeries(env.POSCHULER_BD, locale);
 
   return { series };
 }

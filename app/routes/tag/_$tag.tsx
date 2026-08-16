@@ -1,7 +1,7 @@
 import { isRouteErrorResponse, useLoaderData } from "react-router";
 import { ContentItem } from "~/components/content-item";
 import { NotFound } from "~/components/not-found";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { findPostsByTag } from "~/models/tag.server";
 import type { Route } from "./+types/_$tag";
@@ -23,7 +23,8 @@ import type { Route } from "./+types/_$tag";
  */
 export async function loader({ params, context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
-  const posts = await findPostsByTag(env.POSCHULER_BD, params.tag);
+  const locale = context.get(localeContext);
+  const posts = await findPostsByTag(env.POSCHULER_BD, params.tag, locale);
 
   if (posts.length === 0) {
     throw new Response("Not Found", { status: 404 });

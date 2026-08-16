@@ -1,7 +1,7 @@
 import { RouterContextProvider } from "react-router";
 import { getPlatformProxy } from "wrangler";
 
-import { cloudflareContext, type AppEnv } from "~/context";
+import { cloudflareContext, deriveLocale, localeContext, type AppEnv } from "~/context";
 
 /**
  * Where the test stores live.
@@ -43,10 +43,24 @@ export async function openTestPlatform(): Promise<TestPlatform> {
  * The request-scoped context a loader expects, built the same way
  * `workers/app.ts` builds it — React Router v8 reads bindings through
  * `context.get(cloudflareContext)`, not off a plain object.
+ *
+ * The Locale comes from `deriveLocale`, the same function `workers/app.ts`
+ * calls, so a loader test exercises the real derivation rather than a stand-in
+ * for it. Every existing test requests a root path, which `deriveLocale` reads
+ * as `en` — the same Locale those tests already assumed.
+ *
+ * Takes the already-parsed `url` rather than the `Request` it came from: the
+ * one caller, `routeArgs`, has already parsed it for `pattern`, and parsing it
+ * again here would be the same "derive from the path more than once" mistake
+ * `deriveLocale`'s own doc comment warns against.
  */
-export function testContext({ env, ctx }: Pick<TestPlatform, "env" | "ctx">): RouterContextProvider {
+export function testContext(
+  { env, ctx }: Pick<TestPlatform, "env" | "ctx">,
+  url: URL,
+): RouterContextProvider {
   const context = new RouterContextProvider();
   context.set(cloudflareContext, { env, ctx });
+  context.set(localeContext, deriveLocale(url));
 
   return context;
 }
@@ -72,7 +86,7 @@ export function routeArgs<Args>(
     url,
     pattern: url.pathname,
     params,
-    context: testContext(platform),
+    context: testContext(platform, url),
   } as Args;
 }
 

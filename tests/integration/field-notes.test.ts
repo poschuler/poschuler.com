@@ -105,7 +105,7 @@ afterAll(async () => {
 
 describe("findLoosePosts — excludes a Field Note", () => {
   it("excludes a Post whose Container is a Project, the same as one whose Container is a Series", async () => {
-    const loose = await findLoosePosts(platform.env.POSCHULER_BD);
+    const loose = await findLoosePosts(platform.env.POSCHULER_BD, "en");
 
     expect(loose.some((post) => post.slug === NOTE_SLUG)).toBe(false);
   });
@@ -117,7 +117,7 @@ describe("findLoosePosts — excludes a Field Note", () => {
  */
 describe("findProjectNotes", () => {
   it("returns a Project's published notes in manifest order, each with its summary", async () => {
-    const notes = await findProjectNotes(platform.env.POSCHULER_BD, PROJECT_SLUG);
+    const notes = await findProjectNotes(platform.env.POSCHULER_BD, PROJECT_SLUG, "en");
     const slugs = notes.map((note) => note.slug);
 
     expect(slugs.indexOf(NOTE_SLUG)).toBeGreaterThanOrEqual(0);
@@ -126,7 +126,7 @@ describe("findProjectNotes", () => {
   });
 
   it("returns nothing for a Project with no published notes", async () => {
-    expect(await findProjectNotes(platform.env.POSCHULER_BD, "poschuler-com")).toEqual([]);
+    expect(await findProjectNotes(platform.env.POSCHULER_BD, "poschuler-com", "en")).toEqual([]);
   });
 });
 
@@ -136,14 +136,14 @@ describe("findProjectNotes", () => {
  */
 describe("findProjectsWithNotes", () => {
   it("returns a Project with at least one published note, dated by the most recent", async () => {
-    const projects = await findProjectsWithNotes(platform.env.POSCHULER_BD);
+    const projects = await findProjectsWithNotes(platform.env.POSCHULER_BD, "en");
     const chekalo = projects.find((project) => project.slug === PROJECT_SLUG);
 
     expect(chekalo?.publishedStringDate).toBe("2026-08-02");
   });
 
   it("omits a Project with no published notes", async () => {
-    const projects = await findProjectsWithNotes(platform.env.POSCHULER_BD);
+    const projects = await findProjectsWithNotes(platform.env.POSCHULER_BD, "en");
 
     expect(projects.some((project) => project.slug === "poschuler-com")).toBe(false);
   });

@@ -1,6 +1,6 @@
 import { redirect, useLoaderData } from "react-router";
 import type { Route } from "./+types/_$blog-slug";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext } from "~/context";
 import { PostArticle } from "~/components/post-article";
 import { postHref } from "~/lib/hrefs";
 import { blogPosting, breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
@@ -40,6 +40,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     const blogSlug = params.blogSlug;
 
     const { env } = context.get(cloudflareContext);
+    const locale = context.get(localeContext);
 
     /**
      * The row before the body, for one reason: a Part or a Field Note is
@@ -53,7 +54,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
      * exist and belong in `app/lib/redirects.ts`, consulted in the Worker. This
      * is derived from the row itself.
      */
-    const post = await findPostBySlug(env.POSCHULER_BD, blogSlug);
+    const post = await findPostBySlug(env.POSCHULER_BD, blogSlug, locale);
 
     if (!post) {
         throw new Response("Not Found", { status: 404 });

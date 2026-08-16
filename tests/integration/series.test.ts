@@ -21,7 +21,7 @@ let seriesSlug: string;
 beforeAll(async () => {
   platform = await openTestPlatform();
 
-  const [first] = await findAllSeries(platform.env.POSCHULER_BD);
+  const [first] = await findAllSeries(platform.env.POSCHULER_BD, "en");
   seriesSlug = first.slug;
 });
 
@@ -31,7 +31,7 @@ afterAll(async () => {
 
 describe("findAllSeries", () => {
   it("hydrates the contract, including the list of what is out of scope", async () => {
-    const [first] = await findAllSeries(platform.env.POSCHULER_BD);
+    const [first] = await findAllSeries(platform.env.POSCHULER_BD, "en");
 
     expect(first.startingPoint).toBeTruthy();
     expect(first.destination).toBeTruthy();
@@ -46,8 +46,8 @@ describe("findAllSeries", () => {
    * could leave behind.
    */
   it("counts the Parts it actually holds and dates itself by the newest", async () => {
-    const [first] = await findAllSeries(platform.env.POSCHULER_BD);
-    const posts = await findAllPosts(platform.env.POSCHULER_BD);
+    const [first] = await findAllSeries(platform.env.POSCHULER_BD, "en");
+    const posts = await findAllPosts(platform.env.POSCHULER_BD, "en");
     const parts = posts.filter((post) => post.seriesSlug === first.slug);
 
     expect(first.partCount).toBe(parts.length);
@@ -59,11 +59,11 @@ describe("findAllSeries", () => {
 
 describe("findSeriesBySlug", () => {
   it("returns null for a Slug with nothing behind it", async () => {
-    expect(await findSeriesBySlug(platform.env.POSCHULER_BD, "no-such-series")).toBeNull();
+    expect(await findSeriesBySlug(platform.env.POSCHULER_BD, "no-such-series", "en")).toBeNull();
   });
 
   it("declares a status the reader can act on", async () => {
-    const series = await findSeriesBySlug(platform.env.POSCHULER_BD, seriesSlug);
+    const series = await findSeriesBySlug(platform.env.POSCHULER_BD, seriesSlug, "en");
 
     expect(["ongoing", "complete"]).toContain(series?.status);
   });
@@ -71,7 +71,7 @@ describe("findSeriesBySlug", () => {
 
 describe("findSeriesArc", () => {
   it("returns every section, planned ones included", async () => {
-    const sections = await findSeriesArc(platform.env.POSCHULER_BD, seriesSlug);
+    const sections = await findSeriesArc(platform.env.POSCHULER_BD, seriesSlug, "en");
 
     expect(sections.length).toBeGreaterThan(1);
     expect(sections.some((section) => section.parts.length === 0)).toBe(true);
@@ -79,7 +79,7 @@ describe("findSeriesArc", () => {
   });
 
   it("gives every Part a title and a date, and no duplicates across sections", async () => {
-    const sections = await findSeriesArc(platform.env.POSCHULER_BD, seriesSlug);
+    const sections = await findSeriesArc(platform.env.POSCHULER_BD, seriesSlug, "en");
     const parts = sections.flatMap((section) => section.parts);
 
     expect(parts.length).toBeGreaterThan(0);
@@ -92,8 +92,8 @@ describe("findSeriesArc", () => {
   });
 
   it("holds every Part the content table assigns to this Series", async () => {
-    const sections = await findSeriesArc(platform.env.POSCHULER_BD, seriesSlug);
-    const posts = await findAllPosts(platform.env.POSCHULER_BD);
+    const sections = await findSeriesArc(platform.env.POSCHULER_BD, seriesSlug, "en");
+    const posts = await findAllPosts(platform.env.POSCHULER_BD, "en");
 
     const inArc = sections.flatMap((section) => section.parts.map((part) => part.slug)).sort();
     const inTable = posts
@@ -105,7 +105,7 @@ describe("findSeriesArc", () => {
   });
 
   it("returns nothing for a Series that does not exist", async () => {
-    expect(await findSeriesArc(platform.env.POSCHULER_BD, "no-such-series")).toEqual([]);
+    expect(await findSeriesArc(platform.env.POSCHULER_BD, "no-such-series", "en")).toEqual([]);
   });
 });
 
@@ -116,8 +116,8 @@ describe("findSeriesArc", () => {
 describe("findLoosePosts", () => {
   it("excludes every Post that has a Container", async () => {
     const [loose, all] = await Promise.all([
-      findLoosePosts(platform.env.POSCHULER_BD),
-      findAllPosts(platform.env.POSCHULER_BD),
+      findLoosePosts(platform.env.POSCHULER_BD, "en"),
+      findAllPosts(platform.env.POSCHULER_BD, "en"),
     ]);
 
     expect(loose.length).toBeGreaterThan(0);

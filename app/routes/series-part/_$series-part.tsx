@@ -1,6 +1,6 @@
 import { useLoaderData } from "react-router";
 import { PostArticle } from "~/components/post-article";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { validateRevisions } from "~/lib/revisions";
 import { blogPosting, breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
@@ -42,7 +42,8 @@ interface PartPayload {
  */
 export async function loader({ params, context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
-  const series = await findSeriesBySlug(env.POSCHULER_BD, params.seriesSlug);
+  const locale = context.get(localeContext);
+  const series = await findSeriesBySlug(env.POSCHULER_BD, params.seriesSlug, locale);
 
   if (!series) {
     throw new Response("Not Found", { status: 404 });

@@ -1,6 +1,6 @@
 import { useLoaderData } from "react-router";
 import { PostArticle } from "~/components/post-article";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { validateRevisions } from "~/lib/revisions";
 import { blogPosting, breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
@@ -41,7 +41,8 @@ interface NotePayload {
  */
 export async function loader({ params, context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
-  const project = await findProjectBySlug(env.POSCHULER_BD, params.projectSlug);
+  const locale = context.get(localeContext);
+  const project = await findProjectBySlug(env.POSCHULER_BD, params.projectSlug, locale);
 
   if (!project) {
     throw new Response("Not Found", { status: 404 });

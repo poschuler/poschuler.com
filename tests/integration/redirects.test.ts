@@ -34,7 +34,7 @@ async function destinationExists(db: D1Database, path: string): Promise<boolean>
   const segments = path.split("?")[0].split("/").filter(Boolean);
 
   if (segments[0] === "blog" && segments.length === 2) {
-    const post = await findPostBySlug(db, segments[1]);
+    const post = await findPostBySlug(db, segments[1], "en");
 
     // A Post with a Container does not answer at `/blog/<slug>` — it redirects
     // — so a map aimed there would be a chain, which is the other rule.
@@ -42,11 +42,11 @@ async function destinationExists(db: D1Database, path: string): Promise<boolean>
   }
 
   if (segments[0] === "series" && segments.length === 2) {
-    return (await findSeriesBySlug(db, segments[1])) !== null;
+    return (await findSeriesBySlug(db, segments[1], "en")) !== null;
   }
 
   if (segments[0] === "series" && segments.length === 3) {
-    const sections = await findSeriesArc(db, segments[1]);
+    const sections = await findSeriesArc(db, segments[1], "en");
 
     return sections.some((section) => section.parts.some((part) => part.slug === segments[2]));
   }
@@ -72,7 +72,7 @@ describe("every redirect destination", () => {
     for (const from of Object.keys(PERMANENT_REDIRECTS)) {
       const slug = from.split("/").filter(Boolean)[1];
 
-      expect(await findPostBySlug(platform.env.POSCHULER_BD, slug), from).toBeNull();
+      expect(await findPostBySlug(platform.env.POSCHULER_BD, slug, "en"), from).toBeNull();
     }
   });
 });

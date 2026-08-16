@@ -4,7 +4,7 @@ import { findAllProjects } from "~/models/project.server";
 import { LiveLink } from "~/components/live-link";
 import { ContentItem } from "~/components/content-item";
 import type { Route } from "./+types/_home";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { CONTACT_LINKS, LOCATION } from "~/lib/contact";
 import { PERSON_CORE } from "~/lib/seo/person";
@@ -17,9 +17,10 @@ const RECENT_POST_COUNT = 3;
 
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
+  const locale = context.get(localeContext);
   // Newest first, straight from the query's `order by published_at desc`.
   const [posts, projects] = await Promise.all([
-    findAllPosts(env.POSCHULER_BD),
+    findAllPosts(env.POSCHULER_BD, locale),
     findAllProjects(env.POSCHULER_BD),
   ]);
 

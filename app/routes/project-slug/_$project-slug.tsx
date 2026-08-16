@@ -4,7 +4,7 @@ import { LiveLink } from "~/components/live-link";
 import { ProjectNoteItem } from "~/components/project-note-item";
 import { GitHubIcon } from "~/components/ui/brand-icons";
 import { RevisionHistory, RevisionLine } from "~/components/revisions";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { cn } from "~/lib/utils";
 import { findProjectBySlug, findProjectNotes } from "~/models/project.server";
@@ -24,7 +24,8 @@ interface ProjectBodyPayload {
  */
 export async function loader({ params, context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
-  const project = await findProjectBySlug(env.POSCHULER_BD, params.projectSlug);
+  const locale = context.get(localeContext);
+  const project = await findProjectBySlug(env.POSCHULER_BD, params.projectSlug, locale);
 
   if (!project) {
     throw new Response("Not Found", { status: 404 });

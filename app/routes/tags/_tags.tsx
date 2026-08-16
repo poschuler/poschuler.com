@@ -1,7 +1,7 @@
 import { Tag as TagIcon } from "lucide-react";
 import { useLoaderData } from "react-router";
 import { ListingRow } from "~/components/listing-row";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext } from "~/context";
 import { tagHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
@@ -40,7 +40,8 @@ const TAGS_DESCRIPTION =
  */
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
-  const tags = await findTagsWithPostCounts(env.POSCHULER_BD);
+  const locale = context.get(localeContext);
+  const tags = await findTagsWithPostCounts(env.POSCHULER_BD, locale);
 
   return { tags };
 }

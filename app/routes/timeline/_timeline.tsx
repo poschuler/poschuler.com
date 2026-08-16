@@ -1,15 +1,23 @@
 import { useLoaderData, type MetaFunction } from "react-router";
 import { ContentItem } from "~/components/content-item";
-import { findAll } from "~/models/content.server";
+import { findAllBookmarks, findAllPosts, mergeTimeline } from "~/models/content.server";
 import type { Route } from "./+types/_timeline";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
-  const contentItems = await findAll(env.POSCHULER_BD);
+  const locale = context.get(localeContext);
 
-  return { contentItems };
+  // This Locale's Posts, and every Bookmark regardless of Locale — see
+  // `mergeTimeline` for why the two are fetched apart and merged rather than
+  // answered by one query.
+  const [posts, bookmarks] = await Promise.all([
+    findAllPosts(env.POSCHULER_BD, locale),
+    findAllBookmarks(env.POSCHULER_BD),
+  ]);
+
+  return { contentItems: mergeTimeline(posts, bookmarks) };
 }
 
 export const shouldRevalidate = skipRevalidationOnThemeChange;

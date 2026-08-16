@@ -1,3 +1,4 @@
+import type { Locale } from "~/context";
 import { dbQuery } from "~/db.server";
 import { parseRevisions, type Revision } from "~/lib/revisions";
 
@@ -30,7 +31,7 @@ export type ProjectTier = "flagship" | "supporting" | "experiment";
 type StoredProjectRow = {
   idProject: number;
   slug: string;
-  lang: string;
+  lang: Locale;
   title: string;
   /** Outcome-first, one or two sentences. What the index shows. */
   summary: string;
@@ -103,7 +104,7 @@ export async function findAllProjects(db: D1Database) {
  * Returns `null` rather than throwing: a Slug that does not exist is a 404 the
  * route decides on, not a database error.
  */
-export async function findProjectBySlug(db: D1Database, slug: string, lang = "en") {
+export async function findProjectBySlug(db: D1Database, slug: string, locale: Locale) {
   const rows = await dbQuery<StoredProjectRow>(
     db,
     `select ${PROJECT_COLUMNS}
@@ -111,7 +112,7 @@ export async function findProjectBySlug(db: D1Database, slug: string, lang = "en
       where slug = ? and lang = ?
       limit 1
     `,
-    [slug, lang],
+    [slug, locale],
   );
 
   return rows[0] ? hydrate(rows[0]) : null;
@@ -140,7 +141,7 @@ export type ProjectNoteRowType = {
 export async function findProjectNotes(
   db: D1Database,
   projectSlug: string,
-  lang = "en",
+  locale: Locale,
 ): Promise<ProjectNoteRowType[]> {
   return dbQuery<ProjectNoteRowType>(
     db,
@@ -153,7 +154,7 @@ export async function findProjectNotes(
       where type = 'post' and project_slug = ? and lang = ?
       order by container_order asc
     `,
-    [projectSlug, lang],
+    [projectSlug, locale],
   );
 }
 
@@ -178,7 +179,7 @@ export type ProjectListingRowType = ProjectRowType & {
  * and lets `/blog` filter it out on its own terms, `/blog` is the only reader
  * of this query and it never wants a Project with nothing written about it.
  */
-export async function findProjectsWithNotes(db: D1Database, lang = "en") {
+export async function findProjectsWithNotes(db: D1Database, locale: Locale) {
   const rows = await dbQuery<StoredProjectRow & { publishedAt: string }>(
     db,
     `select ${PROJECT_COLUMNS},
@@ -190,7 +191,7 @@ export async function findProjectsWithNotes(db: D1Database, lang = "en") {
       group by project.id_project
       order by "publishedAt" desc, project.slug asc
     `,
-    [lang],
+    [locale],
   );
 
   return rows.map((row): ProjectListingRowType => ({

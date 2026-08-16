@@ -1,6 +1,6 @@
 import { Link, useLoaderData } from "react-router";
 import { chip } from "~/components/chip";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext } from "~/context";
 import { postHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { breadcrumbList, creativeWorkSeries, HOME_CRUMB } from "~/lib/seo/structured-data";
@@ -29,7 +29,8 @@ interface SeriesBodyPayload {
  */
 export async function loader({ params, context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
-  const series = await findSeriesBySlug(env.POSCHULER_BD, params.seriesSlug);
+  const locale = context.get(localeContext);
+  const series = await findSeriesBySlug(env.POSCHULER_BD, params.seriesSlug, locale);
 
   if (!series) {
     throw new Response("Not Found", { status: 404 });

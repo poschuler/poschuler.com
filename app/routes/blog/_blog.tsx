@@ -6,7 +6,7 @@ import { ContentItem } from "~/components/content-item";
 import { SeriesItem } from "~/components/series-item";
 import { ProjectItem } from "~/components/project-item";
 import type { Route } from "./+types/_blog";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 
 /** One row on this page: a loose Post, or a whole Container — Series or Project — as a single entry. */
@@ -39,10 +39,11 @@ type BlogEntry =
  */
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
+  const locale = context.get(localeContext);
   const [posts, series, projects] = await Promise.all([
-    findLoosePosts(env.POSCHULER_BD),
-    findAllSeries(env.POSCHULER_BD),
-    findProjectsWithNotes(env.POSCHULER_BD),
+    findLoosePosts(env.POSCHULER_BD, locale),
+    findAllSeries(env.POSCHULER_BD, locale),
+    findProjectsWithNotes(env.POSCHULER_BD, locale),
   ]);
 
   const entries: BlogEntry[] = [
