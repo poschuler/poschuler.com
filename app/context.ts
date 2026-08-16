@@ -51,8 +51,9 @@ export type Locale = "en" | "es";
 
 /**
  * The one string that marks the Spanish branch. Read both by the Worker's
- * derivation below and, later, by the route tree that mounts it (ADR 0010) —
- * declared once here so the two cannot disagree about what `/es` means.
+ * derivation below and by the route tree that mounts it, `app/routes.ts`
+ * (ADR 0010) — declared once here so the two cannot disagree about what `/es`
+ * means.
  */
 export const ES_PREFIX = "/es";
 

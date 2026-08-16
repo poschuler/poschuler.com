@@ -4,6 +4,8 @@ The personal site of **Paul Osorio Schuler** — Staff Software Engineer, backen
 
 The whole site is a single Cloudflare Worker. There is no separate API, no origin server and no client-side data fetching — React Router runs in framework mode with SSR, so every loader executes at the edge and the browser receives rendered HTML.
 
+The site is bilingual: English is served at the root with no prefix, Spanish under `/es`, as a second branch over the same route modules. The Resume is the one page whose address changes between them — `/cv` and `/es/cv` — because *resume* is a Spanish verb; every other path segment is the same string in both. The language switcher that links one to the other ships hidden, gated on Spanish content that has not been written yet. See [ADR 0010](docs/adr/0010-english-at-the-root-spanish-under-es.md) for the route shape and [ADR 0011](docs/adr/0011-the-interface-language-is-a-typed-catalogue.md) for why the interface strings are a typed catalogue rather than an i18n library.
+
 ## What's inside
 
 | Page          | What it shows                                                        |
@@ -17,6 +19,8 @@ The whole site is a single Cloudflare Worker. There is no separate API, no origi
 | `/tags`       | Every subject some Post covers, heaviest first, with its count        |
 | `/tags/<tag>` | The Posts on one subject, newest first — `noindex, follow`            |
 | `/cv`         | Structured professional history, plus a PDF download                  |
+
+Every page above also exists under `/es`, serving the same document translated where one exists. A document with no Translation answers 404 rather than falling back to English; an empty Spanish index still answers 200, `noindex, follow`, explaining itself and linking back to English.
 
 ## How content works
 

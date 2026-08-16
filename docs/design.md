@@ -254,7 +254,3 @@ Touch targets in the header are `size-11` (44px) below `md` and `size-9` above i
 
 - **Never bind a chord the browser owns.** The profile shortcuts require `Shift` on top of `⌘`/`Ctrl` precisely because ⌘X is cut, ⌘L is the address bar and ⌘G is find-next. A resume page that breaks copy-paste is a worse offence than one without shortcuts.
 - **Ignore keystrokes aimed at text fields** — inputs, textareas, selects and `contenteditable`, which includes the command palette's own search box.
-
-## Known inconsistencies
-
-- **Spanish strings in `mode.toggle.tsx`.** The button's `title` and screen-reader label read "Tema claro — cambiar a oscuro" while the document is `lang="en"`. Per `AGENTS.md`, shipped strings are English.
