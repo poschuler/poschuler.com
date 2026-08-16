@@ -3,6 +3,7 @@ import type { Route } from "./+types/_$blog-slug";
 import { cloudflareContext, localeContext } from "~/context";
 import { PostArticle } from "~/components/post-article";
 import { postHref } from "~/lib/hrefs";
+import { documentAddresses } from "~/lib/seo/alternates";
 import { blogPosting, breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
 import { validateRevisions } from "~/lib/revisions";
 import { findPostBySlug } from "~/models/content.server";
@@ -65,7 +66,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
         // states for the hop before this one: it is what tells the author the
         // redirect is being used at all. The two land on the same page, so
         // they cannot behave differently.
-        throw redirect(postHref(post) + new URL(request.url).search, 301);
+        throw redirect(postHref(post, post.lang) + new URL(request.url).search, 301);
     }
 
     const BLOG_KV = env.BLOG_KV;
@@ -102,6 +103,11 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
         datePublished: attributes.publishedAt,
         html,
         slug: blogSlug,
+        locale: post.lang,
+        // Read off the same row, via the correlated subquery `findPostBySlug`
+        // now carries (Part 10 of `evolution-plan/15-phase-3-spanish.md`) — the
+        // canonical's alternates, without a second round trip.
+        existingLocales: post.locales,
         repository: attributes.repository,
         // A malformed list is caught at build time; a page is better off
         // without its revision line than not rendering at all.
@@ -113,13 +119,18 @@ export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export function meta({ loaderData }: Route.MetaArgs) {
 
-    const { title, description, slug, datePublished, revisions } = loaderData;
-    const path = `/blog/${slug}`;
+    const { title, description, slug, locale, existingLocales, datePublished, revisions } = loaderData;
+    const { canonical } = documentAddresses(
+        { kind: "post", slug, seriesSlug: null },
+        locale,
+        existingLocales,
+    );
+    const path = postHref({ slug, seriesSlug: null }, locale);
 
     return [
         { title: `${title} | Paul Osorio Schuler` },
         { name: "description", content: `${description}` },
-        { tagName: "link", rel: "canonical", href: `https://poschuler.com/blog/${slug}` },
+        { tagName: "link", rel: "canonical", href: canonical },
         { property: "og:title", content: `${title}` },
         { property: "og:description", content: `${description}` },
         { property: "og:image", content: "https://poschuler.com/og.png" },
@@ -127,10 +138,10 @@ export function meta({ loaderData }: Route.MetaArgs) {
         { property: "og:image:height", content: "630" },
         { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
         { property: "og:type", content: "article" },
-        { property: "og:url", content: `https://poschuler.com/blog/${slug}` },
+        { property: "og:url", content: canonical },
         {
             "script:ld+json": blogPosting({
-                path,
+                url: canonical,
                 title,
                 description,
                 datePublished,
@@ -139,6 +150,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
                 // A standalone Post has no Container, and saying otherwise
                 // would invent a continuity that does not exist.
                 seriesSlug: null,
+                locale,
             }),
         },
         {
@@ -152,7 +164,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function BlogSlug() {
-    const { html, publishedAt, tags, title, repository, revisions } = useLoaderData<typeof loader>();
+    const { html, publishedAt, tags, title, locale, repository, revisions } = useLoaderData<typeof loader>();
 
     return (
         <main className="flex-1 gap-4 p-4 md:gap-8 md:p-10 font-mono bg-ui">
@@ -160,6 +172,7 @@ export default function BlogSlug() {
                 title={title}
                 publishedAt={publishedAt}
                 tags={tags}
+                locale={locale}
                 repository={repository}
                 revisions={revisions}
                 html={html}

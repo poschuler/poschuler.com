@@ -1,4 +1,4 @@
-import type { Locale } from "~/context";
+import { parseLocaleSet, type Locale } from "~/context";
 import { dbQuery } from "~/db.server";
 import type { ArcPart, ArcSection } from "~/lib/series-arc";
 
@@ -124,11 +124,16 @@ export async function findAllSeries(db: D1Database, locale: Locale) {
 /**
  * One Series by Slug, in a Locale. `null` when nothing is behind it — a 404 the
  * route decides on, not a database error.
+ *
+ * `locales` rides along as a correlated subquery — every Locale this Slug's
+ * Series exists in — so the landing can build its own `hreflang` alternates
+ * without a second round trip (Part 10 of `evolution-plan/15-phase-3-spanish.md`).
  */
 export async function findSeriesBySlug(db: D1Database, slug: string, locale: Locale) {
-  const rows = await dbQuery<StoredSeriesRow>(
+  const rows = await dbQuery<StoredSeriesRow & { locales: string | null }>(
     db,
-    `select ${SERIES_COLUMNS}
+    `select ${SERIES_COLUMNS},
+        (select group_concat(s2.lang) from series s2 where s2.slug = series.slug) as "locales"
       from series
       where series.slug = ? and series.lang = ?
       limit 1
@@ -136,7 +141,9 @@ export async function findSeriesBySlug(db: D1Database, slug: string, locale: Loc
     [slug, locale],
   );
 
-  return rows[0] ? (hydrate(rows[0]) as SeriesRowType) : null;
+  const row = rows[0];
+
+  return row ? { ...(hydrate(row) as SeriesRowType), locales: parseLocaleSet(row.locales) } : null;
 }
 
 /** One `series_section` row joined to one Part, or to nothing at all. */
@@ -148,6 +155,8 @@ type ArcJoinRow = {
   partSlug: string | null;
   partTitle: string | null;
   publishedStringDate: string | null;
+  /** `null` for a planned section's row, which joins no Part to correlate against. */
+  partLocales: string | null;
 };
 
 /**
@@ -166,6 +175,12 @@ type ArcJoinRow = {
  * The `left join` is what keeps a planned section in the result. It renders on
  * the landing with its summary and no list, and it is what a finished section
  * announces as coming next.
+ *
+ * `partLocales` rides along as a correlated subquery — the same shape
+ * `findPostBySlug` and `findProjectBySlug` use — so a Part's own page can build
+ * its `hreflang` alternates from the arc this route already reads, rather than
+ * a second query for a fact this one already has the Slug to answer (Part 10 of
+ * `evolution-plan/15-phase-3-spanish.md`).
  */
 export async function findSeriesArc(
   db: D1Database,
@@ -181,7 +196,10 @@ export async function findSeriesArc(
         ss.status as "status",
         c.slug as "partSlug",
         c.title as "partTitle",
-        strftime('%Y-%m-%d', c.published_at) as "publishedStringDate"
+        strftime('%Y-%m-%d', c.published_at) as "publishedStringDate",
+        (select group_concat(c2.lang)
+          from content c2
+          where c2.slug = c.slug and c2.type = 'post') as "partLocales"
       from series_section ss
       left join content c
         on c.series_slug = ss.series_slug
@@ -216,6 +234,7 @@ export async function findSeriesArc(
         slug: row.partSlug,
         title: row.partTitle,
         publishedStringDate: row.publishedStringDate,
+        locales: parseLocaleSet(row.partLocales),
       } satisfies ArcPart);
     }
   }

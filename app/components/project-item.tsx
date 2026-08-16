@@ -29,7 +29,7 @@ export function ProjectItem({
     <ListingRow
       headingLevel={headingLevel}
       title={project.title}
-      href={projectHref(project.slug)}
+      href={projectHref(project.slug, project.lang)}
       icon={Briefcase}
       meta={
         <>

@@ -1,15 +1,15 @@
 import { useLoaderData } from "react-router";
 import { PostArticle } from "~/components/post-article";
 import { cloudflareContext, localeContext } from "~/context";
+import { postHref, seriesHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { validateRevisions } from "~/lib/revisions";
+import { documentAddresses } from "~/lib/seo/alternates";
 import { blogPosting, breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
 import { orientationFor } from "~/lib/series-arc";
 import { findSeriesArc, findSeriesBySlug } from "~/models/series.server";
 import type { Route } from "./+types/_$series-part";
 import { PartNav, SectionIndex, SeriesBreadcrumb } from "./orientation";
-
-const SITE = "https://poschuler.com";
 
 interface PartAttributes {
   title: string;
@@ -86,6 +86,13 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     // The same date, unformatted. What a reader sees is written for their
     // locale; what a crawler is told has to stay `YYYY-MM-DD`.
     datePublished: attributes.publishedAt,
+    locale: series.lang,
+    // Read off `orientation.part`, via the correlated subquery `findSeriesArc`
+    // now folds into the arc it already reads (Part 10 of
+    // `evolution-plan/15-phase-3-spanish.md`) — the canonical's alternates,
+    // without a second round trip. `?? []` only for the type: every row this
+    // route reads is real, and carries one.
+    existingLocales: orientation.part.locales ?? [],
     repository: attributes.repository,
     html,
     // A malformed list is caught at build time; a page is better off without
@@ -98,32 +105,43 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  const { title, description, seriesSlug, seriesTitle, slug, datePublished, revisions } =
-    loaderData;
-  const path = `/series/${seriesSlug}/${slug}`;
-  const url = `${SITE}${path}`;
+  const {
+    title,
+    description,
+    seriesSlug,
+    seriesTitle,
+    slug,
+    locale,
+    existingLocales,
+    datePublished,
+    revisions,
+  } = loaderData;
+  const identity = { kind: "post" as const, slug, seriesSlug };
+  const { canonical } = documentAddresses(identity, locale, existingLocales);
+  const path = postHref(identity, locale);
 
   return [
     { title: `${title} | Paul Osorio Schuler` },
     { name: "description", content: description },
-    { tagName: "link", rel: "canonical", href: url },
+    { tagName: "link", rel: "canonical", href: canonical },
     { property: "og:title", content: title },
     { property: "og:description", content: description },
-    { property: "og:image", content: `${SITE}/og.png` },
+    { property: "og:image", content: "https://poschuler.com/og.png" },
     { property: "og:image:width", content: "1200" },
     { property: "og:image:height", content: "630" },
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "article" },
-    { property: "og:url", content: url },
+    { property: "og:url", content: canonical },
     {
       "script:ld+json": blogPosting({
-        path,
+        url: canonical,
         title,
         description,
         datePublished,
         // Newest first, guaranteed by `validateRevisions`.
         dateRevised: revisions[0]?.date,
         seriesSlug,
+        locale,
       }),
     },
     // Home › Series › the Series › this Part — and **no Section**. A
@@ -134,7 +152,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
       "script:ld+json": breadcrumbList([
         HOME_CRUMB,
         { name: "Series", path: "/series" },
-        { name: seriesTitle, path: `/series/${seriesSlug}` },
+        { name: seriesTitle, path: seriesHref(seriesSlug, locale) },
         { name: title, path },
       ]),
     },
@@ -149,6 +167,7 @@ export default function SeriesPart() {
     title,
     publishedAt,
     tags,
+    locale,
     repository,
     revisions,
     html,
@@ -165,12 +184,14 @@ export default function SeriesPart() {
           seriesSlug={seriesSlug}
           seriesTitle={seriesTitle}
           sectionTitle={orientation.section.title}
+          locale={locale}
         />
 
         <SectionIndex
           seriesSlug={seriesSlug}
           section={orientation.section}
           currentSlug={slug}
+          locale={locale}
         />
       </div>
 
@@ -178,6 +199,7 @@ export default function SeriesPart() {
         title={title}
         publishedAt={publishedAt}
         tags={tags}
+        locale={locale}
         repository={repository}
         revisions={revisions}
         html={html}
@@ -192,6 +214,7 @@ export default function SeriesPart() {
           seriesSlug={seriesSlug}
           seriesTitle={seriesTitle}
           orientation={orientation}
+          locale={locale}
         />
       </div>
     </main>

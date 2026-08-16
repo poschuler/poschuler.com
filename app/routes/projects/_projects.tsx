@@ -1,12 +1,11 @@
-import { Link, useLoaderData, type MetaFunction } from "react-router";
+import { Link, useLoaderData } from "react-router";
 import { chip } from "~/components/chip";
 import { LiveLink } from "~/components/live-link";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext, LOCALES } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
+import { documentAddresses } from "~/lib/seo/alternates";
 import { findAllProjects, type ProjectRowType } from "~/models/project.server";
 import type { Route } from "./+types/_projects";
-
-const SITE = "https://poschuler.com";
 
 const PROJECTS_TITLE = "Projects | Paul Osorio Schuler";
 const PROJECTS_DESCRIPTION =
@@ -15,25 +14,35 @@ const PROJECTS_DESCRIPTION =
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
   const projects = await findAllProjects(env.POSCHULER_BD);
+  // `findAllProjects` carries no Locale filter yet (a known defect, out of
+  // scope here) — this page's own Locale is unrelated, and is read only for
+  // the canonical below.
+  const locale = context.get(localeContext);
 
-  return { projects };
+  return { projects, locale };
 }
 
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
-export const meta: MetaFunction = () => {
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+  const { canonical } = documentAddresses(
+    { kind: "index", path: "/projects" },
+    loaderData.locale,
+    LOCALES,
+  );
+
   return [
     { title: PROJECTS_TITLE },
     { name: "description", content: PROJECTS_DESCRIPTION },
-    { tagName: "link", rel: "canonical", href: `${SITE}/projects` },
+    { tagName: "link", rel: "canonical", href: canonical },
     { property: "og:title", content: PROJECTS_TITLE },
     { property: "og:description", content: PROJECTS_DESCRIPTION },
-    { property: "og:image", content: `${SITE}/og.png` },
+    { property: "og:image", content: "https://poschuler.com/og.png" },
     { property: "og:image:width", content: "1200" },
     { property: "og:image:height", content: "630" },
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
-    { property: "og:url", content: `${SITE}/projects` },
+    { property: "og:url", content: canonical },
   ];
 };
 

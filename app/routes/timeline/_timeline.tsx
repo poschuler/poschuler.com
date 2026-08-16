@@ -1,9 +1,10 @@
-import { useLoaderData, type MetaFunction } from "react-router";
+import { useLoaderData } from "react-router";
 import { ContentItem } from "~/components/content-item";
 import { findAllBookmarks, findAllPosts, mergeTimeline } from "~/models/content.server";
 import type { Route } from "./+types/_timeline";
-import { cloudflareContext, localeContext } from "~/context";
+import { cloudflareContext, localeContext, LOCALES } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
+import { documentAddresses } from "~/lib/seo/alternates";
 
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
@@ -17,7 +18,7 @@ export async function loader({ context }: Route.LoaderArgs) {
     findAllBookmarks(env.POSCHULER_BD),
   ]);
 
-  return { contentItems: mergeTimeline(posts, bookmarks) };
+  return { contentItems: mergeTimeline(posts, bookmarks), locale };
 }
 
 export const shouldRevalidate = skipRevalidationOnThemeChange;
@@ -26,11 +27,17 @@ const TIMELINE_TITLE = "Timeline | Paul Osorio Schuler";
 const TIMELINE_DESCRIPTION =
   "Everything Paul Osorio Schuler writes and reads, interleaved and newest first: articles on backend systems and the links worth keeping.";
 
-export const meta: MetaFunction = () => {
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+  const { canonical } = documentAddresses(
+    { kind: "index", path: "/timeline" },
+    loaderData.locale,
+    LOCALES,
+  );
+
   return [
     { title: TIMELINE_TITLE },
     { name: "description", content: TIMELINE_DESCRIPTION },
-    { tagName: "link", rel: "canonical", href: "https://poschuler.com/timeline" },
+    { tagName: "link", rel: "canonical", href: canonical },
     { property: "og:title", content: TIMELINE_TITLE },
     { property: "og:description", content: TIMELINE_DESCRIPTION },
     { property: "og:image", content: "https://poschuler.com/og.png" },
@@ -38,7 +45,7 @@ export const meta: MetaFunction = () => {
     { property: "og:image:height", content: "630" },
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
-    { property: "og:url", content: "https://poschuler.com/timeline" },
+    { property: "og:url", content: canonical },
   ];
 };
 

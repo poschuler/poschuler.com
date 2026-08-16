@@ -1,15 +1,15 @@
 import { useLoaderData } from "react-router";
 import { PostArticle } from "~/components/post-article";
 import { cloudflareContext, localeContext } from "~/context";
+import { postHref, projectHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { validateRevisions } from "~/lib/revisions";
+import { documentAddresses } from "~/lib/seo/alternates";
 import { blogPosting, breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
 import { findPostBySlug } from "~/models/content.server";
 import { findProjectBySlug, findProjectNotes } from "~/models/project.server";
 import type { Route } from "./+types/_$project-note";
 import { NoteSiblings, ProjectBreadcrumb } from "./orientation";
-
-const SITE = "https://poschuler.com";
 
 interface NoteAttributes {
   title: string;
@@ -89,6 +89,11 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     // The same date, unformatted. What a reader sees is written for their
     // locale; what a crawler is told has to stay `YYYY-MM-DD`.
     datePublished: attributes.publishedAt,
+    locale: post.lang,
+    // Read off the same row `findPostBySlug` already fetched, via its
+    // correlated subquery (Part 10 of `evolution-plan/15-phase-3-spanish.md`)
+    // — the canonical's alternates, without a second round trip.
+    existingLocales: post.locales,
     repository: attributes.repository,
     html,
     // A malformed list is caught at build time; a page is better off without
@@ -101,32 +106,43 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  const { title, description, projectSlug, projectTitle, slug, datePublished, revisions } =
-    loaderData;
-  const path = `/projects/${projectSlug}/${slug}`;
-  const url = `${SITE}${path}`;
+  const {
+    title,
+    description,
+    projectSlug,
+    projectTitle,
+    slug,
+    locale,
+    existingLocales,
+    datePublished,
+    revisions,
+  } = loaderData;
+  const identity = { kind: "post" as const, slug, seriesSlug: null, projectSlug };
+  const { canonical } = documentAddresses(identity, locale, existingLocales);
+  const path = postHref(identity, locale);
 
   return [
     { title: `${title} | Paul Osorio Schuler` },
     { name: "description", content: description },
-    { tagName: "link", rel: "canonical", href: url },
+    { tagName: "link", rel: "canonical", href: canonical },
     { property: "og:title", content: title },
     { property: "og:description", content: description },
-    { property: "og:image", content: `${SITE}/og.png` },
+    { property: "og:image", content: "https://poschuler.com/og.png" },
     { property: "og:image:width", content: "1200" },
     { property: "og:image:height", content: "630" },
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "article" },
-    { property: "og:url", content: url },
+    { property: "og:url", content: canonical },
     {
       "script:ld+json": blogPosting({
-        path,
+        url: canonical,
         title,
         description,
         datePublished,
         // Newest first, guaranteed by `validateRevisions`.
         dateRevised: revisions[0]?.date,
         projectSlug,
+        locale,
       }),
     },
     // Home › Projects › the Project › this note — four levels, none of them
@@ -136,7 +152,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
       "script:ld+json": breadcrumbList([
         HOME_CRUMB,
         { name: "Projects", path: "/projects" },
-        { name: projectTitle, path: `/projects/${projectSlug}` },
+        { name: projectTitle, path: projectHref(projectSlug, locale) },
         { name: title, path },
       ]),
     },
@@ -151,6 +167,7 @@ export default function ProjectNote() {
     title,
     publishedAt,
     tags,
+    locale,
     repository,
     revisions,
     html,
@@ -163,13 +180,14 @@ export default function ProjectNote() {
         * title: the reader who arrived from a search engine has to learn what
         * this is about before reading it, not twenty minutes later. */}
       <div className="mx-auto w-full max-w-measure pt-8">
-        <ProjectBreadcrumb projectSlug={projectSlug} projectTitle={projectTitle} />
+        <ProjectBreadcrumb projectSlug={projectSlug} projectTitle={projectTitle} locale={locale} />
       </div>
 
       <PostArticle
         title={title}
         publishedAt={publishedAt}
         tags={tags}
+        locale={locale}
         repository={repository}
         revisions={revisions}
         html={html}
@@ -185,6 +203,7 @@ export default function ProjectNote() {
         projectTitle={projectTitle}
         notes={notes}
         currentSlug={slug}
+        locale={locale}
       />
     </main>
   );

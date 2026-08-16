@@ -1,4 +1,4 @@
-import type { Locale } from "~/context";
+import { parseLocaleSet, type Locale } from "~/context";
 import { dbQuery } from "~/db.server";
 import { parseRevisions, type Revision } from "~/lib/revisions";
 
@@ -103,11 +103,16 @@ export async function findAllProjects(db: D1Database) {
  *
  * Returns `null` rather than throwing: a Slug that does not exist is a 404 the
  * route decides on, not a database error.
+ *
+ * `locales` rides along as a correlated subquery — every Locale this Slug's
+ * Project exists in — so the landing can build its own `hreflang` alternates
+ * without a second round trip (Part 10 of `evolution-plan/15-phase-3-spanish.md`).
  */
 export async function findProjectBySlug(db: D1Database, slug: string, locale: Locale) {
-  const rows = await dbQuery<StoredProjectRow>(
+  const rows = await dbQuery<StoredProjectRow & { locales: string | null }>(
     db,
-    `select ${PROJECT_COLUMNS}
+    `select ${PROJECT_COLUMNS},
+        (select group_concat(p2.lang) from project p2 where p2.slug = project.slug) as "locales"
       from project
       where slug = ? and lang = ?
       limit 1
@@ -115,7 +120,9 @@ export async function findProjectBySlug(db: D1Database, slug: string, locale: Lo
     [slug, locale],
   );
 
-  return rows[0] ? hydrate(rows[0]) : null;
+  const row = rows[0];
+
+  return row ? { ...hydrate(row), locales: parseLocaleSet(row.locales) } : null;
 }
 
 /** A Field Note as a Project's index and sibling list need it — no more. */

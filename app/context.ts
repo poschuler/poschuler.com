@@ -77,3 +77,27 @@ export function deriveLocale(url: URL): Locale {
  * mid-render.
  */
 export const localeContext = createContext<Locale>("en");
+
+/**
+ * Every published Locale, in the order a reciprocal list should read them —
+ * `en` first, because it is the `x-default` (ADR 0010). The one place that
+ * order is decided, so two documents translated into the same Locales report
+ * them the same way regardless of what order a query happened to return.
+ */
+export const LOCALES: readonly Locale[] = ["en", "es"];
+
+/**
+ * The Locales that exist for one document, out of the comma-separated column
+ * a correlated subquery hands back beside its row — the pattern
+ * `CONTENT_COLUMNS`'s docblock names as the precedent, applied to *which
+ * Locales* rather than *which columns*.
+ *
+ * Filtered against `LOCALES` rather than trusted verbatim, so the result is
+ * ordered and so a row nothing here declares cannot forge a Locale this site
+ * never published — the same posture `deriveLocale` takes with a path.
+ */
+export function parseLocaleSet(stored: string | null): Locale[] {
+  const found = new Set((stored ?? "").split(","));
+
+  return LOCALES.filter((locale) => found.has(locale));
+}

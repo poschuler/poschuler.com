@@ -1,15 +1,14 @@
 import { Link, useLoaderData } from "react-router";
 import { chip } from "~/components/chip";
-import { cloudflareContext, localeContext } from "~/context";
-import { postHref } from "~/lib/hrefs";
+import { cloudflareContext, localeContext, type Locale } from "~/context";
+import { postHref, seriesHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
+import { documentAddresses } from "~/lib/seo/alternates";
 import { breadcrumbList, creativeWorkSeries, HOME_CRUMB } from "~/lib/seo/structured-data";
 import { readingOrder, type ArcSection } from "~/lib/series-arc";
 import { cn } from "~/lib/utils";
 import { findSeriesArc, findSeriesBySlug } from "~/models/series.server";
 import type { Route } from "./+types/_$series-slug";
-
-const SITE = "https://poschuler.com";
 
 interface SeriesBodyPayload {
   html: string;
@@ -59,6 +58,11 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     destination: series.destination,
     outOfScope: series.outOfScope,
     audience: series.audience,
+    locale: series.lang,
+    // Read off the same row, via the correlated subquery `findSeriesBySlug`
+    // now carries (Part 10 of `evolution-plan/15-phase-3-spanish.md`) — the
+    // canonical's alternates, without a second round trip.
+    existingLocales: series.locales,
     sections,
     html: body.html,
   };
@@ -67,26 +71,28 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  const { title, description, slug, sections } = loaderData;
+  const { title, description, slug, locale, existingLocales, sections } = loaderData;
   const pageTitle = `${title} | Paul Osorio Schuler`;
+  const { canonical } = documentAddresses({ kind: "series", slug }, locale, existingLocales);
 
   return [
     { title: pageTitle },
     { name: "description", content: description },
-    { tagName: "link", rel: "canonical", href: `${SITE}/series/${slug}` },
+    { tagName: "link", rel: "canonical", href: canonical },
     { property: "og:title", content: pageTitle },
     { property: "og:description", content: description },
-    { property: "og:image", content: `${SITE}/og.png` },
+    { property: "og:image", content: "https://poschuler.com/og.png" },
     { property: "og:image:width", content: "1200" },
     { property: "og:image:height", content: "630" },
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
-    { property: "og:url", content: `${SITE}/series/${slug}` },
+    { property: "og:url", content: canonical },
     {
       "script:ld+json": creativeWorkSeries({
         slug,
         title,
         description,
+        locale,
         // The arc flattened into reading order — which is the order that makes
         // a position mean anything. A planned Section contributes nothing,
         // because it holds nothing to contribute.
@@ -100,7 +106,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
       "script:ld+json": breadcrumbList([
         HOME_CRUMB,
         { name: "Series", path: "/series" },
-        { name: title, path: `/series/${slug}` },
+        { name: title, path: seriesHref(slug, locale) },
       ]),
     },
   ];
@@ -128,7 +134,15 @@ function sectionState(section: ArcSection): "Complete" | "In progress" | "Planne
  * anything** — there is nothing to enumerate, which is the whole point: the arc
  * stays fully visible while the empty checkboxes never appear.
  */
-function Section({ seriesSlug, section }: { seriesSlug: string; section: ArcSection }) {
+function Section({
+  seriesSlug,
+  section,
+  locale,
+}: {
+  seriesSlug: string;
+  section: ArcSection;
+  locale: Locale;
+}) {
   return (
     <article className="my-6 border-default border-l-2 py-3 pl-4">
       <h3 className="flex flex-wrap items-baseline gap-x-3 font-semibold text-lg">
@@ -143,7 +157,7 @@ function Section({ seriesSlug, section }: { seriesSlug: string; section: ArcSect
           {section.parts.map((part) => (
             <li key={part.slug} className="flex flex-wrap items-baseline gap-x-3">
               <Link
-                to={postHref({ slug: part.slug, seriesSlug })}
+                to={postHref({ slug: part.slug, seriesSlug }, locale)}
                 className="transition-colors duration-200 hover:text-low"
               >
                 {part.title}
@@ -168,6 +182,7 @@ export default function SeriesLanding() {
     destination,
     outOfScope,
     audience,
+    locale,
     sections,
     html,
   } = useLoaderData<typeof loader>();
@@ -222,7 +237,7 @@ export default function SeriesLanding() {
         <h2 className="font-semibold text-xl tracking-tight">The arc</h2>
 
         {sections.map((section) => (
-          <Section key={section.slug} seriesSlug={slug} section={section} />
+          <Section key={section.slug} seriesSlug={slug} section={section} locale={locale} />
         ))}
 
         {/* The promise, spelled out where the arc ends: what *complete* would

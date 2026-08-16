@@ -5,12 +5,11 @@ import { ProjectNoteItem } from "~/components/project-note-item";
 import { GitHubIcon } from "~/components/ui/brand-icons";
 import { RevisionHistory, RevisionLine } from "~/components/revisions";
 import { cloudflareContext, localeContext } from "~/context";
+import { documentAddresses } from "~/lib/seo/alternates";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { cn } from "~/lib/utils";
 import { findProjectBySlug, findProjectNotes } from "~/models/project.server";
 import type { Route } from "./+types/_$project-slug";
-
-const SITE = "https://poschuler.com";
 
 interface ProjectBodyPayload {
   html: string;
@@ -57,6 +56,11 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     liveUrl: project.liveUrl,
     repoUrl: project.repoUrl,
     revisions: project.revisions,
+    locale: project.lang,
+    // Read off the same row, via the correlated subquery `findProjectBySlug`
+    // now carries (Part 10 of `evolution-plan/15-phase-3-spanish.md`) — the
+    // canonical's alternates, without a second round trip.
+    existingLocales: project.locales,
     html: body.html,
     notes,
   };
@@ -65,26 +69,27 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  const { title, description, slug } = loaderData;
+  const { title, description, slug, locale, existingLocales } = loaderData;
   const pageTitle = `${title} | Paul Osorio Schuler`;
+  const { canonical } = documentAddresses({ kind: "project", slug }, locale, existingLocales);
 
   return [
     { title: pageTitle },
     { name: "description", content: description },
-    { tagName: "link", rel: "canonical", href: `${SITE}/projects/${slug}` },
+    { tagName: "link", rel: "canonical", href: canonical },
     { property: "og:title", content: pageTitle },
     { property: "og:description", content: description },
-    { property: "og:image", content: `${SITE}/og.png` },
+    { property: "og:image", content: "https://poschuler.com/og.png" },
     { property: "og:image:width", content: "1200" },
     { property: "og:image:height", content: "630" },
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
-    { property: "og:url", content: `${SITE}/projects/${slug}` },
+    { property: "og:url", content: canonical },
   ];
 }
 
 export default function Project() {
-  const { slug, title, summary, status, liveUrl, repoUrl, revisions, html, notes } =
+  const { slug, title, summary, status, liveUrl, repoUrl, revisions, locale, html, notes } =
     useLoaderData<typeof loader>();
 
   return (
@@ -142,7 +147,7 @@ export default function Project() {
           <h2 className="font-semibold text-xl tracking-tight">Field notes</h2>
 
           {notes.map((note) => (
-            <ProjectNoteItem key={note.slug} note={note} projectSlug={slug} />
+            <ProjectNoteItem key={note.slug} note={note} projectSlug={slug} locale={locale} />
           ))}
         </section>
       )}

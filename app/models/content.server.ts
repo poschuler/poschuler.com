@@ -1,4 +1,4 @@
-import type { Locale } from "~/context";
+import { parseLocaleSet, type Locale } from "~/context";
 import { dbQuery } from "~/db.server";
 
 /**
@@ -134,11 +134,22 @@ export function findLoosePosts(db: D1Database, locale: Locale) {
  * The row, not the body: `/blog/:blogSlug` reads it to find out whether the
  * Slug it was handed is served from somewhere else. Returns `null` rather than
  * throwing — a Slug that does not exist is a 404 the route decides on.
+ *
+ * `locales` rides along as a correlated subquery — the Locales some Post of
+ * this Slug exists in, not only this one — so the page this row frames can
+ * build its own `hreflang` alternates without a second round trip (Part 10 of
+ * `evolution-plan/15-phase-3-spanish.md`, and `CONTENT_COLUMNS`'s docblock,
+ * which names this the correlated-subquery precedent). Scoped to `type =
+ * 'post'` the same way the outer query is, so a Bookmark that happened to
+ * share a Slug could never be counted as a Translation.
  */
 export async function findPostBySlug(db: D1Database, slug: string, locale: Locale) {
-  const rows = await dbQuery<PostRowType>(
+  const rows = await dbQuery<PostRowType & { locales: string | null }>(
     db,
-    `select ${CONTENT_COLUMNS}
+    `select ${CONTENT_COLUMNS},
+        (select group_concat(c2.lang)
+          from content c2
+          where c2.slug = content.slug and c2.type = 'post') as "locales"
       from content
       where slug = ? and lang = ? and type = 'post'
       limit 1
@@ -146,7 +157,9 @@ export async function findPostBySlug(db: D1Database, slug: string, locale: Local
     [slug, locale],
   );
 
-  return rows[0] ?? null;
+  const row = rows[0];
+
+  return row ? { ...row, locales: parseLocaleSet(row.locales) } : null;
 }
 
 /**

@@ -1,14 +1,13 @@
 import { Tag as TagIcon } from "lucide-react";
 import { useLoaderData } from "react-router";
 import { ListingRow } from "~/components/listing-row";
-import { cloudflareContext, localeContext } from "~/context";
+import { cloudflareContext, localeContext, LOCALES, type Locale } from "~/context";
 import { tagHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
+import { documentAddresses } from "~/lib/seo/alternates";
 import { breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
 import { findTagsWithPostCounts, type TagCountRowType } from "~/models/tag.server";
 import type { Route } from "./+types/_tags";
-
-const SITE = "https://poschuler.com";
 
 const TAGS_TITLE = "Tags | Paul Osorio Schuler";
 const TAGS_DESCRIPTION =
@@ -43,7 +42,7 @@ export async function loader({ context }: Route.LoaderArgs) {
   const locale = context.get(localeContext);
   const tags = await findTagsWithPostCounts(env.POSCHULER_BD, locale);
 
-  return { tags };
+  return { tags, locale };
 }
 
 export const shouldRevalidate = skipRevalidationOnThemeChange;
@@ -60,19 +59,21 @@ export const shouldRevalidate = skipRevalidationOnThemeChange;
  * would be a second description of pages that each already describe themselves
  * one click away — and those pages are `noindex`.
  */
-export const meta: Route.MetaFunction = () => {
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+  const { canonical } = documentAddresses({ kind: "index", path: "/tags" }, loaderData.locale, LOCALES);
+
   return [
     { title: TAGS_TITLE },
     { name: "description", content: TAGS_DESCRIPTION },
-    { tagName: "link", rel: "canonical", href: `${SITE}/tags` },
+    { tagName: "link", rel: "canonical", href: canonical },
     { property: "og:title", content: TAGS_TITLE },
     { property: "og:description", content: TAGS_DESCRIPTION },
-    { property: "og:image", content: `${SITE}/og.png` },
+    { property: "og:image", content: "https://poschuler.com/og.png" },
     { property: "og:image:width", content: "1200" },
     { property: "og:image:height", content: "630" },
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
-    { property: "og:url", content: `${SITE}/tags` },
+    { property: "og:url", content: canonical },
     {
       "script:ld+json": breadcrumbList([HOME_CRUMB, { name: "Tags", path: "/tags" }]),
     },
@@ -91,11 +92,11 @@ export const meta: Route.MetaFunction = () => {
  * — one Post is a different proposition from four — and it is the number the
  * page behind the link has to hold.
  */
-function TagRow({ tag, posts }: TagCountRowType) {
+function TagRow({ tag, posts, locale }: TagCountRowType & { locale: Locale }) {
   return (
     <ListingRow
       title={tag}
-      href={tagHref(tag)}
+      href={tagHref(tag, locale)}
       icon={TagIcon}
       meta={<span>{`${posts} ${posts === 1 ? "post" : "posts"}`}</span>}
     />
@@ -103,7 +104,7 @@ function TagRow({ tag, posts }: TagCountRowType) {
 }
 
 export default function Tags() {
-  const { tags } = useLoaderData<typeof loader>();
+  const { tags, locale } = useLoaderData<typeof loader>();
 
   return (
     <main className="flex flex-1 flex-col gap-4 bg-ui p-4 font-mono md:gap-8 md:p-10">
@@ -123,7 +124,7 @@ export default function Tags() {
 
       <section className="mx-auto w-full max-w-measure">
         {tags.map((one) => (
-          <TagRow key={one.tag} tag={one.tag} posts={one.posts} />
+          <TagRow key={one.tag} tag={one.tag} posts={one.posts} locale={locale} />
         ))}
       </section>
     </main>

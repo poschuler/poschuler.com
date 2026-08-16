@@ -19,19 +19,21 @@ import {
  */
 
 const PART = {
-  path: "/series/pragmatic-nodejs-api/project-setup",
+  url: "https://poschuler.com/series/pragmatic-nodejs-api/project-setup",
   title: "Project setup",
   description: "Where a Node.js project's structure comes from.",
   datePublished: "2025-12-25",
   seriesSlug: "pragmatic-nodejs-api",
+  locale: "en" as const,
 };
 
 const NOTE = {
-  path: "/projects/chekalo/product-matching",
+  url: "https://poschuler.com/projects/chekalo/product-matching",
   title: "Matching products across retailers without a shared id",
   description: "The problem, and the shape of the solution.",
   datePublished: "2026-08-15",
   projectSlug: "chekalo",
+  locale: "en" as const,
 };
 
 describe("blogPosting", () => {
@@ -77,7 +79,7 @@ describe("blogPosting", () => {
   it("attaches a Part to its Series by the identifier the landing declares", () => {
     const article = blogPosting(PART);
 
-    expect(article.isPartOf).toEqual({ "@id": seriesId("pragmatic-nodejs-api") });
+    expect(article.isPartOf).toEqual({ "@id": seriesId("pragmatic-nodejs-api", "en") });
   });
 
   /**
@@ -94,7 +96,7 @@ describe("blogPosting", () => {
   it("attaches a Field Note to its Project by the identifier the landing declares", () => {
     const article = blogPosting(NOTE);
 
-    expect(article.isPartOf).toEqual({ "@id": projectId("chekalo") });
+    expect(article.isPartOf).toEqual({ "@id": projectId("chekalo", "en") });
   });
 
   it("says nothing about containment for a Field Note with no projectSlug given", () => {
@@ -132,6 +134,7 @@ describe("creativeWorkSeries", () => {
     slug: "pragmatic-nodejs-api",
     title: "Pragmatic Node.js API",
     description: "A monolithic API you can defend.",
+    locale: "en" as const,
     parts: [
       { slug: "project-setup", title: "Project setup" },
       { slug: "schema-validation", title: "Schema validation" },
@@ -139,7 +142,7 @@ describe("creativeWorkSeries", () => {
   };
 
   it("declares the identifier its Parts point back at", () => {
-    expect(creativeWorkSeries(SERIES)["@id"]).toBe(seriesId("pragmatic-nodejs-api"));
+    expect(creativeWorkSeries(SERIES)["@id"]).toBe(seriesId("pragmatic-nodejs-api", "en"));
   });
 
   it("lists its Parts in reading order", () => {
@@ -169,6 +172,14 @@ describe("creativeWorkSeries", () => {
     const part = blogPosting(PART);
 
     expect(part.isPartOf).toEqual({ "@id": series["@id"] });
+  });
+
+  /** This module builds no URL of its own: the Locale changes the address via `~/lib/hrefs`, nothing here. */
+  it("addresses a Spanish landing under /es, at the same Slug", () => {
+    const series = creativeWorkSeries({ ...SERIES, locale: "es" });
+
+    expect(series.url).toBe("https://poschuler.com/es/series/pragmatic-nodejs-api");
+    expect(series["@id"]).toBe("https://poschuler.com/es/series/pragmatic-nodejs-api#series");
   });
 });
 

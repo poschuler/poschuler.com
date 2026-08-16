@@ -1,3 +1,5 @@
+import type { Locale } from "~/context";
+import { postHref, projectHref, seriesHref } from "~/lib/hrefs";
 import { AUTHOR, SITE } from "./person";
 
 /**
@@ -8,6 +10,14 @@ import { AUTHOR, SITE } from "./person";
  * content it describes agrees with it exactly once, on the day it is written.
  * These builders take the same values the page renders, so the two cannot say
  * different things.
+ *
+ * **This module builds no URL of its own** (Part 10 of
+ * `evolution-plan/15-phase-3-spanish.md`). An article's own address arrives
+ * already made — the same `canonical` the page's `<head>` carries, out of
+ * `app/lib/seo/alternates.ts` — and every other address here, a Container's or
+ * a sibling Part's, comes from `~/lib/hrefs`, the one place a relative path is
+ * built. What this file still owns is prepending `SITE`, exactly as
+ * `alternates.ts` does — never the segment structure underneath it.
  */
 
 /** A `<script type="application/ld+json">` payload, whatever shape it takes. */
@@ -46,7 +56,8 @@ export function breadcrumbList(crumbs: Crumb[]): JsonLd {
 export const HOME_CRUMB: Crumb = { name: "Home", path: "/" };
 
 export type ArticleFacts = {
-  path: string;
+  /** This article's own absolute address — `alternates.ts`'s `canonical`, not built again here. */
+  url: string;
   title: string;
   description: string;
   /** `YYYY-MM-DD`. */
@@ -57,6 +68,8 @@ export type ArticleFacts = {
   seriesSlug?: string | null;
   /** The Project this is a Field Note of, when it has one. */
   projectSlug?: string | null;
+  /** This article's own Locale — needed only to address its Container, not itself. */
+  locale: Locale;
 };
 
 /**
@@ -77,16 +90,15 @@ export type ArticleFacts = {
  * present and one of them `null`.
  */
 export function blogPosting({
-  path,
+  url,
   title,
   description,
   datePublished,
   dateRevised,
   seriesSlug,
   projectSlug,
+  locale,
 }: ArticleFacts): JsonLd {
-  const url = `${SITE}${path}`;
-
   return {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -105,16 +117,16 @@ export function blogPosting({
     author: AUTHOR,
     publisher: AUTHOR,
     ...(seriesSlug
-      ? { isPartOf: { "@id": seriesId(seriesSlug) } }
+      ? { isPartOf: { "@id": seriesId(seriesSlug, locale) } }
       : projectSlug
-        ? { isPartOf: { "@id": projectId(projectSlug) } }
+        ? { isPartOf: { "@id": projectId(projectSlug, locale) } }
         : {}),
   };
 }
 
 /** The identifier a Part points at, and the landing declares. */
-export function seriesId(slug: string): string {
-  return `${SITE}/series/${slug}#series`;
+export function seriesId(slug: string, locale: Locale): string {
+  return `${SITE}${seriesHref(slug, locale)}#series`;
 }
 
 /**
@@ -127,14 +139,15 @@ export function seriesId(slug: string): string {
  * real resource instead — the page a Field Note's `isPartOf` names is one that
  * exists, even without a JSON-LD node to greet it there yet.
  */
-export function projectId(slug: string): string {
-  return `${SITE}/projects/${slug}`;
+export function projectId(slug: string, locale: Locale): string {
+  return `${SITE}${projectHref(slug, locale)}`;
 }
 
 export type SeriesFacts = {
   slug: string;
   title: string;
   description: string;
+  locale: Locale;
   /** In reading order, which is the order that makes `position` mean anything. */
   parts: Array<{ slug: string; title: string }>;
 };
@@ -146,22 +159,26 @@ export type SeriesFacts = {
  * URL and no title a crawler could use, and announcing it here would be the
  * same claim about the future the pages themselves refuse to make.
  */
-export function creativeWorkSeries({ slug, title, description, parts }: SeriesFacts): JsonLd {
+export function creativeWorkSeries({ slug, title, description, locale, parts }: SeriesFacts): JsonLd {
   return {
     "@context": "https://schema.org",
     "@type": "CreativeWorkSeries",
-    "@id": seriesId(slug),
+    "@id": seriesId(slug, locale),
     name: title,
     description,
-    url: `${SITE}/series/${slug}`,
+    url: `${SITE}${seriesHref(slug, locale)}`,
     inLanguage: "en",
     author: AUTHOR,
-    hasPart: parts.map((part, index) => ({
-      "@type": "BlogPosting",
-      "@id": `${SITE}/series/${slug}/${part.slug}#article`,
-      name: part.title,
-      url: `${SITE}/series/${slug}/${part.slug}`,
-      position: index + 1,
-    })),
+    hasPart: parts.map((part, index) => {
+      const partUrl = `${SITE}${postHref({ slug: part.slug, seriesSlug: slug }, locale)}`;
+
+      return {
+        "@type": "BlogPosting",
+        "@id": `${partUrl}#article`,
+        name: part.title,
+        url: partUrl,
+        position: index + 1,
+      };
+    }),
   };
 }

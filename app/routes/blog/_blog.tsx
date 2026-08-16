@@ -1,4 +1,4 @@
-import { useLoaderData, type MetaFunction } from "react-router";
+import { useLoaderData } from "react-router";
 import { findLoosePosts, type PostRowType } from "~/models/content.server";
 import { findAllSeries, type SeriesListingRowType } from "~/models/series.server";
 import { findProjectsWithNotes, type ProjectListingRowType } from "~/models/project.server";
@@ -6,8 +6,9 @@ import { ContentItem } from "~/components/content-item";
 import { SeriesItem } from "~/components/series-item";
 import { ProjectItem } from "~/components/project-item";
 import type { Route } from "./+types/_blog";
-import { cloudflareContext, localeContext } from "~/context";
+import { cloudflareContext, localeContext, LOCALES } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
+import { documentAddresses } from "~/lib/seo/alternates";
 
 /** One row on this page: a loose Post, or a whole Container — Series or Project — as a single entry. */
 type BlogEntry =
@@ -62,16 +63,18 @@ export async function loader({ context }: Route.LoaderArgs) {
 
   entries.sort((left, right) => dateOf(right).localeCompare(dateOf(left)));
 
-  return { entries };
+  return { entries, locale };
 }
 
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
-export const meta: MetaFunction = () => {
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+  const { canonical } = documentAddresses({ kind: "index", path: "/blog" }, loaderData.locale, LOCALES);
+
   return [
     { title: "Blog | Paul Osorio Schuler" },
     { name: "description", content: "Long-form articles by Paul Osorio Schuler on building backend systems with Node.js and TypeScript: API structure, domain-driven design and software architecture." },
-    { tagName: "link", rel: "canonical", href: "https://poschuler.com/blog" },
+    { tagName: "link", rel: "canonical", href: canonical },
     { property: "og:title", content: "Blog | Paul Osorio Schuler" },
     { property: "og:description", content: "Long-form articles by Paul Osorio Schuler on building backend systems with Node.js and TypeScript: API structure, domain-driven design and software architecture." },
     { property: "og:image", content: "https://poschuler.com/og.png" },
@@ -79,7 +82,7 @@ export const meta: MetaFunction = () => {
     { property: "og:image:height", content: "630" },
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
-    { property: "og:url", content: "https://poschuler.com/blog" },
+    { property: "og:url", content: canonical },
   ];
 };
 

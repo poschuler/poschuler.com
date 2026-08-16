@@ -1,25 +1,34 @@
-import { useLoaderData, type MetaFunction } from "react-router";
+import { useLoaderData } from "react-router";
 import { ContentItem } from "~/components/content-item";
 import { findAllBookmarks } from "~/models/content.server";
 import type { Route } from "./+types/_bookmarks";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext, LOCALES } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
+import { documentAddresses } from "~/lib/seo/alternates";
 
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
   const bookmarks = await findAllBookmarks(env.POSCHULER_BD);
+  // A Bookmark has no Locale (`CONTEXT.md`) — this page's own does, for the
+  // canonical below, which is what `localeContext` is read for here.
+  const locale = context.get(localeContext);
 
-  return { bookmarks };
+  return { bookmarks, locale };
 }
 
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
-export const meta: MetaFunction = () => {
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+  const { canonical } = documentAddresses(
+    { kind: "index", path: "/bookmarks" },
+    loaderData.locale,
+    LOCALES,
+  );
 
   return [
     { title: `Bookmarks | Paul Osorio Schuler` },
     { name: "description", content: `External articles Paul Osorio Schuler has read and kept, on TypeScript, web development, auth and security, accessibility and performance.` },
-    { tagName: "link", rel: "canonical", href: `https://poschuler.com/bookmarks` },
+    { tagName: "link", rel: "canonical", href: canonical },
     { property: "og:title", content: `Bookmarks | Paul Osorio Schuler` },
     { property: "og:description", content: `External articles Paul Osorio Schuler has read and kept, on TypeScript, web development, auth and security, accessibility and performance.` },
     { property: "og:image", content: "https://poschuler.com/og.png" },
@@ -27,7 +36,7 @@ export const meta: MetaFunction = () => {
     { property: "og:image:height", content: "630" },
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
-    { property: "og:url", content: `https://poschuler.com/bookmarks` },
+    { property: "og:url", content: canonical },
   ];
 };
 

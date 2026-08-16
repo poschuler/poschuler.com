@@ -6,6 +6,7 @@ import { Hero } from "~/routes/resume/hero";
 import { Skills } from "~/routes/resume/skills";
 import { KeyboardManager } from "~/routes/resume/keyboard-manager";
 import type { MetaFunction } from "react-router";
+import { documentAddresses } from "~/lib/seo/alternates";
 import { PERSON_CORE, SITE } from "~/lib/seo/person";
 import { basics, certificates, education, languages } from "~/routes/resume/resume.json";
 
@@ -57,11 +58,21 @@ const RESUME_DESCRIPTION =
  * fetches once and caches.
  */
 
+/**
+ * No loader, so no `locale` arrives from `localeContext` the way every other
+ * page's does — deliberately, for the reason above this file's `meta` used to
+ * carry alone. This page has exactly one address until Phase 3's Part 8 gives
+ * the Resume its Spanish text (`evolution-plan/15-phase-3-spanish.md`), so the
+ * Locale it canonicalises at is written here rather than threaded through a
+ * loader added for this alone.
+ */
 export const meta: MetaFunction = () => {
+  const { canonical } = documentAddresses({ kind: "index", path: "/resume" }, "en", ["en"]);
+
   return [
     { title: RESUME_TITLE },
     { name: "description", content: RESUME_DESCRIPTION },
-    { tagName: "link", rel: "canonical", href: `${SITE}/resume` },
+    { tagName: "link", rel: "canonical", href: canonical },
     { property: "og:title", content: RESUME_TITLE },
     { property: "og:description", content: RESUME_DESCRIPTION },
     { property: "og:image", content: `${SITE}/og.png` },
@@ -69,7 +80,7 @@ export const meta: MetaFunction = () => {
     { property: "og:image:height", content: "630" },
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
-    { property: "og:url", content: `${SITE}/resume` },
+    { property: "og:url", content: canonical },
     { "script:ld+json": PERSON },
   ];
 };

@@ -1,12 +1,11 @@
-import { useLoaderData, type MetaFunction } from "react-router";
+import { useLoaderData } from "react-router";
 import { SeriesItem } from "~/components/series-item";
-import { cloudflareContext, localeContext } from "~/context";
+import { cloudflareContext, localeContext, LOCALES } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
+import { documentAddresses } from "~/lib/seo/alternates";
 import { breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
 import { findAllSeries } from "~/models/series.server";
 import type { Route } from "./+types/_series";
-
-const SITE = "https://poschuler.com";
 
 const SERIES_TITLE = "Series | Paul Osorio Schuler";
 const SERIES_DESCRIPTION =
@@ -30,24 +29,30 @@ export async function loader({ context }: Route.LoaderArgs) {
   const locale = context.get(localeContext);
   const series = await findAllSeries(env.POSCHULER_BD, locale);
 
-  return { series };
+  return { series, locale };
 }
 
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
-export const meta: MetaFunction = () => {
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+  const { canonical } = documentAddresses(
+    { kind: "index", path: "/series" },
+    loaderData.locale,
+    LOCALES,
+  );
+
   return [
     { title: SERIES_TITLE },
     { name: "description", content: SERIES_DESCRIPTION },
-    { tagName: "link", rel: "canonical", href: `${SITE}/series` },
+    { tagName: "link", rel: "canonical", href: canonical },
     { property: "og:title", content: SERIES_TITLE },
     { property: "og:description", content: SERIES_DESCRIPTION },
-    { property: "og:image", content: `${SITE}/og.png` },
+    { property: "og:image", content: "https://poschuler.com/og.png" },
     { property: "og:image:width", content: "1200" },
     { property: "og:image:height", content: "630" },
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
-    { property: "og:url", content: `${SITE}/series` },
+    { property: "og:url", content: canonical },
     // An index, so a trail and nothing more. Emitting an `ItemList` of the
     // series here would be a second description of documents that each already
     // describe themselves one click away.

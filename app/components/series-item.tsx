@@ -54,7 +54,7 @@ export function SeriesItem({
     <ListingRow
       headingLevel={headingLevel}
       title={series.title}
-      href={seriesHref(series.slug)}
+      href={seriesHref(series.slug, series.lang)}
       icon={Library}
       meta={facts.map((fact, index) => (
         // The separator belongs to the piece that follows it, so a Series with

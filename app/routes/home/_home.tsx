@@ -1,12 +1,13 @@
-import { Link, useLoaderData, type MetaFunction } from "react-router";
+import { Link, useLoaderData } from "react-router";
 import { findAllPosts } from "~/models/content.server";
 import { findAllProjects } from "~/models/project.server";
 import { LiveLink } from "~/components/live-link";
 import { ContentItem } from "~/components/content-item";
 import type { Route } from "./+types/_home";
-import { cloudflareContext, localeContext } from "~/context";
+import { cloudflareContext, localeContext, LOCALES } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { CONTACT_LINKS, LOCATION } from "~/lib/contact";
+import { documentAddresses } from "~/lib/seo/alternates";
 import { PERSON_CORE } from "~/lib/seo/person";
 
 /**
@@ -37,6 +38,7 @@ export async function loader({ context }: Route.LoaderArgs) {
       summary: flagship.summary,
       liveUrl: flagship.liveUrl,
     },
+    locale,
   };
 }
 
@@ -69,11 +71,13 @@ const HOME_TITLE = "Paul Osorio Schuler | Senior Backend Engineer | TypeScript â
 const HOME_DESCRIPTION =
   "Senior backend engineer in Lima, Peru, with fifteen years in banking systems. I build and operate Chekalo.pe, a price intelligence platform in TypeScript and Node.js.";
 
-export const meta: MetaFunction = () => {
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+  const { canonical } = documentAddresses({ kind: "index", path: "/" }, loaderData.locale, LOCALES);
+
   return [
     { title: HOME_TITLE },
     { name: "description", content: HOME_DESCRIPTION },
-    { tagName: "link", rel: "canonical", href: "https://poschuler.com" },
+    { tagName: "link", rel: "canonical", href: canonical },
     { property: "og:title", content: HOME_TITLE },
     { property: "og:description", content: HOME_DESCRIPTION },
     { property: "og:image", content: "https://poschuler.com/og.png" },
@@ -81,7 +85,7 @@ export const meta: MetaFunction = () => {
     { property: "og:image:height", content: "630" },
     { property: "og:image:alt", content: "Paul Osorio Schuler â€” Senior Backend Engineer" },
     { property: "og:type", content: "website" },
-    { property: "og:url", content: "https://poschuler.com" },
+    { property: "og:url", content: canonical },
     { "script:ld+json": PERSON },
   ];
 };

@@ -37,7 +37,7 @@ export function ContentItem({
     <ListingRow
       headingLevel={headingLevel}
       title={item.title}
-      href={item.type === "post" ? postHref(item) : item.externalUrl}
+      href={item.type === "post" ? postHref(item, item.lang) : item.externalUrl}
       external={item.type === "link"}
       icon={item.type === "post" ? PenLine : BookmarkCheck}
       meta={

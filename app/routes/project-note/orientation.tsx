@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import type { Locale } from "~/context";
 import { postHref, projectHref } from "~/lib/hrefs";
 import type { ProjectNoteRowType } from "~/models/project.server";
 
@@ -18,9 +19,11 @@ const linkClassName = "transition-colors duration-200 hover:text-default";
 export function ProjectBreadcrumb({
   projectSlug,
   projectTitle,
+  locale,
 }: {
   projectSlug: string;
   projectTitle: string;
+  locale: Locale;
 }) {
   return (
     <nav aria-label="Breadcrumb" className="text-low text-sm">
@@ -32,7 +35,7 @@ export function ProjectBreadcrumb({
         </li>
         <li aria-hidden="true">›</li>
         <li>
-          <Link to={projectHref(projectSlug)} className={linkClassName}>
+          <Link to={projectHref(projectSlug, locale)} className={linkClassName}>
             {projectTitle}
           </Link>
         </li>
@@ -61,11 +64,13 @@ export function NoteSiblings({
   projectTitle,
   notes,
   currentSlug,
+  locale,
 }: {
   projectSlug: string;
   projectTitle: string;
   notes: ProjectNoteRowType[];
   currentSlug: string;
+  locale: Locale;
 }) {
   const siblings = notes.filter((note) => note.slug !== currentSlug);
 
@@ -84,7 +89,7 @@ export function NoteSiblings({
         {siblings.map((note) => (
           <li key={note.slug}>
             <Link
-              to={postHref({ slug: note.slug, seriesSlug: null, projectSlug })}
+              to={postHref({ slug: note.slug, seriesSlug: null, projectSlug }, locale)}
               className={`text-low ${linkClassName}`}
             >
               {note.title}
@@ -93,7 +98,10 @@ export function NoteSiblings({
         ))}
       </ol>
 
-      <Link to={projectHref(projectSlug)} className={`block text-low text-sm ${linkClassName}`}>
+      <Link
+        to={projectHref(projectSlug, locale)}
+        className={`block text-low text-sm ${linkClassName}`}
+      >
         → {projectTitle}, the project
       </Link>
     </nav>

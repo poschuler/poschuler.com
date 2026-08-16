@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import { chip } from "~/components/chip";
 import { RevisionHistory, RevisionLine } from "~/components/revisions";
 import { GitHubIcon } from "~/components/ui/brand-icons";
+import type { Locale } from "~/context";
 import { tagHref } from "~/lib/hrefs";
 import type { Revision } from "~/lib/revisions";
 import { cn } from "~/lib/utils";
@@ -17,7 +18,7 @@ import { cn } from "~/lib/utils";
 const lowToneLink = "transition-colors duration-200 hover:text-default";
 
 /** The Post's Tags, each a link to its page. */
-function TagChips({ tags }: { tags: string[] }) {
+function TagChips({ tags, locale }: { tags: string[]; locale: Locale }) {
   if (tags.length === 0) {
     return null;
   }
@@ -26,7 +27,7 @@ function TagChips({ tags }: { tags: string[] }) {
     <ul className="flex flex-wrap gap-2">
       {tags.map((tag) => (
         <li key={tag}>
-          <Link to={tagHref(tag)} className={cn(chip, lowToneLink)}>
+          <Link to={tagHref(tag, locale)} className={cn(chip, lowToneLink)}>
             {tag}
           </Link>
         </li>
@@ -52,6 +53,7 @@ export function PostArticle({
   title,
   publishedAt,
   tags,
+  locale,
   repository,
   revisions,
   html,
@@ -65,6 +67,8 @@ export function PostArticle({
    * mean a new query for something the reader has already been sent.
    */
   tags: string[];
+  /** This Post's own Locale, for the Tag chips below — a link built at any other would 404. */
+  locale: Locale;
   repository?: string;
   revisions: Revision[];
   html: string;
@@ -104,7 +108,7 @@ export function PostArticle({
         * or three, and centring would drift the chips down the middle of it. */}
       <div className="not-prose my-4 flex flex-wrap items-baseline gap-x-4 gap-y-2">
         <RevisionLine publishedAt={publishedAt} revisions={revisions} />
-        <TagChips tags={tags} />
+        <TagChips tags={tags} locale={locale} />
       </div>
 
       <hr className="mt-7 mb-7" />
