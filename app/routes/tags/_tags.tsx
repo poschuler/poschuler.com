@@ -1,11 +1,12 @@
 import { Tag as TagIcon } from "lucide-react";
 import { useLoaderData } from "react-router";
+import { EmptyIndex } from "~/components/empty-index";
 import { ListingRow } from "~/components/listing-row";
 import { cloudflareContext, localeContext, LOCALES, useLocale } from "~/context";
 import { useStrings } from "~/lib/catalog";
 import { tagHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
-import { documentAddresses } from "~/lib/seo/alternates";
+import { documentAddresses, emptyIndexRobots } from "~/lib/seo/alternates";
 import { breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
 import { findTagsWithPostCounts, type TagCountRowType } from "~/models/tag.server";
 import type { Route } from "./+types/_tags";
@@ -49,16 +50,23 @@ export async function loader({ context }: Route.LoaderArgs) {
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 /**
- * **No robots directive, deliberately.** Every individual Tag page declares
- * `noindex, follow`, and this page is the exception that makes that rule pay:
- * it is the one document in the namespace with something of its own to say —
- * the shape of what this site writes about — rather than a list of links to a
- * single Post. It is also the only `/tags` URL the sitemap advertises, and a
- * sitemap must not advertise a page that asks not to be indexed.
+ * **No robots directive, deliberately — as long as it has something to say.**
+ * Every individual Tag page declares `noindex, follow`, and this page is the
+ * exception that makes that rule pay: it is the one document in the namespace
+ * with something of its own to say — the shape of what this site writes about
+ * — rather than a list of links to a single Post. It is also the only `/tags`
+ * URL the sitemap advertises, and a sitemap must not advertise a page that
+ * asks not to be indexed.
  *
  * A trail and nothing more, as on `/series`: an `ItemList` of the Tags here
  * would be a second description of pages that each already describe themselves
  * one click away — and those pages are `noindex`.
+ *
+ * **The exception has its own exception.** No Tag exists until a Post carries
+ * it, so an empty-content Locale closes this namespace too — `/es/tags` today
+ * — and the same rule every other index follows applies here as well: an
+ * index with nothing to say declares `noindex, follow` rather than entering
+ * the index thin (Part 6 of `evolution-plan/15-phase-3-spanish.md`).
  */
 export const meta: Route.MetaFunction = ({ loaderData }) => {
   const { canonical } = documentAddresses({ kind: "index", path: "/tags" }, loaderData.locale, LOCALES);
@@ -78,6 +86,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
     {
       "script:ld+json": breadcrumbList([HOME_CRUMB, { name: "Tags", path: "/tags" }]),
     },
+    ...emptyIndexRobots(loaderData.tags.length === 0),
   ];
 };
 
@@ -127,11 +136,15 @@ export default function Tags() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-measure">
-        {tags.map((one) => (
-          <TagRow key={one.tag} tag={one.tag} posts={one.posts} />
-        ))}
-      </section>
+      {tags.length === 0 ? (
+        <EmptyIndex englishHref="/tags" />
+      ) : (
+        <section className="mx-auto w-full max-w-measure">
+          {tags.map((one) => (
+            <TagRow key={one.tag} tag={one.tag} posts={one.posts} />
+          ))}
+        </section>
+      )}
     </main>
   );
 }

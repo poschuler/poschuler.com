@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { documentAddresses } from "~/lib/seo/alternates";
+import { documentAddresses, emptyIndexRobots } from "~/lib/seo/alternates";
 
 /**
  * The one source both the page `<head>` and the sitemap read. What matters
@@ -126,5 +126,22 @@ describe("documentAddresses — an index", () => {
     expect(documentAddresses({ kind: "index", path: "/" }, "es", ["en", "es"]).canonical).toBe(
       "https://poschuler.com/es",
     );
+  });
+});
+
+/**
+ * The one directive `/blog`, `/projects`, `/series` and `/tags` all add to
+ * their own `meta` when their own list is empty (Part 6 of
+ * `evolution-plan/15-phase-3-spanish.md`) — shared here so the four route
+ * files spread the same array rather than typing the same conditional out
+ * four times.
+ */
+describe("emptyIndexRobots", () => {
+  it("adds noindex, follow when the list is empty", () => {
+    expect(emptyIndexRobots(true)).toEqual([{ name: "robots", content: "noindex, follow" }]);
+  });
+
+  it("adds nothing when the list is not empty", () => {
+    expect(emptyIndexRobots(false)).toEqual([]);
   });
 });

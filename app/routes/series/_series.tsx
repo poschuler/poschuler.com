@@ -1,9 +1,10 @@
 import { useLoaderData } from "react-router";
+import { EmptyIndex } from "~/components/empty-index";
 import { SeriesItem } from "~/components/series-item";
 import { cloudflareContext, localeContext, LOCALES } from "~/context";
 import { useStrings } from "~/lib/catalog";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
-import { documentAddresses } from "~/lib/seo/alternates";
+import { documentAddresses, emptyIndexRobots } from "~/lib/seo/alternates";
 import { breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
 import { findAllSeries } from "~/models/series.server";
 import type { Route } from "./+types/_series";
@@ -60,6 +61,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
     {
       "script:ld+json": breadcrumbList([HOME_CRUMB, { name: "Series", path: "/series" }]),
     },
+    ...emptyIndexRobots(loaderData.series.length === 0),
   ];
 };
 
@@ -83,13 +85,17 @@ export default function Series() {
         </div>
       </section>
 
-      {/* The Destination only here: this page's question is *where does this
-        * take me*, and it is the one line that answers it before a click. */}
-      <section className="mx-auto w-full max-w-measure">
-        {series.map((one) => (
-          <SeriesItem key={one.idSeries} series={one} showDestination />
-        ))}
-      </section>
+      {series.length === 0 ? (
+        <EmptyIndex englishHref="/series" />
+      ) : (
+        /* The Destination only here: this page's question is *where does this
+         * take me*, and it is the one line that answers it before a click. */
+        <section className="mx-auto w-full max-w-measure">
+          {series.map((one) => (
+            <SeriesItem key={one.idSeries} series={one} showDestination />
+          ))}
+        </section>
+      )}
     </main>
   );
 }

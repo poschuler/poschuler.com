@@ -65,6 +65,18 @@ type Chrome = {
     title: string;
     backHome: string;
   };
+  /**
+   * What an index answers when its list is empty rather than 404ing (Part 6 of
+   * `evolution-plan/15-phase-3-spanish.md`) — today only reachable under `/es`,
+   * before the first Spanish document of a section exists. One pair reused by
+   * every index that can be empty: the heading above it already names the
+   * section, so the message only has to say why the list below is missing and
+   * the link only has to say where the content already is.
+   */
+  emptyIndex: {
+    message: string;
+    readInEnglish: string;
+  };
   home: {
     whatIBuild: string;
     allProjects: string;
@@ -181,6 +193,10 @@ export const STRINGS: Record<Locale, Chrome> = {
       title: "404 — Not Found",
       backHome: "Back to the home page",
     },
+    emptyIndex: {
+      message: "Nothing has been published here yet.",
+      readInEnglish: "Read it in English →",
+    },
     home: {
       whatIBuild: "What I build",
       allProjects: "All projects →",
@@ -285,6 +301,10 @@ export const STRINGS: Record<Locale, Chrome> = {
     notFound: {
       title: "404 — No encontrado",
       backHome: "Volver a la página de inicio",
+    },
+    emptyIndex: {
+      message: "Todavía no se ha publicado nada aquí.",
+      readInEnglish: "Leerlo en inglés →",
     },
     home: {
       whatIBuild: "Lo que construyo",

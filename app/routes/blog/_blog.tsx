@@ -3,13 +3,14 @@ import { findLoosePosts, type PostRowType } from "~/models/content.server";
 import { findAllSeries, type SeriesListingRowType } from "~/models/series.server";
 import { findProjectsWithNotes, type ProjectListingRowType } from "~/models/project.server";
 import { ContentItem } from "~/components/content-item";
+import { EmptyIndex } from "~/components/empty-index";
 import { SeriesItem } from "~/components/series-item";
 import { ProjectItem } from "~/components/project-item";
 import type { Route } from "./+types/_blog";
 import { cloudflareContext, localeContext, LOCALES } from "~/context";
 import { useStrings } from "~/lib/catalog";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
-import { documentAddresses } from "~/lib/seo/alternates";
+import { documentAddresses, emptyIndexRobots } from "~/lib/seo/alternates";
 
 /** One row on this page: a loose Post, or a whole Container — Series or Project — as a single entry. */
 type BlogEntry =
@@ -84,6 +85,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
     { property: "og:url", content: canonical },
+    ...emptyIndexRobots(loaderData.entries.length === 0),
   ];
 };
 
@@ -108,25 +110,29 @@ export default function Blog() {
         </div>
       </section>
 
-      {/* `showKind` on the Series rows, and `ProjectItem` always says its own:
-        * this list interleaves three units, so a row that is a whole
-        * Container has to say so before the reader clicks it expecting one
-        * article. */}
-      <section className="mx-auto w-full max-w-measure">
-        {entries.map((entry) => {
-          if (entry.kind === "post") {
-            return <ContentItem key={`post:${entry.post.idContent}`} item={entry.post} />;
-          }
+      {entries.length === 0 ? (
+        <EmptyIndex englishHref="/blog" />
+      ) : (
+        /* `showKind` on the Series rows, and `ProjectItem` always says its own:
+         * this list interleaves three units, so a row that is a whole
+         * Container has to say so before the reader clicks it expecting one
+         * article. */
+        <section className="mx-auto w-full max-w-measure">
+          {entries.map((entry) => {
+            if (entry.kind === "post") {
+              return <ContentItem key={`post:${entry.post.idContent}`} item={entry.post} />;
+            }
 
-          if (entry.kind === "series") {
-            return (
-              <SeriesItem key={`series:${entry.series.idSeries}`} series={entry.series} showKind />
-            );
-          }
+            if (entry.kind === "series") {
+              return (
+                <SeriesItem key={`series:${entry.series.idSeries}`} series={entry.series} showKind />
+              );
+            }
 
-          return <ProjectItem key={`project:${entry.project.idProject}`} project={entry.project} />;
-        })}
-      </section>
+            return <ProjectItem key={`project:${entry.project.idProject}`} project={entry.project} />;
+          })}
+        </section>
+      )}
     </main>
   );
 }

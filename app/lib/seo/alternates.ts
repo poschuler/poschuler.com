@@ -59,6 +59,21 @@ function relativePath(identity: DocumentIdentity, locale: Locale): string {
 }
 
 /**
+ * The one `<meta name="robots">` descriptor an empty index adds to its own
+ * `meta()` (Part 6 of `evolution-plan/15-phase-3-spanish.md`): nothing thin
+ * enters the index, and `follow` still lets the crawler walk on to wherever
+ * the index's own empty state points.
+ *
+ * An empty array when the list is not empty, so `...emptyIndexRobots(...)`
+ * composes into every index's `meta` array without an `if` at the call site —
+ * one line, shared by `/blog`, `/projects`, `/series` and `/tags` rather than
+ * the same conditional written out four times.
+ */
+export function emptyIndexRobots(isEmpty: boolean): { name: "robots"; content: string }[] {
+  return isEmpty ? [{ name: "robots", content: "noindex, follow" }] : [];
+}
+
+/**
  * A document's addresses, given its identity, the page's own Locale and the
  * Locales that exist for it.
  *

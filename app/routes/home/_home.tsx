@@ -8,6 +8,7 @@ import { cloudflareContext, localeContext, LOCALES } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { CONTACT_LINKS, LOCATION } from "~/lib/contact";
 import { useStrings } from "~/lib/catalog";
+import { projectHref, withLocale } from "~/lib/hrefs";
 import { documentAddresses } from "~/lib/seo/alternates";
 import { PERSON_CORE } from "~/lib/seo/person";
 
@@ -23,7 +24,7 @@ export async function loader({ context }: Route.LoaderArgs) {
   // Newest first, straight from the query's `order by published_at desc`.
   const [posts, projects] = await Promise.all([
     findAllPosts(env.POSCHULER_BD, locale),
-    findAllProjects(env.POSCHULER_BD),
+    findAllProjects(env.POSCHULER_BD, locale),
   ]);
 
   // Only the flagship. Three blocks would invite the visitor to compare a
@@ -92,7 +93,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 };
 
 export default function Home() {
-  const { recentPosts, flagship } = useLoaderData<typeof loader>();
+  const { recentPosts, flagship, locale } = useLoaderData<typeof loader>();
   const strings = useStrings();
 
   return (
@@ -172,7 +173,11 @@ export default function Home() {
 
           <article className="my-4 border-default border-l-2 py-4 px-4">
             <h3 className="flex flex-wrap items-baseline gap-x-3 text-base font-semibold">
-              <Link to={`/projects/${flagship.slug}`} className="hover:text-default">
+              {/* `locale`, not `flagship.lang`: the flagship above is already
+                * this Locale's own row (`findAllProjects` is Locale-filtered),
+                * and the loader trims the fields it sends to exactly what this
+                * block renders — a `lang` this Link would otherwise need. */}
+              <Link to={projectHref(flagship.slug, locale)} className="hover:text-default">
                 {flagship.title}
               </Link>
 
@@ -186,7 +191,7 @@ export default function Home() {
 
           <Link
             className="text-sm text-low transition-colors duration-200 hover:text-default"
-            to="/projects"
+            to={withLocale("/projects", locale)}
           >
             {strings.home.allProjects}
           </Link>
@@ -204,7 +209,7 @@ export default function Home() {
 
         <Link
           className="text-sm text-low transition-colors duration-200 hover:text-default"
-          to="/blog"
+          to={withLocale("/blog", locale)}
         >
           {strings.home.allArticles}
         </Link>

@@ -1,5 +1,7 @@
 import { Unplug } from "lucide-react";
 import { Link } from "react-router";
+import { useLocale } from "~/context";
+import { withLocale } from "~/lib/hrefs";
 import { useStrings } from "~/lib/catalog";
 
 /**
@@ -15,6 +17,7 @@ import { useStrings } from "~/lib/catalog";
  */
 export function NotFound() {
   const strings = useStrings();
+  const locale = useLocale();
 
   return (
     <main className="flex w-full flex-1 flex-col items-center justify-center gap-5 bg-ui p-4 font-mono">
@@ -27,9 +30,15 @@ export function NotFound() {
       {/* It read "Back to the timeline" until now, from when `/` *was* the
         * Timeline. It has been the landing page since Phase 0, and the Timeline
         * has had its own route ever since — one the header above this offers,
-        * along with everywhere else worth going. */}
+        * along with everywhere else worth going.
+        *
+        * `withLocale` rather than a bare `"/"`: a lost visitor under `/es` who
+        * followed this link to the English root would be handed exactly the
+        * outcome this phase exists to prevent one click after the 404 that
+        * was supposed to prevent it (Part 6 of
+        * `evolution-plan/15-phase-3-spanish.md`). */}
       <Link
-        to="/"
+        to={withLocale("/", locale)}
         className="text-low transition-colors duration-200 hover:text-default"
       >
         {strings.notFound.backHome}

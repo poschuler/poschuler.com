@@ -1,10 +1,12 @@
 import { Link, useLoaderData } from "react-router";
 import { chip } from "~/components/chip";
+import { EmptyIndex } from "~/components/empty-index";
 import { LiveLink } from "~/components/live-link";
 import { cloudflareContext, localeContext, LOCALES } from "~/context";
 import { useStrings } from "~/lib/catalog";
+import { projectHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
-import { documentAddresses } from "~/lib/seo/alternates";
+import { documentAddresses, emptyIndexRobots } from "~/lib/seo/alternates";
 import { findAllProjects, type ProjectRowType } from "~/models/project.server";
 import type { Route } from "./+types/_projects";
 
@@ -14,11 +16,8 @@ const PROJECTS_DESCRIPTION =
 
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
-  const projects = await findAllProjects(env.POSCHULER_BD);
-  // `findAllProjects` carries no Locale filter yet (a known defect, out of
-  // scope here) — this page's own Locale is unrelated, and is read only for
-  // the canonical below.
   const locale = context.get(localeContext);
+  const projects = await findAllProjects(env.POSCHULER_BD, locale);
 
   return { projects, locale };
 }
@@ -44,6 +43,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
     { property: "og:url", content: canonical },
+    ...emptyIndexRobots(loaderData.projects.length === 0),
   ];
 };
 
@@ -74,7 +74,7 @@ function Flagship({ project }: { project: ProjectRowType }) {
     <article className="border-default border-l-2 py-4 pl-4">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h2 className="text-2xl font-semibold tracking-tight">
-          <Link to={`/projects/${project.slug}`} className="hover:text-default">
+          <Link to={projectHref(project.slug, project.lang)} className="hover:text-default">
             {project.title}
           </Link>
         </h2>
@@ -91,7 +91,7 @@ function Flagship({ project }: { project: ProjectRowType }) {
       )}
 
       <Link
-        to={`/projects/${project.slug}`}
+        to={projectHref(project.slug, project.lang)}
         className="mt-4 inline-block font-mono text-sm text-low transition-colors duration-200 hover:text-default"
       >
         {strings.projects.readTheCase}
@@ -106,7 +106,7 @@ function Supporting({ project }: { project: ProjectRowType }) {
   return (
     <article className="border-default border-l-2 py-3 pl-4">
       <h2 className="flex flex-wrap items-baseline gap-x-2 text-lg font-semibold">
-        <Link to={`/projects/${project.slug}`} className="hover:text-default">
+        <Link to={projectHref(project.slug, project.lang)} className="hover:text-default">
           {project.title}
         </Link>
         <ArchivedBadge project={project} />
@@ -148,19 +148,23 @@ export default function Projects() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-measure space-y-8">
-        {flagship.map((project) => (
-          <Flagship key={project.idProject} project={project} />
-        ))}
+      {projects.length === 0 ? (
+        <EmptyIndex englishHref="/projects" />
+      ) : (
+        <section className="mx-auto w-full max-w-measure space-y-8">
+          {flagship.map((project) => (
+            <Flagship key={project.idProject} project={project} />
+          ))}
 
-        {rest.length > 0 && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {rest.map((project) => (
-              <Supporting key={project.idProject} project={project} />
-            ))}
-          </div>
-        )}
-      </section>
+          {rest.length > 0 && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {rest.map((project) => (
+                <Supporting key={project.idProject} project={project} />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </main>
   );
 }

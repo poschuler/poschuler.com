@@ -79,20 +79,28 @@ function hydrate<T extends StoredProjectRow>(
 }
 
 /**
- * Every Project, heaviest first.
+ * Every Project in a Locale, heaviest first.
  *
  * Ordered by `sort_order` rather than by any date, because recency is the wrong
  * signal for a portfolio: the strongest evidence is not the newest. `tier` is
  * not in the ordering — it groups the rendering, and mixing the two would make
  * a tier change silently reorder the page.
+ *
+ * Required and typed as `Locale` for the reason every sibling query in this
+ * file already takes one (Part 5 of `evolution-plan/15-phase-3-spanish.md`):
+ * without the filter, `/es/projects` and the home page's flagship block would
+ * both render this Locale's chrome around the English row — the outcome Part 6
+ * exists to prevent.
  */
-export async function findAllProjects(db: D1Database) {
+export async function findAllProjects(db: D1Database, locale: Locale) {
   const rows = await dbQuery<StoredProjectRow>(
     db,
     `select ${PROJECT_COLUMNS}
       from project
+      where lang = ?
       order by sort_order asc, slug asc
     `,
+    [locale],
   );
 
   return rows.map(hydrate);
