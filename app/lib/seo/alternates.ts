@@ -59,6 +59,74 @@ function relativePath(identity: DocumentIdentity, locale: Locale): string {
 }
 
 /**
+ * The section a document belongs to, for the one case `switcherDestination`
+ * below needs it: a document with no Translation, which sends a reader to
+ * that section's index rather than to a 404 (Part 6 and Part 9 of
+ * `evolution-plan/15-phase-3-spanish.md`). Typed over the three kinds that can
+ * lack a Translation — an `index` never can, so `switcherDestination` never
+ * calls this for one.
+ */
+export type SwitcherSection = "blog" | "series" | "projects";
+
+function fallbackSection(
+  identity: Exclude<DocumentIdentity, { kind: "index" }>,
+): { path: string; section: SwitcherSection } {
+  switch (identity.kind) {
+    case "post":
+      return { path: "/blog", section: "blog" };
+    case "series":
+      return { path: "/series", section: "series" };
+    case "project":
+      return { path: "/projects", section: "projects" };
+  }
+}
+
+export type SwitcherDestination = {
+  /** Where `<Link to>` should navigate — relative, the same shape every other function here returns. */
+  href: string;
+  /** The Locale the destination is written in — what `lang` and `hrefLang` both declare on the link. */
+  locale: Locale;
+  /**
+   * `null` when the destination is this very document, translated: the label
+   * is just the other Locale's own name. Otherwise the section the switcher
+   * fell back to, so the caller — which owns every interface string (ADR
+   * 0011) — can compose "Blog en español" instead of a silent link.
+   */
+  section: SwitcherSection | null;
+};
+
+/**
+ * Where the language switcher sends a reader, and what to call the trip (Part
+ * 9 of `evolution-plan/15-phase-3-spanish.md`).
+ *
+ * Reads the exact `existingLocales` a route's own `documentAddresses` call
+ * already computed — never queried again here — so the switcher and the
+ * `hreflang` cannot disagree about which Locales exist for one document. An
+ * `index` never reads it at all: Part 6 makes every index exist in every
+ * Locale unconditionally, which is a fact about the route rather than
+ * something a query could contradict — `/cv` included, mounted in both
+ * branches (ADR 0010) before Part 8 gives it Spanish text of its own.
+ *
+ * Not a pair and not a dropdown: with two Locales this is the whole switcher,
+ * one link to whichever Locale the caller is not currently reading.
+ */
+export function switcherDestination(
+  identity: DocumentIdentity,
+  locale: Locale,
+  existingLocales: readonly Locale[],
+): SwitcherDestination {
+  const target: Locale = locale === "en" ? "es" : "en";
+
+  if (identity.kind === "index" || existingLocales.includes(target)) {
+    return { href: relativePath(identity, target), locale: target, section: null };
+  }
+
+  const fallback = fallbackSection(identity);
+
+  return { href: withLocale(fallback.path, target), locale: target, section: fallback.section };
+}
+
+/**
  * The one `<meta name="robots">` descriptor an empty index adds to its own
  * `meta()` (Part 6 of `evolution-plan/15-phase-3-spanish.md`): nothing thin
  * enters the index, and `follow` still lets the crawler walk on to wherever

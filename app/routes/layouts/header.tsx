@@ -10,6 +10,7 @@ import {
   Terminal,
 } from "lucide-react";
 
+import { LANGUAGE_SWITCHER_REVEALED, LanguageSwitcher } from "~/components/language-switcher";
 import { ModeToggle } from "~/components/mode.toggle";
 import { Button } from "~/components/ui/button";
 import {
@@ -76,6 +77,23 @@ function Wordmark({ className }: { className?: string }) {
  * overflowed and pushed the theme toggle off the right edge. Either fix alone
  * is marginal; together the row has room to spare at the width it appears.
  *
+ * **The switcher (`~/components/language-switcher`) is the eighth control in
+ * this row, and its width was checked against that same overflow before it
+ * was added — not assumed, because this docblock exists to record a real one
+ * (Part 9 of `evolution-plan/15-phase-3-spanish.md`).** The build's own CSS
+ * fixes every token the row's width depends on: `--spacing: .25rem` (so
+ * `gap-6` is 24px), `--text-sm: .875rem` (14px), the `icon` button at `size-9`
+ * above `lg` (36px), and `lg` itself at `64rem` (1024px, `build/client/assets/*.css`
+ * after `pnpm build`). Summing those against Inter Semibold's own advance
+ * width (about 0.56em per character) puts the row at roughly 670px today —
+ * wordmark, six labels and the theme toggle, with their five internal gaps
+ * and the header's own three. The switcher's longest realistic label is not
+ * *Español* but its own fallback sentence, *"Proyectos en español"* (Part 9),
+ * at roughly 165px including its gap — landing the row at roughly 860px,
+ * still over 160px inside the 1024px it has to fit in. There is no headless
+ * browser in this environment to render and measure directly; this is the
+ * estimate that check leaves behind.
+ *
  * The icons stay in the panel, where they earn their place: a vertical list is
  * scanned down a column of glyphs. Six of them strung along one line is
  * texture rather than help, and half of them — blog, timeline, bookmarks — are
@@ -115,6 +133,13 @@ export function Header() {
         * shoulder with the one control that opens the navigation — on a phone
         * that is two adjacent targets where only one of them matters. */}
       <ModeToggle className="hidden shrink-0 lg:block" />
+
+      {/* Shipped hidden (`~/components/language-switcher`'s own docblock) —
+        * `LANGUAGE_SWITCHER_REVEALED` is `false` for the whole of Phase 3, so
+        * this renders nothing today. The classes are the ones it takes the
+        * day that flips: `ModeToggle`'s own pattern, one control to its
+        * right. */}
+      <LanguageSwitcher className="hidden shrink-0 lg:block" />
 
       <Sheet>
         <SheetTrigger
@@ -157,6 +182,20 @@ export function Header() {
             <span className="text-low text-sm">{strings.nav.themeRowLabel}</span>
             <ModeToggle />
           </div>
+
+          {/* Its own row rather than folded into the one above: `ModeToggle`
+            * carries a label but `LanguageSwitcher` reads as its own label —
+            * "Español" — so pairing them under one word would leave one
+            * control unlabelled. Gated on the same flag the row above reads
+            * from `~/components/language-switcher`: a bare label with no
+            * control beside it, were this rendered while the switcher itself
+            * returns nothing, would be its own visible artifact. */}
+          {LANGUAGE_SWITCHER_REVEALED && (
+            <div className="-mx-4 flex items-center justify-between px-4 pt-4">
+              <span className="text-low text-sm">{strings.nav.languageRowLabel}</span>
+              <LanguageSwitcher />
+            </div>
+          )}
         </SheetContent>
       </Sheet>
     </header>

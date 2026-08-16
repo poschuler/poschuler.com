@@ -55,11 +55,32 @@ type Chrome = {
     panelTitle: string;
     /** Beside the toggle in the mobile panel. */
     themeRowLabel: string;
+    /** Beside the switcher in the mobile panel — this Locale's own word for "Language". */
+    languageRowLabel: string;
   };
   theme: {
     mode: Record<"light" | "dark" | "system", string>;
     tooltip: (current: string, next: string) => string;
     srAnnouncement: (current: string, next: string) => string;
+  };
+  /**
+   * The language switcher's own copy (Part 9 of
+   * `evolution-plan/15-phase-3-spanish.md`). Looked up by the *destination*
+   * Locale, never the page's own — the switcher is written in the language it
+   * leads to, so `Español` reads correctly to a screen reader on an English
+   * page and vice versa.
+   */
+  languageSwitcher: {
+    /** This Locale's own name, in its own language — "English" / "Español". */
+    language: string;
+    /** A section's name in this Locale, keyed the way `SwitcherSection` is (`app/lib/seo/alternates.ts`). */
+    section: Record<"blog" | "series" | "projects", string>;
+    /**
+     * What the switcher says when the current document has no Translation and
+     * falls back to a section index — `"Blog in English"` / `"Blog en
+     * español"` — always composed in this Locale's own language.
+     */
+    inThisLanguage: (section: string) => string;
   };
   notFound: {
     title: string;
@@ -183,11 +204,17 @@ export const STRINGS: Record<Locale, Chrome> = {
       mainLabel: "Main",
       panelTitle: "Navigation",
       themeRowLabel: "Theme",
+      languageRowLabel: "Language",
     },
     theme: {
       mode: { light: "light", dark: "dark", system: "system" },
       tooltip: (current, next) => `Theme: ${current} — switch to ${next}`,
       srAnnouncement: (current, next) => `Theme: ${current}. Switch to ${next}`,
+    },
+    languageSwitcher: {
+      language: "English",
+      section: { blog: "Blog", series: "Series", projects: "Projects" },
+      inThisLanguage: (section) => `${section} in English`,
     },
     notFound: {
       title: "404 — Not Found",
@@ -292,11 +319,17 @@ export const STRINGS: Record<Locale, Chrome> = {
       mainLabel: "Principal",
       panelTitle: "Navegación",
       themeRowLabel: "Tema",
+      languageRowLabel: "Idioma",
     },
     theme: {
       mode: { light: "claro", dark: "oscuro", system: "sistema" },
       tooltip: (current, next) => `Tema: ${current} — cambiar a ${next}`,
       srAnnouncement: (current, next) => `Tema: ${current}. Cambiar a ${next}`,
+    },
+    languageSwitcher: {
+      language: "Español",
+      section: { blog: "Blog", series: "Series", projects: "Proyectos" },
+      inThisLanguage: (section) => `${section} en español`,
     },
     notFound: {
       title: "404 — No encontrado",
