@@ -2,6 +2,7 @@ import { Link, useLoaderData } from "react-router";
 import { chip } from "~/components/chip";
 import { LiveLink } from "~/components/live-link";
 import { cloudflareContext, localeContext, LOCALES } from "~/context";
+import { useStrings } from "~/lib/catalog";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { documentAddresses } from "~/lib/seo/alternates";
 import { findAllProjects, type ProjectRowType } from "~/models/project.server";
@@ -47,13 +48,15 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 };
 
 function ArchivedBadge({ project }: { project: ProjectRowType }) {
+  const strings = useStrings();
+
   if (project.status !== "archived") {
     return null;
   }
 
   return (
     <span className={chip}>
-      Archived
+      {strings.projects.archivedBadge}
     </span>
   );
 }
@@ -65,6 +68,7 @@ function ArchivedBadge({ project }: { project: ProjectRowType }) {
  */
 function Flagship({ project }: { project: ProjectRowType }) {
   const { stack } = project;
+  const strings = useStrings();
 
   return (
     <article className="border-default border-l-2 py-4 pl-4">
@@ -90,7 +94,7 @@ function Flagship({ project }: { project: ProjectRowType }) {
         to={`/projects/${project.slug}`}
         className="mt-4 inline-block font-mono text-sm text-low transition-colors duration-200 hover:text-default"
       >
-        Read the case →
+        {strings.projects.readTheCase}
       </Link>
     </article>
   );
@@ -119,6 +123,7 @@ function Supporting({ project }: { project: ProjectRowType }) {
 
 export default function Projects() {
   const { projects } = useLoaderData<typeof loader>();
+  const strings = useStrings();
 
   const flagship = projects.filter((project) => project.tier === "flagship");
   // Everything that is not the flagship, rather than `tier === 'supporting'`.
@@ -132,13 +137,13 @@ export default function Projects() {
       <section className="w-full">
         <div className="text-center">
           <h1 className="scroll-m-20 text-3xl font-semibold tracking-tight lg:text-4xl mt-8">
-            Projects
+            {strings.projects.heading}
           </h1>
         </div>
 
         <div className="max-w-[450px] mx-auto">
           <blockquote className="text-center mt-2 italic text-low text-lg">
-            Things I have built and run, rather than things I have used
+            {strings.projects.subtitle}
           </blockquote>
         </div>
       </section>

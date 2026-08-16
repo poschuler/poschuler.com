@@ -2,7 +2,8 @@ import { Link } from "react-router";
 import { chip } from "~/components/chip";
 import { RevisionHistory, RevisionLine } from "~/components/revisions";
 import { GitHubIcon } from "~/components/ui/brand-icons";
-import type { Locale } from "~/context";
+import { useLocale } from "~/context";
+import { useStrings } from "~/lib/catalog";
 import { tagHref } from "~/lib/hrefs";
 import type { Revision } from "~/lib/revisions";
 import { cn } from "~/lib/utils";
@@ -18,7 +19,9 @@ import { cn } from "~/lib/utils";
 const lowToneLink = "transition-colors duration-200 hover:text-default";
 
 /** The Post's Tags, each a link to its page. */
-function TagChips({ tags, locale }: { tags: string[]; locale: Locale }) {
+function TagChips({ tags }: { tags: string[] }) {
+  const locale = useLocale();
+
   if (tags.length === 0) {
     return null;
   }
@@ -53,7 +56,6 @@ export function PostArticle({
   title,
   publishedAt,
   tags,
-  locale,
   repository,
   revisions,
   html,
@@ -67,12 +69,12 @@ export function PostArticle({
    * mean a new query for something the reader has already been sent.
    */
   tags: string[];
-  /** This Post's own Locale, for the Tag chips below — a link built at any other would 404. */
-  locale: Locale;
   repository?: string;
   revisions: Revision[];
   html: string;
 }) {
+  const strings = useStrings();
+
   return (
     <article className="prose mx-auto py-8">
       <h1>{title}</h1>
@@ -86,7 +88,7 @@ export function PostArticle({
             rel="noopener noreferrer"
             className={cn("flex items-center gap-2 text-lg text-low no-underline", lowToneLink)}
           >
-            View Github Repository
+            {strings.postArticle.viewGithubRepository}
           </Link>
         </p>
       )}
@@ -108,7 +110,7 @@ export function PostArticle({
         * or three, and centring would drift the chips down the middle of it. */}
       <div className="not-prose my-4 flex flex-wrap items-baseline gap-x-4 gap-y-2">
         <RevisionLine publishedAt={publishedAt} revisions={revisions} />
-        <TagChips tags={tags} locale={locale} />
+        <TagChips tags={tags} />
       </div>
 
       <hr className="mt-7 mb-7" />

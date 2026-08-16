@@ -7,6 +7,7 @@ import type { Route } from "./+types/_home";
 import { cloudflareContext, localeContext, LOCALES } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { CONTACT_LINKS, LOCATION } from "~/lib/contact";
+import { useStrings } from "~/lib/catalog";
 import { documentAddresses } from "~/lib/seo/alternates";
 import { PERSON_CORE } from "~/lib/seo/person";
 
@@ -92,6 +93,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 
 export default function Home() {
   const { recentPosts, flagship } = useLoaderData<typeof loader>();
+  const strings = useStrings();
 
   return (
     <main className="flex flex-col flex-1 gap-4 p-4 md:gap-8 md:p-10 font-mono bg-ui">
@@ -166,7 +168,7 @@ export default function Home() {
         * check. Directly below it, for that reason. */}
       {flagship && (
         <section className="mx-auto w-full max-w-measure">
-          <h2 className="text-lg font-semibold tracking-tight">What I build</h2>
+          <h2 className="text-lg font-semibold tracking-tight">{strings.home.whatIBuild}</h2>
 
           <article className="my-4 border-default border-l-2 py-4 px-4">
             <h3 className="flex flex-wrap items-baseline gap-x-3 text-base font-semibold">
@@ -186,7 +188,7 @@ export default function Home() {
             className="text-sm text-low transition-colors duration-200 hover:text-default"
             to="/projects"
           >
-            All projects →
+            {strings.home.allProjects}
           </Link>
         </section>
       )}
@@ -194,7 +196,7 @@ export default function Home() {
       {/* The same column as the hero, so the page reads as one narrow strip
         * rather than a landing page with a wider index bolted underneath. */}
       <section className="mx-auto w-full max-w-measure">
-        <h2 className="text-lg font-semibold tracking-tight">Recent writing</h2>
+        <h2 className="text-lg font-semibold tracking-tight">{strings.home.recentWriting}</h2>
 
         {recentPosts.map((post) => (
           <ContentItem key={post.idContent} item={post} headingLevel="h3" />
@@ -204,7 +206,7 @@ export default function Home() {
           className="text-sm text-low transition-colors duration-200 hover:text-default"
           to="/blog"
         >
-          All articles →
+          {strings.home.allArticles}
         </Link>
       </section>
     </main>

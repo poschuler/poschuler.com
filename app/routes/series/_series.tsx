@@ -1,6 +1,7 @@
 import { useLoaderData } from "react-router";
 import { SeriesItem } from "~/components/series-item";
 import { cloudflareContext, localeContext, LOCALES } from "~/context";
+import { useStrings } from "~/lib/catalog";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { documentAddresses } from "~/lib/seo/alternates";
 import { breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
@@ -64,19 +65,20 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 
 export default function Series() {
   const { series } = useLoaderData<typeof loader>();
+  const strings = useStrings();
 
   return (
     <main className="flex flex-1 flex-col gap-4 bg-ui p-4 font-mono md:gap-8 md:p-10">
       <section className="w-full">
         <div className="text-center">
           <h1 className="mt-8 scroll-m-20 font-semibold text-3xl tracking-tight lg:text-4xl">
-            Series
+            {strings.series.heading}
           </h1>
         </div>
 
         <div className="mx-auto max-w-[450px]">
           <blockquote className="mt-2 text-center text-lg text-low italic">
-            Subjects worked through in order, rather than one article at a time
+            {strings.series.subtitle}
           </blockquote>
         </div>
       </section>

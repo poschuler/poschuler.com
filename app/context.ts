@@ -1,4 +1,4 @@
-import { createContext } from "react-router";
+import { createContext, useRouteLoaderData } from "react-router";
 
 /**
  * The Worker environment.
@@ -85,6 +85,26 @@ export const localeContext = createContext<Locale>("en");
  * them the same way regardless of what order a query happened to return.
  */
 export const LOCALES: readonly Locale[] = ["en", "es"];
+
+/**
+ * The page's own Locale, read by a component instead of received as a prop.
+ *
+ * `localeContext` is a loader-only value — nothing in the rendered tree can
+ * `context.get` it. `root.tsx`'s loader is the one place that crosses it into
+ * `useRouteLoaderData`, the same bridge `colorScheme` already uses (see
+ * `ModeToggle`). Every component below the root reads this hook rather than
+ * receiving `locale` as a prop passed down from whichever route happened to
+ * have it in its own loader data — the catalogue (`app/lib/catalog.ts`) and
+ * every href-building component use it this way, so adding a component to the
+ * tree never means adding a parameter to every layer above it.
+ *
+ * Defaults to `"en"` if the root loader has not run — the same degrade the
+ * default parameter of `localeContext` itself takes.
+ */
+export function useLocale(): Locale {
+  const root = useRouteLoaderData("root") as { locale?: Locale } | undefined;
+  return root?.locale ?? "en";
+}
 
 /**
  * The Locales that exist for one document, out of the comma-separated column

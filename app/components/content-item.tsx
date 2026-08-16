@@ -1,6 +1,7 @@
 import { BookmarkCheck, PenLine } from "lucide-react";
 import { ListingRow } from "~/components/listing-row";
 import { postHref } from "~/lib/hrefs";
+import { useStrings } from "~/lib/catalog";
 import type { ContentRowType } from "~/models/content.server";
 
 /**
@@ -33,6 +34,8 @@ export function ContentItem({
    */
   showKind?: boolean;
 }) {
+  const strings = useStrings();
+
   return (
     <ListingRow
       headingLevel={headingLevel}
@@ -44,7 +47,9 @@ export function ContentItem({
         <>
           <time dateTime={item.publishedStringDate}>{item.publishedStringDate}</time>
           {item.type === "link" && <span>· {item.source}</span>}
-          {showKind && <span>· {item.type === "post" ? "I wrote" : "I read"}</span>}
+          {showKind && (
+            <span>· {item.type === "post" ? strings.contentItem.wrote : strings.contentItem.read}</span>
+          )}
         </>
       }
     />

@@ -3,6 +3,7 @@ import { ContentItem } from "~/components/content-item";
 import { findAllBookmarks } from "~/models/content.server";
 import type { Route } from "./+types/_bookmarks";
 import { cloudflareContext, localeContext, LOCALES } from "~/context";
+import { useStrings } from "~/lib/catalog";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { documentAddresses } from "~/lib/seo/alternates";
 
@@ -42,6 +43,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 
 export default function Bookmarks() {
   const { bookmarks } = useLoaderData<typeof loader>();
+  const strings = useStrings();
 
   return (
     <main className="flex flex-col flex-1 gap-4 p-4 md:gap-8 md:p-10 font-mono bg-ui">
@@ -49,13 +51,13 @@ export default function Bookmarks() {
 
         <div className="text-center">
           <h1 className="scroll-m-20 text-3xl font-semibold tracking-tight lg:text-4xl mt-8">
-            Bookmarks
+            {strings.bookmarks.heading}
           </h1>
         </div>
 
         <div className="max-w-[450px] mx-auto">
           <blockquote className="text-center mt-2 italic text-low text-lg">
-            Links I've bookmarked and learned from
+            {strings.bookmarks.subtitle}
           </blockquote>
         </div>
       </section>

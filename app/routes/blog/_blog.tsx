@@ -7,6 +7,7 @@ import { SeriesItem } from "~/components/series-item";
 import { ProjectItem } from "~/components/project-item";
 import type { Route } from "./+types/_blog";
 import { cloudflareContext, localeContext, LOCALES } from "~/context";
+import { useStrings } from "~/lib/catalog";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { documentAddresses } from "~/lib/seo/alternates";
 
@@ -88,6 +89,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 
 export default function Blog() {
   const { entries } = useLoaderData<typeof loader>();
+  const strings = useStrings();
 
   return (
     <main className="flex flex-col flex-1 gap-4 p-4 md:gap-8 md:p-10 font-mono bg-ui">
@@ -95,13 +97,13 @@ export default function Blog() {
 
         <div className="text-center">
           <h1 className="scroll-m-20 text-3xl font-semibold tracking-tight lg:text-4xl mt-8">
-            Articles
+            {strings.blog.heading}
           </h1>
         </div>
 
         <div className="max-w-[450px] mx-auto">
           <blockquote className="text-center mt-2 italic text-low text-lg">
-            My articles on topics I care about
+            {strings.blog.subtitle}
           </blockquote>
         </div>
       </section>

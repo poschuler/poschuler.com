@@ -1,6 +1,7 @@
 import { Briefcase } from "lucide-react";
 import { ListingRow } from "~/components/listing-row";
 import { projectHref } from "~/lib/hrefs";
+import { useStrings } from "~/lib/catalog";
 import type { ProjectListingRowType } from "~/models/project.server";
 
 /**
@@ -25,6 +26,8 @@ export function ProjectItem({
   project: ProjectListingRowType;
   headingLevel?: "h2" | "h3";
 }) {
+  const strings = useStrings();
+
   return (
     <ListingRow
       headingLevel={headingLevel}
@@ -34,7 +37,7 @@ export function ProjectItem({
       meta={
         <>
           <time dateTime={project.publishedStringDate}>{project.publishedStringDate}</time>
-          <span>· Project</span>
+          <span>· {strings.projects.kindLabel}</span>
         </>
       }
     />

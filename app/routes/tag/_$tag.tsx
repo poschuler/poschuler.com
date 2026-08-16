@@ -2,6 +2,7 @@ import { isRouteErrorResponse, useLoaderData } from "react-router";
 import { ContentItem } from "~/components/content-item";
 import { NotFound } from "~/components/not-found";
 import { cloudflareContext, localeContext } from "~/context";
+import { useStrings } from "~/lib/catalog";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { findPostsByTag } from "~/models/tag.server";
 import type { Route } from "./+types/_$tag";
@@ -99,6 +100,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 export default function Tag() {
   const { tag, posts } = useLoaderData<typeof loader>();
+  const strings = useStrings();
 
   return (
     <main className="flex flex-1 flex-col gap-4 bg-ui p-4 font-mono md:gap-8 md:p-10">
@@ -111,7 +113,7 @@ export default function Tag() {
 
         <div className="mx-auto max-w-[450px]">
           <blockquote className="mt-2 text-center text-lg text-low italic">
-            Everything I have written on this subject
+            {strings.tag.subtitle}
           </blockquote>
         </div>
       </section>

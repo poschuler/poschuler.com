@@ -1,5 +1,6 @@
 import { Link } from "react-router";
-import type { Locale } from "~/context";
+import { useLocale } from "~/context";
+import { useStrings } from "~/lib/catalog";
 import { postHref, seriesHref } from "~/lib/hrefs";
 import type { ArcSection, Orientation, PartLink } from "~/lib/series-arc";
 
@@ -29,19 +30,20 @@ export function SeriesBreadcrumb({
   seriesSlug,
   seriesTitle,
   sectionTitle,
-  locale,
 }: {
   seriesSlug: string;
   seriesTitle: string;
   sectionTitle: string;
-  locale: Locale;
 }) {
+  const locale = useLocale();
+  const strings = useStrings();
+
   return (
-    <nav aria-label="Breadcrumb" className="text-low text-sm">
+    <nav aria-label={strings.a11y.breadcrumb} className="text-low text-sm">
       <ol className="flex flex-wrap items-center gap-x-2">
         <li>
           <Link to="/series" className={linkClassName}>
-            Series
+            {strings.series.heading}
           </Link>
         </li>
         <li aria-hidden="true">›</li>
@@ -73,15 +75,16 @@ export function SectionIndex({
   seriesSlug,
   section,
   currentSlug,
-  locale,
 }: {
   seriesSlug: string;
   section: ArcSection;
   currentSlug: string;
-  locale: Locale;
 }) {
+  const locale = useLocale();
+  const strings = useStrings();
+
   return (
-    <nav aria-label={`${section.title} — the parts published so far`} className="mt-4">
+    <nav aria-label={strings.series.sectionIndexLabel(section.title)} className="mt-4">
       <ol className="space-y-1 text-sm">
         {section.parts.map((part) => {
           const isCurrent = part.slug === currentSlug;
@@ -95,7 +98,7 @@ export function SectionIndex({
               {isCurrent ? (
                 <span aria-current="page">
                   {part.title}
-                  <span className="ml-2 text-low text-xs">— you are here</span>
+                  <span className="ml-2 text-low text-xs">{strings.series.youAreHere}</span>
                 </span>
               ) : (
                 <Link
@@ -118,13 +121,13 @@ function Neighbour({
   seriesSlug,
   link,
   direction,
-  locale,
 }: {
   seriesSlug: string;
   link: PartLink;
   direction: "previous" | "next";
-  locale: Locale;
 }) {
+  const locale = useLocale();
+
   return (
     <Link
       to={postHref({ slug: link.part.slug, seriesSlug }, locale)}
@@ -154,19 +157,19 @@ export function PartNav({
   seriesSlug,
   seriesTitle,
   orientation,
-  locale,
 }: {
   seriesSlug: string;
   seriesTitle: string;
   orientation: Orientation;
-  locale: Locale;
 }) {
   const { previous, next, section, nextUp, endOfSeries } = orientation;
+  const locale = useLocale();
+  const strings = useStrings();
 
   return (
-    <nav aria-label="Where to go next" className="mt-8 space-y-4 border-default border-t pt-6">
+    <nav aria-label={strings.series.whereNextLabel} className="mt-8 space-y-4 border-default border-t pt-6">
       {previous ? (
-        <Neighbour seriesSlug={seriesSlug} link={previous} direction="previous" locale={locale} />
+        <Neighbour seriesSlug={seriesSlug} link={previous} direction="previous" />
       ) : (
         // The first Part of the Series has no previous, and that slot is worth
         // more as the way up than as a blank: start here, the full arc.
@@ -175,23 +178,23 @@ export function PartNav({
           className={`flex gap-x-2 text-low ${linkClassName}`}
         >
           <span aria-hidden="true">←</span>
-          <span>{seriesTitle} — start here</span>
+          <span>{strings.series.startHere(seriesTitle)}</span>
         </Link>
       )}
 
-      {next && <Neighbour seriesSlug={seriesSlug} link={next} direction="next" locale={locale} />}
+      {next && <Neighbour seriesSlug={seriesSlug} link={next} direction="next" />}
 
       {!next && (
         <div className="text-low text-sm">
           <p>
             {endOfSeries
-              ? "That is the end of the series."
-              : `That is the end of ${section.title}.`}
+              ? strings.series.endOfSeries
+              : strings.series.endOfSection(section.title)}
           </p>
 
           {nextUp && (
             <div className="mt-3">
-              <p className="font-semibold">Next up · {nextUp.title}</p>
+              <p className="font-semibold">{strings.series.nextUp(nextUp.title)}</p>
               <p className="mt-1 text-pretty">{nextUp.summary}</p>
             </div>
           )}
@@ -206,7 +209,7 @@ export function PartNav({
           to={seriesHref(seriesSlug, locale)}
           className={`block text-low text-sm ${linkClassName}`}
         >
-          See the full arc →
+          {strings.series.seeFullArc}
         </Link>
       )}
     </nav>

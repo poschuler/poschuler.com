@@ -1,7 +1,8 @@
 import { Tag as TagIcon } from "lucide-react";
 import { useLoaderData } from "react-router";
 import { ListingRow } from "~/components/listing-row";
-import { cloudflareContext, localeContext, LOCALES, type Locale } from "~/context";
+import { cloudflareContext, localeContext, LOCALES, useLocale } from "~/context";
+import { useStrings } from "~/lib/catalog";
 import { tagHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { documentAddresses } from "~/lib/seo/alternates";
@@ -92,39 +93,43 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
  * — one Post is a different proposition from four — and it is the number the
  * page behind the link has to hold.
  */
-function TagRow({ tag, posts, locale }: TagCountRowType & { locale: Locale }) {
+function TagRow({ tag, posts }: TagCountRowType) {
+  const locale = useLocale();
+  const strings = useStrings();
+
   return (
     <ListingRow
       title={tag}
       href={tagHref(tag, locale)}
       icon={TagIcon}
-      meta={<span>{`${posts} ${posts === 1 ? "post" : "posts"}`}</span>}
+      meta={<span>{strings.tags.posts(posts)}</span>}
     />
   );
 }
 
 export default function Tags() {
-  const { tags, locale } = useLoaderData<typeof loader>();
+  const { tags } = useLoaderData<typeof loader>();
+  const strings = useStrings();
 
   return (
     <main className="flex flex-1 flex-col gap-4 bg-ui p-4 font-mono md:gap-8 md:p-10">
       <section className="w-full">
         <div className="text-center">
           <h1 className="mt-8 scroll-m-20 font-semibold text-3xl tracking-tight lg:text-4xl">
-            Tags
+            {strings.tags.heading}
           </h1>
         </div>
 
         <div className="mx-auto max-w-[450px]">
           <blockquote className="mt-2 text-center text-lg text-low italic">
-            Everything I write about, most-written-about first
+            {strings.tags.subtitle}
           </blockquote>
         </div>
       </section>
 
       <section className="mx-auto w-full max-w-measure">
         {tags.map((one) => (
-          <TagRow key={one.tag} tag={one.tag} posts={one.posts} locale={locale} />
+          <TagRow key={one.tag} tag={one.tag} posts={one.posts} />
         ))}
       </section>
     </main>

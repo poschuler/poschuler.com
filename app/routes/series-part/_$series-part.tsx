@@ -167,7 +167,6 @@ export default function SeriesPart() {
     title,
     publishedAt,
     tags,
-    locale,
     repository,
     revisions,
     html,
@@ -184,14 +183,12 @@ export default function SeriesPart() {
           seriesSlug={seriesSlug}
           seriesTitle={seriesTitle}
           sectionTitle={orientation.section.title}
-          locale={locale}
         />
 
         <SectionIndex
           seriesSlug={seriesSlug}
           section={orientation.section}
           currentSlug={slug}
-          locale={locale}
         />
       </div>
 
@@ -199,7 +196,6 @@ export default function SeriesPart() {
         title={title}
         publishedAt={publishedAt}
         tags={tags}
-        locale={locale}
         repository={repository}
         revisions={revisions}
         html={html}
@@ -214,7 +210,6 @@ export default function SeriesPart() {
           seriesSlug={seriesSlug}
           seriesTitle={seriesTitle}
           orientation={orientation}
-          locale={locale}
         />
       </div>
     </main>

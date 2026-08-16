@@ -18,19 +18,22 @@ import {
   SheetContent,
   SheetTrigger,
 } from "~/components/ui/sheet";
+import { useStrings } from "~/lib/catalog";
 import { cn } from "~/lib/utils";
 
 /**
  * One list, rendered twice — the row above `lg`, the panel below it. The icon
- * is read only by the panel; see the note on `Header`.
+ * is read only by the panel; see the note on `Header`. `key` looks up its
+ * label in the catalogue rather than carrying one, so the same list drives
+ * both Locales.
  */
 const NAV_ITEMS = [
-  { to: "/", label: "home", Icon: HomeIcon },
-  { to: "/projects", label: "projects", Icon: Hammer },
-  { to: "/blog", label: "blog", Icon: NotebookPen },
-  { to: "/bookmarks", label: "bookmarks", Icon: BookMarked },
-  { to: "/timeline", label: "timeline", Icon: Clock },
-  { to: "/resume", label: "resume", Icon: FileCode2 },
+  { to: "/", key: "home", Icon: HomeIcon },
+  { to: "/projects", key: "projects", Icon: Hammer },
+  { to: "/blog", key: "blog", Icon: NotebookPen },
+  { to: "/bookmarks", key: "bookmarks", Icon: BookMarked },
+  { to: "/timeline", key: "timeline", Icon: Clock },
+  { to: "/resume", key: "resume", Icon: FileCode2 },
 ] as const;
 
 /**
@@ -84,6 +87,8 @@ function Wordmark({ className }: { className?: string }) {
  * behind it, where you left it.
  */
 export function Header() {
+  const strings = useStrings();
+
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-default border-b bg-subtle px-4 lg:gap-6 lg:px-6">
       <Link to="/" className="mr-auto shrink-0">
@@ -91,16 +96,16 @@ export function Header() {
       </Link>
 
       <nav
-        aria-label="Main"
+        aria-label={strings.nav.mainLabel}
         className="hidden items-center gap-6 font-semibold text-low text-sm lg:flex"
       >
-        {NAV_ITEMS.map(({ to, label }) => (
+        {NAV_ITEMS.map(({ to, key }) => (
           <Link
             key={to}
             to={to}
             className="whitespace-nowrap transition-colors duration-200 hover:text-default"
           >
-            {label}
+            {strings.nav[key]}
           </Link>
         ))}
       </nav>
@@ -122,14 +127,14 @@ export function Header() {
           }
         >
           <Menu className="size-5" />
-          <span className="sr-only">Open navigation</span>
+          <span className="sr-only">{strings.nav.openMenu}</span>
         </SheetTrigger>
 
-        <SheetContent title="Navigation" heading={<Wordmark />}>
+        <SheetContent title={strings.nav.panelTitle} heading={<Wordmark />}>
           {/* Every link is a `SheetClose`: client-side navigation leaves the
             * sheet mounted, so the panel has to dismiss itself on the way out. */}
-          <nav aria-label="Main" className="grid gap-1 text-lg">
-            {NAV_ITEMS.map(({ to, label, Icon }) => (
+          <nav aria-label={strings.nav.mainLabel} className="grid gap-1 text-lg">
+            {NAV_ITEMS.map(({ to, key, Icon }) => (
               <SheetClose
                 key={to}
                 render={
@@ -140,7 +145,7 @@ export function Header() {
                 }
               >
                 <Icon className="size-5" />
-                {label}
+                {strings.nav[key]}
               </SheetClose>
             ))}
           </nav>
@@ -149,7 +154,7 @@ export function Header() {
             * the one under the panel's own header rather than floating inset
             * from it. */}
           <div className="-mx-4 mt-auto flex items-center justify-between border-default border-t px-4 pt-4">
-            <span className="text-low text-sm">Theme</span>
+            <span className="text-low text-sm">{strings.nav.themeRowLabel}</span>
             <ModeToggle />
           </div>
         </SheetContent>

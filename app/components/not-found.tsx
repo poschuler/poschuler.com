@@ -1,5 +1,6 @@
 import { Unplug } from "lucide-react";
 import { Link } from "react-router";
+import { useStrings } from "~/lib/catalog";
 
 /**
  * The site's 404 page, as a component rather than only as a route.
@@ -13,12 +14,14 @@ import { Link } from "react-router";
  * `Outlet` instead, and the header, the footer and the link below all stay.
  */
 export function NotFound() {
+  const strings = useStrings();
+
   return (
     <main className="flex w-full flex-1 flex-col items-center justify-center gap-5 bg-ui p-4 font-mono">
       <Unplug className="size-14" aria-hidden />
 
       <h1 className="font-semibold text-3xl tracking-tight lg:text-4xl">
-        404 — Not Found
+        {strings.notFound.title}
       </h1>
 
       {/* It read "Back to the timeline" until now, from when `/` *was* the
@@ -29,7 +32,7 @@ export function NotFound() {
         to="/"
         className="text-low transition-colors duration-200 hover:text-default"
       >
-        Back to the home page
+        {strings.notFound.backHome}
       </Link>
     </main>
   );

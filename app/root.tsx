@@ -11,7 +11,7 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 import { getColorScheme } from "./color-scheme-cookie";
-import { cloudflareContext } from "./context";
+import { cloudflareContext, localeContext } from "./context";
 
 // Imported for their hashed build URLs. The `@font-face` rules live in
 // `app/app.css`; these two are the latin faces every page needs — the
@@ -39,7 +39,13 @@ export const links: Route.LinksFunction = () => [
 export async function loader({ request, context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
 
-  return { colorScheme: await getColorScheme(request, env) };
+  return {
+    colorScheme: await getColorScheme(request, env),
+    // Carried here so `useLocale` (`app/context.ts`) can hand it to any
+    // component, the same bridge `colorScheme` already crosses from a
+    // loader-only context into `useRouteLoaderData`.
+    locale: context.get(localeContext),
+  };
 }
 
 /**

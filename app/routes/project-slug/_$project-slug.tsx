@@ -5,6 +5,7 @@ import { ProjectNoteItem } from "~/components/project-note-item";
 import { GitHubIcon } from "~/components/ui/brand-icons";
 import { RevisionHistory, RevisionLine } from "~/components/revisions";
 import { cloudflareContext, localeContext } from "~/context";
+import { useStrings } from "~/lib/catalog";
 import { documentAddresses } from "~/lib/seo/alternates";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { cn } from "~/lib/utils";
@@ -89,8 +90,9 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function Project() {
-  const { slug, title, summary, status, liveUrl, repoUrl, revisions, locale, html, notes } =
+  const { slug, title, summary, status, liveUrl, repoUrl, revisions, html, notes } =
     useLoaderData<typeof loader>();
+  const strings = useStrings();
 
   return (
     <main className="flex-1 gap-4 bg-ui p-4 font-mono md:gap-8 md:p-10">
@@ -102,7 +104,7 @@ export default function Project() {
           * costs. */}
         {status === "archived" && (
           <p className={cn(chip, "not-prose mb-4")}>
-            Archived — no longer maintained
+            {strings.projects.archivedNotice}
           </p>
         )}
 
@@ -121,7 +123,7 @@ export default function Project() {
               className="inline-flex items-center gap-2 text-low no-underline transition-colors duration-200 hover:text-default"
             >
               <GitHubIcon className="size-5" />
-              Repository
+              {strings.projects.repository}
             </a>
           )}
         </div>
@@ -144,10 +146,10 @@ export default function Project() {
         * published yet (Part 11 of `evolution-plan/14-phase-1b-field-notes.md`). */}
       {notes.length > 0 && (
         <section className="mx-auto w-full max-w-measure pb-8">
-          <h2 className="font-semibold text-xl tracking-tight">Field notes</h2>
+          <h2 className="font-semibold text-xl tracking-tight">{strings.projects.fieldNotesHeading}</h2>
 
           {notes.map((note) => (
-            <ProjectNoteItem key={note.slug} note={note} projectSlug={slug} locale={locale} />
+            <ProjectNoteItem key={note.slug} note={note} projectSlug={slug} />
           ))}
         </section>
       )}

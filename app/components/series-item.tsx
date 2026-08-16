@@ -1,6 +1,7 @@
 import { Library } from "lucide-react";
 import { ListingRow } from "~/components/listing-row";
 import { seriesHref } from "~/lib/hrefs";
+import { useStrings } from "~/lib/catalog";
 import type { SeriesListingRowType } from "~/models/series.server";
 
 /**
@@ -35,10 +36,9 @@ export function SeriesItem({
    */
   showDestination?: boolean;
 }) {
+  const strings = useStrings();
   const size =
-    series.partCount === 0
-      ? "no parts yet"
-      : `${series.partCount} ${series.partCount === 1 ? "part" : "parts"}`;
+    series.partCount === 0 ? strings.seriesItem.noPartsYet : strings.seriesItem.parts(series.partCount);
 
   const facts = [
     series.publishedStringDate ? (
@@ -46,7 +46,7 @@ export function SeriesItem({
         {series.publishedStringDate}
       </time>
     ) : null,
-    showKind ? <span key="kind">Series</span> : null,
+    showKind ? <span key="kind">{strings.seriesItem.kindLabel}</span> : null,
     <span key="size">{size}</span>,
   ].filter(Boolean);
 

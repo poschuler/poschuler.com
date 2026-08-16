@@ -167,7 +167,6 @@ export default function ProjectNote() {
     title,
     publishedAt,
     tags,
-    locale,
     repository,
     revisions,
     html,
@@ -180,14 +179,13 @@ export default function ProjectNote() {
         * title: the reader who arrived from a search engine has to learn what
         * this is about before reading it, not twenty minutes later. */}
       <div className="mx-auto w-full max-w-measure pt-8">
-        <ProjectBreadcrumb projectSlug={projectSlug} projectTitle={projectTitle} locale={locale} />
+        <ProjectBreadcrumb projectSlug={projectSlug} projectTitle={projectTitle} />
       </div>
 
       <PostArticle
         title={title}
         publishedAt={publishedAt}
         tags={tags}
-        locale={locale}
         repository={repository}
         revisions={revisions}
         html={html}
@@ -203,7 +201,6 @@ export default function ProjectNote() {
         projectTitle={projectTitle}
         notes={notes}
         currentSlug={slug}
-        locale={locale}
       />
     </main>
   );

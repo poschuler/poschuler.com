@@ -1,6 +1,7 @@
 import { Link, useLoaderData } from "react-router";
 import { chip } from "~/components/chip";
-import { cloudflareContext, localeContext, type Locale } from "~/context";
+import { cloudflareContext, localeContext, useLocale } from "~/context";
+import { useStrings } from "~/lib/catalog";
 import { postHref, seriesHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { documentAddresses } from "~/lib/seo/alternates";
@@ -113,18 +114,19 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 /**
- * What a section's state is called, derived from what it holds.
+ * What a section's state is, derived from what it holds — a key into
+ * `strings.series.sectionState`, not the display word itself.
  *
  * Only *complete* is stored: a section with no Parts is planned and a section
  * with Parts is in progress, and declaring either would restore two sources of
  * truth free to disagree (ADR 0007).
  */
-function sectionState(section: ArcSection): "Complete" | "In progress" | "Planned" {
+function sectionState(section: ArcSection): "complete" | "inProgress" | "planned" {
   if (section.status === "complete") {
-    return "Complete";
+    return "complete";
   }
 
-  return section.parts.length > 0 ? "In progress" : "Planned";
+  return section.parts.length > 0 ? "inProgress" : "planned";
 }
 
 /**
@@ -137,17 +139,18 @@ function sectionState(section: ArcSection): "Complete" | "In progress" | "Planne
 function Section({
   seriesSlug,
   section,
-  locale,
 }: {
   seriesSlug: string;
   section: ArcSection;
-  locale: Locale;
 }) {
+  const locale = useLocale();
+  const strings = useStrings();
+
   return (
     <article className="my-6 border-default border-l-2 py-3 pl-4">
       <h3 className="flex flex-wrap items-baseline gap-x-3 font-semibold text-lg">
         {section.title}
-        <span className={chip}>{sectionState(section)}</span>
+        <span className={chip}>{strings.series.sectionState[sectionState(section)]}</span>
       </h3>
 
       <p className="mt-2 text-pretty text-low text-sm">{section.summary}</p>
@@ -182,10 +185,10 @@ export default function SeriesLanding() {
     destination,
     outOfScope,
     audience,
-    locale,
     sections,
     html,
   } = useLoaderData<typeof loader>();
+  const strings = useStrings();
 
   return (
     <main className="flex-1 gap-4 bg-ui p-4 font-mono md:gap-8 md:p-10">
@@ -193,7 +196,7 @@ export default function SeriesLanding() {
         <h1 className="mb-2">{title}</h1>
 
         <p className={cn(chip, "not-prose")}>
-          {status === "complete" ? "Complete" : "Ongoing"}
+          {status === "complete" ? strings.series.landingState.complete : strings.series.landingState.ongoing}
         </p>
 
         {/* The contract, before anything else on the page. Almost nobody states
@@ -203,17 +206,17 @@ export default function SeriesLanding() {
           * breaks the promise the reader signed up for. */}
         <dl className="not-prose my-8 space-y-5 border-default border-l-2 py-4 pl-4">
           <div>
-            <dt className="font-semibold text-sm">You start with</dt>
+            <dt className="font-semibold text-sm">{strings.series.startingPoint}</dt>
             <dd className="mt-1 text-pretty text-low">{startingPoint}</dd>
           </div>
 
           <div>
-            <dt className="font-semibold text-sm">You end up with</dt>
+            <dt className="font-semibold text-sm">{strings.series.destination}</dt>
             <dd className="mt-1 text-pretty text-low">{destination}</dd>
           </div>
 
           <div>
-            <dt className="font-semibold text-sm">Not covered</dt>
+            <dt className="font-semibold text-sm">{strings.series.outOfScope}</dt>
             <dd className="mt-1 text-low">
               <ul className="space-y-1">
                 {outOfScope.map((item) => (
@@ -224,7 +227,7 @@ export default function SeriesLanding() {
           </div>
 
           <div>
-            <dt className="font-semibold text-sm">Who it is for</dt>
+            <dt className="font-semibold text-sm">{strings.series.audience}</dt>
             <dd className="mt-1 text-pretty text-low">{audience}</dd>
           </div>
         </dl>
@@ -234,18 +237,16 @@ export default function SeriesLanding() {
       </article>
 
       <section className="mx-auto w-full max-w-measure pb-8">
-        <h2 className="font-semibold text-xl tracking-tight">The arc</h2>
+        <h2 className="font-semibold text-xl tracking-tight">{strings.series.arcHeading}</h2>
 
         {sections.map((section) => (
-          <Section key={section.slug} seriesSlug={slug} section={section} locale={locale} />
+          <Section key={section.slug} seriesSlug={slug} section={section} />
         ))}
 
         {/* The promise, spelled out where the arc ends: what *complete* would
           * mean here is reaching the Destination above, not a part count. */}
         <p className="mt-6 text-low text-sm">
-          {status === "complete"
-            ? "This series is complete: it reaches the destination above."
-            : "This series is ongoing. It is finished when it reaches the destination above — however many parts that takes."}
+          {status === "complete" ? strings.series.completeSummary : strings.series.ongoingSummary}
         </p>
       </section>
     </main>

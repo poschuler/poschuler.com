@@ -1,6 +1,6 @@
 import { PenLine } from "lucide-react";
 import { ListingRow } from "~/components/listing-row";
-import type { Locale } from "~/context";
+import { useLocale } from "~/context";
 import { postHref } from "~/lib/hrefs";
 import type { ProjectNoteRowType } from "~/models/project.server";
 
@@ -16,12 +16,12 @@ import type { ProjectNoteRowType } from "~/models/project.server";
 export function ProjectNoteItem({
   note,
   projectSlug,
-  locale,
 }: {
   note: ProjectNoteRowType;
   projectSlug: string;
-  locale: Locale;
 }) {
+  const locale = useLocale();
+
   return (
     <ListingRow
       title={note.title}

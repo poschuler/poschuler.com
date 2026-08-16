@@ -164,7 +164,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function BlogSlug() {
-    const { html, publishedAt, tags, title, locale, repository, revisions } = useLoaderData<typeof loader>();
+    const { html, publishedAt, tags, title, repository, revisions } = useLoaderData<typeof loader>();
 
     return (
         <main className="flex-1 gap-4 p-4 md:gap-8 md:p-10 font-mono bg-ui">
@@ -172,7 +172,6 @@ export default function BlogSlug() {
                 title={title}
                 publishedAt={publishedAt}
                 tags={tags}
-                locale={locale}
                 repository={repository}
                 revisions={revisions}
                 html={html}
