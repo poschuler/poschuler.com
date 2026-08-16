@@ -110,16 +110,18 @@ interface ContainerFolder<Manifest> {
     manifests: Array<{ relativePath: string; attributes: Manifest; body: string }>;
     /**
      * The files the manifest is reconciled against: only the ones carrying a
-     * recognised Locale. A draft filed under the `.en-old.md` convention parses
-     * to no Locale and is excluded here; a draft declared with `draft: true`
-     * has a Locale like any other file and is reconciled the same way, with
-     * `draft: true` set on the entry so the manifest's own row builder can
-     * tell it apart.
+     * recognised Locale — a file whose suffix does not parse to one is not a
+     * legitimate state to reconcile against anything, and `contentRowFor`
+     * fails the build on it below rather than this walker excusing it here. A
+     * draft declared with `draft: true`, by contrast, has a Locale like any
+     * other file and is reconciled the same way, with `draft: true` set on
+     * the entry so the manifest's own row builder can tell it apart.
      */
     files: ContainerChildFile[];
     /**
-     * Every file below the folder, drafts included — each one still has to be
-     * offered a row, if only to be skipped with a reason.
+     * Every file below the folder, drafts and unrecognised Locales included —
+     * each one still has to be offered a row, if only to fail the build with
+     * a message naming it.
      */
     nested: Array<{ relativePath: string; attributes: FrontMatterAttributes }>;
 }

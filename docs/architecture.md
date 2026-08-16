@@ -66,6 +66,17 @@ there fails rather than acquiring a meaning. `series/` and `projects/` each
 allow one nested type — `post` — which is what makes a Part and a Field Note
 possible in the first place.
 
+`CONTENT_TREES` also declares whether a tree's files carry a Locale. A
+recognised suffix — `<slug>.en.md` or `<slug>.es.md` — is required under
+`blog/`, `projects/` and `series/`, and forbidden under `bookmarks/`: a
+Bookmark is a pointer to somebody else's document, not a Translation of one,
+and would seed with `lang` set against the partial unique index that assumes
+it has none. Before this was declared, the vocabulary lived in a regular
+expression alone, and a suffix it did not recognise — a typo, or the
+`.en-old.md` convention this repository used to draft under — was absorbed
+into the Slug and skipped without a word (ADR 0004). Both mistakes now fail
+the build, each with a message of its own.
+
 The arc itself — which sections a Series has, in what order, and which Parts sit
 in each — is declared once in the Series manifest and nowhere else. A Project's
 manifest is the same idea without an arc: a flat `notes:` list, in the order its
@@ -341,7 +352,6 @@ The protection has edges. It covers concurrency-driven cancellation only — a m
 - **`/blog/:blogSlug` hardcodes `:en`.** The schema, the seed pipeline and the KV key layout are all Locale-aware; the route is not, and no URL carries a Locale. Serving a second Translation needs a routing decision first (`/es/blog/…` vs. a query param vs. content negotiation).
 - **`generate-kv-json.ts` builds its D1 query with nested unescaped double quotes** inside a double-quoted `--command` string. It works only because SQL treats the collapsed quoting as bare identifiers.
 - **The sitemap's `/resume` `lastmod` is maintained by hand.** The Resume has no Published At to derive one from, so it is `meta.lastModified` inside `resume.json` — passed into `buildSitemapRoutes` rather than held as a constant in the seed pipeline, so the date sits beside the document it describes and whoever edits one is looking at the other. Deriving it from git does not work: CI checks out with `fetch-depth: 1`, so the only commit present is the checkout's own and the date would describe the build rather than the Resume.
-- **`…setup-nodejs-express-typescript-project.en-old.md` is never published.** Its front matter says `type: post`, but `en-old` is not a Locale the generator recognises, so it is skipped with a warning nobody reads and no row or KV key exists for it. It is either a draft that should not be in `app/content/`, or a Translation that needs a real Locale.
 - **No test renders a component.** CSS and markup regressions are caught by eye only. jsdom does not compute animations, so a component test would not have found the sidebar's closing flash either — catching that class of defect needs a real browser, which is a third runtime nobody has signed up for yet.
 - **`/resume` has no test, and does not need one the way the others do.** It has no loader: its sections import `resume.json` directly, so there is no request-time behaviour to assert. What could still break — a section that stops rendering — needs a component test, which is the same gap as above.
 - **Cloudflare prepends a managed `robots.txt`.** The zone has AI Crawl Control's managed robots.txt on, which blocks the AI training crawlers and adds Content Signals. It merges with this Worker's response *only when the origin answers 200* — while `/robots.txt` was throwing on a missing `PUBLIC_HOST`, Cloudflare's block was served alone and the failure was invisible, `Sitemap:` line and all. If that line ever disappears again, request the route directly before suspecting the dashboard.

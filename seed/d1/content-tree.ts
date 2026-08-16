@@ -31,8 +31,21 @@
 export type ContentType = "post" | "link" | "project" | "series";
 
 /**
- * The top-level directories under `app/content`: what each one holds, and what
- * — if anything — may live nested inside one of its items.
+ * Whether a tree's files carry a Locale suffix — `<slug>.<locale>.md` — or
+ * must not.
+ *
+ * `"required"` is every tree with a Translation: a Post, a Project landing, a
+ * Series manifest and its Parts all live at `(Slug, Locale)`. `"forbidden"` is
+ * `bookmarks/` alone — a Bookmark is a pointer to somebody else's document,
+ * not a document of its own, so it has nothing to translate and no Locale to
+ * carry (Part 1 of `evolution-plan/15-phase-3-spanish.md`).
+ */
+export type LocaleRule = "required" | "forbidden";
+
+/**
+ * The top-level directories under `app/content`: what each one holds, what —
+ * if anything — may live nested inside one of its items, and whether its
+ * files carry a Locale.
  *
  * `nested: null` means *nothing nests here*. A subfolder under `blog/` fails
  * the build rather than acquiring an invented meaning. `projects/` used to say
@@ -40,13 +53,24 @@ export type ContentType = "post" | "link" | "project" | "series";
  * linkable — 1b (`evolution-plan/14-phase-1b-field-notes.md`) is the column's
  * arrival, and this line is the branch it was reserved for: depth 3 under a
  * Project is a Field Note, the same depth rule `series/` already generalised.
+ *
+ * `locale` used to live nowhere: the vocabulary was two characters inside a
+ * regular expression in `seed-sql.ts`, and a suffix it did not recognise was
+ * absorbed into the Slug without a word. It is declared here, beside `item`
+ * and `nested`, for the reason those two are declared here — this is where
+ * this repository states a structural fact of the pipeline, and a Locale is
+ * one. A `locales.json` beside `tags.json` was considered and rejected: a Tag
+ * is editorial, written while writing content; a Locale is not.
  */
 export const CONTENT_TREES = {
-  blog: { item: "post", nested: null },
-  bookmarks: { item: "link", nested: null },
-  projects: { item: "project", nested: "post" },
-  series: { item: "series", nested: "post" },
-} as const satisfies Record<string, { item: ContentType; nested: ContentType | null }>;
+  blog: { item: "post", nested: null, locale: "required" },
+  bookmarks: { item: "link", nested: null, locale: "forbidden" },
+  projects: { item: "project", nested: "post", locale: "required" },
+  series: { item: "series", nested: "post", locale: "required" },
+} as const satisfies Record<
+  string,
+  { item: ContentType; nested: ContentType | null; locale: LocaleRule }
+>;
 
 export type ContentTree = keyof typeof CONTENT_TREES;
 
@@ -185,4 +209,17 @@ export function declaredTypeMatches(
   placement: Placement,
 ): boolean {
   return declaredType === placement.type;
+}
+
+/**
+ * Whether a filename's parsed Locale agrees with what its tree declares.
+ *
+ * `lang` is `null` both when the filename carried no Locale at all and when it
+ * carried a suffix nobody recognises — `parseContentFilename` does not tell
+ * those two apart, and this rule does not need it to: under a tree that
+ * requires a Locale, either is the same failure, and it is up to the caller to
+ * name the file responsible.
+ */
+export function localeMatchesTree(tree: ContentTree, lang: string | null): boolean {
+  return CONTENT_TREES[tree].locale === "required" ? lang !== null : lang === null;
 }

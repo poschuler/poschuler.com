@@ -4,6 +4,7 @@ import {
   CONTENT_TREES,
   declaredTypeMatches,
   isMisplaced,
+  localeMatchesTree,
   placementOf,
   treeOf,
   unclaimedTrees,
@@ -199,5 +200,54 @@ describe("declaredTypeMatches", () => {
 
   it("rejects a missing type rather than assuming the tree is right", () => {
     expect(declaredTypeMatches(undefined, placement("blog/a/a.en.md"))).toBe(false);
+  });
+});
+
+/**
+ * Part 1 of `evolution-plan/15-phase-3-spanish.md`: the Locale vocabulary
+ * moves out of a regular expression in `seed-sql.ts` and into `CONTENT_TREES`,
+ * declared per tree the same way `item` and `nested` already are.
+ */
+describe("CONTENT_TREES — the Locale rule per tree", () => {
+  it("requires a Locale under every tree that holds a Translation", () => {
+    expect(CONTENT_TREES.blog.locale).toBe("required");
+    expect(CONTENT_TREES.projects.locale).toBe("required");
+    expect(CONTENT_TREES.series.locale).toBe("required");
+  });
+
+  /** A Bookmark is a pointer, not a document with a Translation of its own. */
+  it("forbids a Locale under bookmarks", () => {
+    expect(CONTENT_TREES.bookmarks.locale).toBe("forbidden");
+  });
+});
+
+describe("localeMatchesTree", () => {
+  it.each(["blog", "projects", "series"] as const)(
+    "accepts a recognised Locale under %s",
+    (tree) => {
+      expect(localeMatchesTree(tree, "en")).toBe(true);
+      expect(localeMatchesTree(tree, "es")).toBe(true);
+    },
+  );
+
+  /**
+   * `null` covers both a filename with no suffix at all and one whose suffix
+   * `parseContentFilename` does not recognise — `localeMatchesTree` does not
+   * need to tell those two apart, only that a Locale-bearing tree got neither.
+   */
+  it.each(["blog", "projects", "series"] as const)(
+    "rejects no recognised Locale under %s",
+    (tree) => {
+      expect(localeMatchesTree(tree, null)).toBe(false);
+    },
+  );
+
+  it("accepts no Locale under bookmarks", () => {
+    expect(localeMatchesTree("bookmarks", null)).toBe(true);
+  });
+
+  it("rejects a Locale under bookmarks, even a recognised one", () => {
+    expect(localeMatchesTree("bookmarks", "en")).toBe(false);
+    expect(localeMatchesTree("bookmarks", "es")).toBe(false);
   });
 });

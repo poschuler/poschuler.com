@@ -85,8 +85,10 @@ describe("parseContentFilename", () => {
   });
 
   /**
-   * Only `en` and `es` count as a Locale, so `en-old` is absorbed into the slug.
-   * This is the mechanism behind the unpublished draft below.
+   * Only `en` and `es` count as a Locale, so `en-old` is absorbed into the
+   * slug. `localeMatchesTree` (`content-tree.ts`) is what turns this into a
+   * build failure under a tree that requires a Locale — see the Posts and
+   * Bookmarks describe blocks below.
    */
   it("does not recognise en-old as a Locale", () => {
     expect(parseContentFilename("post.en-old.md")).toEqual({
@@ -156,20 +158,22 @@ describe("contentRowFor — Posts", () => {
   });
 
   /**
-   * The `.en-old.md` draft in `app/content` hits this branch: `en-old` is not a
-   * Locale the parser recognises, so a file declaring `type: post` arrives with
-   * no Locale and produces no row and no KV key. It is skipped with a warning
-   * nobody reads.
+   * `en-old` is not a Locale the parser recognises, so a file declaring
+   * `type: post` under `blog/` arrives with no Locale. It used to be absorbed
+   * into the Slug and skipped without a word (Part 1 of
+   * `evolution-plan/15-phase-3-spanish.md`) — now it fails the build, naming
+   * the file.
    */
-  it("skips a Post whose filename carries no recognised Locale", () => {
+  it("fails a Post whose filename carries no recognised Locale", () => {
     const result = contentRowFor(
       "blog/setup-project/setup-project.en-old.md",
       post(),
       VOCABULARY,
     );
 
-    expect(isSkipped(result)).toBe(true);
-    expect((result as { reason: string }).reason).toMatch(/must have a language/);
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toContain("blog/setup-project/setup-project.en-old.md");
+    expect((result as { error: string }).error).toMatch(/no recognised Locale/);
   });
 });
 
@@ -381,6 +385,42 @@ describe("contentRowFor — Bookmarks", () => {
     expect(row.statement).toContain("(slug, lang, type, title, external_url, source, published_at, updated_at)");
     expect(row.statement).toContain("'https://example.com/a', 'Example'");
   });
+
+  /**
+   * A Bookmark has no Locale to translate — it is a pointer, and the thing it
+   * points at is not this repository's to translate. Before this a filename
+   * ending `.en.md` would have seeded with `lang = 'en'` against the partial
+   * unique index that assumes a Bookmark has none, and nothing would say so.
+   */
+  it("fails a Bookmark whose filename carries a Locale suffix", () => {
+    const result = contentRowFor("bookmarks/how-i-would-do-auth.en.md", bookmark(), VOCABULARY);
+
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toContain("bookmarks/how-i-would-do-auth.en.md");
+    expect((result as { error: string }).error).toMatch(/Locale suffix/);
+  });
+
+  /**
+   * The two failures Part 1 introduces are told apart by their messages: a
+   * Locale-bearing tree missing one reads differently from a Bookmark
+   * carrying one it should not.
+   */
+  it("fails with a different message from a Post carrying no recognised Locale", () => {
+    const missingLocale = contentRowFor(
+      "blog/a/a.en-old.md",
+      post(),
+      VOCABULARY,
+    ) as { error: string };
+    const strayLocale = contentRowFor(
+      "bookmarks/a.en.md",
+      bookmark(),
+      VOCABULARY,
+    ) as { error: string };
+
+    expect(missingLocale.error).toMatch(/no recognised Locale/);
+    expect(strayLocale.error).toMatch(/carries a Locale suffix/);
+    expect(missingLocale.error).not.toBe(strayLocale.error);
+  });
 });
 
 /**
@@ -442,19 +482,20 @@ describe("contentRowFor — Parts of a Series", () => {
   });
 
   /**
-   * The draft beside part one. It stays unpublished because `en-old` is not a
-   * Locale — which used to hold by accident, and is the one file that must be
-   * skipped rather than failed for being absent from the manifest.
+   * `en-old` is not a Locale, so this file fails on that before the manifest
+   * is ever consulted — it is never a candidate for "not listed", because it
+   * never earns a Locale to be listed under.
    */
-  it("skips a draft inside a Series instead of demanding the manifest list it", () => {
+  it("fails a Part with no recognised Locale rather than demanding the manifest list it", () => {
     const result = contentRowFor(
       "series/pragmatic-nodejs-api/project-setup/project-setup.en-old.md",
       post(),
       VOCABULARY,
     );
 
-    expect(isSkipped(result)).toBe(true);
-    expect((result as { reason: string }).reason).toMatch(/must have a language/);
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/no recognised Locale/);
+    expect((result as { error: string }).error).not.toMatch(/not listed in the/);
   });
 
   it("fails a Part declaring itself the Series it belongs to", () => {
@@ -663,19 +704,20 @@ describe("contentRowFor — Tags are drawn from the declared vocabulary", () => 
   });
 
   /**
-   * The one file no check can see. `project-setup.en-old.md` carries the
-   * pre-vocabulary spellings and is skipped for its filename before its Tags are
-   * ever read — so it stays invalid and unchecked, and becomes a build failure
-   * the moment anyone renames it.
+   * The Locale check leads the Post branch, ahead of the Tag check — a file
+   * with no recognised Locale fails on that even when its Tags would fail
+   * too, so the error names the mistake actually in front of the reader
+   * rather than a second one behind it.
    */
-  it("skips a draft carrying pre-vocabulary Tags rather than failing on them", () => {
+  it("fails a Post with no recognised Locale on that, even when its Tags are undeclared too", () => {
     const result = contentRowFor(
       "series/pragmatic-nodejs-api/project-setup/project-setup.en-old.md",
       post({ tags: ["Nodejs", "TypeScript"] }),
       VOCABULARY,
     );
 
-    expect(isSkipped(result)).toBe(true);
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/no recognised Locale/);
   });
 });
 
