@@ -1,4 +1,5 @@
 import { chip } from "~/components/chip";
+import { useStrings } from "~/lib/catalog";
 import { Section } from "./section";
 import { skills } from "./resume.json";
 
@@ -8,8 +9,10 @@ import { skills } from "./resume.json";
  * about what kind of engineer wrote it.
  */
 export function Skills() {
+  let strings = useStrings();
+
   return (
-    <Section title="Skills">
+    <Section title={strings.resume.headings.skills}>
       <div className="space-y-2">
         {skills.map((group) => (
           <div key={group.row}>

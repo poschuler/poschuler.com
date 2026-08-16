@@ -160,6 +160,24 @@ type Chrome = {
   tag: {
     subtitle: string;
   };
+  /**
+   * The Resume's own section headings (Part 8 of
+   * `evolution-plan/15-phase-3-spanish.md`, #48) — the one piece of chrome
+   * `resume.json` itself does not carry, because a heading is not a fact about
+   * the person the way `basics`, `work` or `education` are. Everything else the
+   * Resume renders either travels bilingual inside `resume.json` (the About
+   * paragraph, the experience bullets) or stays single-form on purpose (dates,
+   * employers, job titles, technologies, certificates).
+   */
+  resume: {
+    headings: {
+      about: string;
+      skills: string;
+      experience: string;
+      education: string;
+      certificates: string;
+    };
+  };
   contentItem: {
     wrote: string;
     read: string;
@@ -282,6 +300,15 @@ export const STRINGS: Record<Locale, Chrome> = {
     tag: {
       subtitle: "Everything I have written on this subject",
     },
+    resume: {
+      headings: {
+        about: "About",
+        skills: "Skills",
+        experience: "Work Experience",
+        education: "Education",
+        certificates: "Certificates",
+      },
+    },
     contentItem: {
       wrote: "I wrote",
       read: "I read",
@@ -396,6 +423,15 @@ export const STRINGS: Record<Locale, Chrome> = {
     },
     tag: {
       subtitle: "Todo lo que he escrito sobre este tema",
+    },
+    resume: {
+      headings: {
+        about: "Acerca de",
+        skills: "Habilidades",
+        experience: "Experiencia laboral",
+        education: "Educación",
+        certificates: "Certificados",
+      },
     },
     contentItem: {
       wrote: "Escribí",

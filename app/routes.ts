@@ -61,7 +61,10 @@ const contentRoutes = (suffix: string) => [
 export default [
   // Not pages, so each exists once: a theme cookie, a crawler's rulebook and
   // the sitemap it points at are facts about the whole site, not about a
-  // Locale (ADR 0010).
+  // Locale (ADR 0010). `/cv.pdf` sits here for a different reason, decided
+  // and recorded at `routes/resume-pdf/_resume-pdf.tsx`: it is a static file
+  // proxied from a CDN rather than rendered from `resume.json`, so a Spanish
+  // `/es/cv.pdf` is not a route this codebase can add on its own.
   route("/set-theme", "routes/set-theme.ts"),
   route("/cv.pdf", "routes/resume-pdf/_resume-pdf.tsx"),
   route("/robots.txt", "routes/robots.ts"),

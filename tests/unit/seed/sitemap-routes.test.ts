@@ -92,11 +92,12 @@ const hreflangsOf = (route: ReturnType<typeof buildSitemapRoutes>[number]) =>
   (route.alternates ?? []).map((alternate) => alternate.hreflang).sort();
 
 describe("buildSitemapRoutes", () => {
-  it("lists the eight static routes — Home, Bookmarks and Timeline doubled for /es — and one per Post", () => {
+  it("lists the nine static routes — Home, cv, Bookmarks and Timeline doubled for /es — and one per Post", () => {
     expect(urlsOf(routesFor(items))).toEqual([
       HOME_EN,
       "/es",
       "/cv",
+      "/es/cv",
       "/blog",
       "/bookmarks",
       "/es/bookmarks",
@@ -142,20 +143,31 @@ describe("buildSitemapRoutes", () => {
   it("still lists the Locale-invariant routes when the store is empty", () => {
     const routes = routesFor([]);
 
-    expect(urlsOf(routes)).toEqual([HOME_EN, "/es", "/cv", "/bookmarks", "/es/bookmarks", "/timeline", "/es/timeline"]);
-    expect(routes.every((route) => route.lastmod === FALLBACK || route.url === "/cv")).toBe(true);
+    expect(urlsOf(routes)).toEqual([
+      HOME_EN,
+      "/es",
+      "/cv",
+      "/es/cv",
+      "/bookmarks",
+      "/es/bookmarks",
+      "/timeline",
+      "/es/timeline",
+    ]);
+    const cvUrls = ["/cv", "/es/cv"];
+    expect(routes.every((route) => route.lastmod === FALLBACK || cvUrls.includes(route.url))).toBe(true);
   });
 
   /** Read from `resume.json`'s own `meta.lastModified`, not from any content. */
-  it("dates /cv from the date the Resume itself carries", () => {
+  it("dates /cv from the date the Resume itself carries, in both Locales", () => {
     const routes = routesFor(items, FALLBACK, "2026-02-02");
 
     expect(routes.find((route) => route.url === "/cv")?.lastmod).toBe("2026-02-02");
+    expect(routes.find((route) => route.url === "/es/cv")?.lastmod).toBe("2026-02-02");
   });
 
   it("does not let the Resume's date leak into any other section", () => {
     const routes = routesFor(items, FALLBACK, "2026-02-02");
-    const others = routes.filter((route) => route.url !== "/cv");
+    const others = routes.filter((route) => route.url !== "/cv" && route.url !== "/es/cv");
 
     expect(others.every((route) => route.lastmod !== "2026-02-02")).toBe(true);
   });
@@ -460,11 +472,15 @@ describe("alternates", () => {
     expect(home.alternates).toContainEqual({ hreflang: "es", href: "https://poschuler.com/es" });
   });
 
-  it("gives the Resume no Spanish alternate, until #48", () => {
+  it("gives the Resume reciprocal alternates, now that #48 gives it Spanish text", () => {
     const routes = routesFor(items);
     const cv = routes.find((route) => route.url === "/cv")!;
+    const cvEs = routes.find((route) => route.url === "/es/cv")!;
 
-    expect(hreflangsOf(cv)).toEqual(["en", "x-default"]);
+    expect(hreflangsOf(cv)).toEqual(["en", "es", "x-default"]);
+    expect(cv.alternates).toContainEqual({ hreflang: "es", href: "https://poschuler.com/es/cv" });
+    expect(hreflangsOf(cvEs)).toEqual(["en", "es", "x-default"]);
+    expect(cv.alternates).toEqual(cvEs.alternates);
   });
 });
 

@@ -119,3 +119,19 @@ describe("the unpublished /en namespace", () => {
     }
   });
 });
+
+/**
+ * `/cv` itself is a page, mounted in both branches like every other
+ * (`resume` above). Its PDF is not: `routes/resume-pdf/_resume-pdf.tsx`'s own
+ * docblock records why (Part 8 of `evolution-plan/15-phase-3-spanish.md`,
+ * #48) — it proxies one hand-produced file from a CDN rather than rendering
+ * `resume.json`, so there is no `/es/cv.pdf` to mount.
+ */
+describe("/cv.pdf", () => {
+  it("is mounted exactly once, with no Spanish form", () => {
+    const pdfRoutes = all.filter((route) => route.file === "routes/resume-pdf/_resume-pdf.tsx");
+
+    expect(pdfRoutes).toHaveLength(1);
+    expect(pdfRoutes[0]?.path).toBe("/cv.pdf");
+  });
+});

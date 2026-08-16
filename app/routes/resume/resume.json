@@ -8,7 +8,10 @@
     "image": "/paul-osorio-schuler.webp",
     "email": "poschuler@gmail.com",
     "url": "https://poschuler.com",
-    "summary": "Senior backend engineer with 15+ years across banking and product. I build and operate Chekalo.pe, a price intelligence platform that ingests Peru's major retailers daily, resolves the same product across stores into a single canonical identity, and serves search and comparison from OpenSearch. TypeScript and Node.js throughout, structured as a modular monolith over PostgreSQL and Redis-backed work queues. Previously led solution architecture at Scotiabank and BCP for enterprise orchestration and integration platforms.",
+    "summary": {
+      "en": "Senior backend engineer with 15+ years across banking and product. I build and operate Chekalo.pe, a price intelligence platform that ingests Peru's major retailers daily, resolves the same product across stores into a single canonical identity, and serves search and comparison from OpenSearch. TypeScript and Node.js throughout, structured as a modular monolith over PostgreSQL and Redis-backed work queues. Previously led solution architecture at Scotiabank and BCP for enterprise orchestration and integration platforms.",
+      "es": "Ingeniero backend senior con más de 15 años de experiencia entre banca y producto. Construyo y opero Chekalo.pe, una plataforma de inteligencia de precios que ingesta diariamente a los principales retailers de Perú, resuelve el mismo producto entre tiendas en una identidad canónica única, y sirve búsqueda y comparación desde OpenSearch. TypeScript y Node.js de principio a fin, estructurado como un monolito modular sobre PostgreSQL y colas de trabajo respaldadas por Redis. Previamente lideré arquitectura de soluciones en Scotiabank y BCP para plataformas empresariales de orquestación e integración."
+    },
     "location": {
       "city": "Lima",
       "countryCode": "PE",
@@ -40,15 +43,25 @@
       "location": "Lima, Peru",
       "startDate": "2023",
       "endDate": "present",
-      "summary": "",
-      "highlights": [
-        "Design, build and operate a price intelligence platform that ingests nine major retail sites daily, each behind its own integration, resolving their listings into a single canonical catalog with per-seller offers and price history.",
-        "Structured the backend as a modular monolith with three bounded modules — ingestion, catalog and search projection — each owning its own durable, reprocessable state behind hard boundaries.",
-        "Replaced LLM- and vector-based product matching (Qdrant, embeddings, cosine similarity) with deterministic identity resolution on brand, model and variant signature, corroborated by barcode — reproducible, auditable, and a fraction of the cost.",
-        "Built queue-backed ingestion on Redis and BullMQ with per-retailer rate limits and retries, validating every retailer payload at the boundary in production and de-duplicating unchanged ones to halve what gets stored.",
-        "Projected the catalog into OpenSearch incrementally — only the canonical products that changed — reindexing behind atomic alias swaps so search stays available through every schema change.",
-        "Shipped the consumer site (chekalo.pe) as a pure read model on React Router 8 with SSR — no query API, no database, reading the projected index directly."
-      ]
+      "summary": { "en": "", "es": "" },
+      "highlights": {
+        "en": [
+          "Design, build and operate a price intelligence platform that ingests nine major retail sites daily, each behind its own integration, resolving their listings into a single canonical catalog with per-seller offers and price history.",
+          "Structured the backend as a modular monolith with three bounded modules — ingestion, catalog and search projection — each owning its own durable, reprocessable state behind hard boundaries.",
+          "Replaced LLM- and vector-based product matching (Qdrant, embeddings, cosine similarity) with deterministic identity resolution on brand, model and variant signature, corroborated by barcode — reproducible, auditable, and a fraction of the cost.",
+          "Built queue-backed ingestion on Redis and BullMQ with per-retailer rate limits and retries, validating every retailer payload at the boundary in production and de-duplicating unchanged ones to halve what gets stored.",
+          "Projected the catalog into OpenSearch incrementally — only the canonical products that changed — reindexing behind atomic alias swaps so search stays available through every schema change.",
+          "Shipped the consumer site (chekalo.pe) as a pure read model on React Router 8 with SSR — no query API, no database, reading the projected index directly."
+        ],
+        "es": [
+          "Diseño, construyo y opero una plataforma de inteligencia de precios que ingesta diariamente nueve sitios de retail, cada uno detrás de su propia integración, resolviendo sus listados en un catálogo canónico único con ofertas por vendedor e historial de precios.",
+          "Estructuré el backend como un monolito modular con tres módulos delimitados — ingestión, catálogo y proyección de búsqueda — cada uno con su propio estado durable y reprocesable detrás de límites estrictos.",
+          "Reemplacé el emparejamiento de productos basado en LLM y vectores (Qdrant, embeddings, similitud de coseno) por resolución determinística de identidad sobre marca, modelo y firma de variante, corroborada por código de barras — reproducible, auditable y a una fracción del costo.",
+          "Construí una ingestión respaldada por colas sobre Redis y BullMQ con límites de tasa y reintentos por retailer, validando cada payload de retailer en el límite del sistema en producción y de-duplicando los que no cambiaron para reducir a la mitad lo almacenado.",
+          "Proyecté el catálogo hacia OpenSearch de forma incremental — solo los productos canónicos que cambiaron — reindexando detrás de intercambios atómicos de alias para que la búsqueda siga disponible durante cada cambio de esquema.",
+          "Publiqué el sitio de consumo (chekalo.pe) como un modelo de lectura puro sobre React Router 8 con SSR — sin API de consulta, sin base de datos, leyendo directamente el índice proyectado."
+        ]
+      }
     },
     {
       "row": 8,
@@ -57,13 +70,21 @@
       "location": "Lima, Peru",
       "startDate": "2021",
       "endDate": "present",
-      "summary": "",
-      "highlights": [
-        "Lead solution architecture for enterprise orchestration and integration across banking operations — Camunda over Kafka, with .NET and Python workers — moving the platform toward event-driven design.",
-        "Delivered systems generating over CAD 2M annually through operational efficiency, sales growth and risk reduction.",
-        "Own delivery across the portfolio — commitments, scope control and stakeholder expectations — with 12 engineers (7 in-house, 5 outsourced) reporting progress and escalating technical blockers.",
-        "Review technical and economic feasibility before initiatives are committed, and validate requirements directly with the business areas that own them."
-      ]
+      "summary": { "en": "", "es": "" },
+      "highlights": {
+        "en": [
+          "Lead solution architecture for enterprise orchestration and integration across banking operations — Camunda over Kafka, with .NET and Python workers — moving the platform toward event-driven design.",
+          "Delivered systems generating over CAD 2M annually through operational efficiency, sales growth and risk reduction.",
+          "Own delivery across the portfolio — commitments, scope control and stakeholder expectations — with 12 engineers (7 in-house, 5 outsourced) reporting progress and escalating technical blockers.",
+          "Review technical and economic feasibility before initiatives are committed, and validate requirements directly with the business areas that own them."
+        ],
+        "es": [
+          "Lidero la arquitectura de soluciones para orquestación e integración empresarial en las operaciones del banco — Camunda sobre Kafka, con workers en .NET y Python — moviendo la plataforma hacia un diseño orientado a eventos.",
+          "Entregué sistemas que generan más de CAD 2M anuales mediante eficiencia operativa, crecimiento de ventas y reducción de riesgo.",
+          "Soy responsable de la entrega en todo el portafolio — compromisos, control de alcance y expectativas de los stakeholders — con 12 ingenieros (7 internos, 5 tercerizados) reportando avances y escalando bloqueos técnicos.",
+          "Reviso la factibilidad técnica y económica antes de comprometer iniciativas, y valido los requerimientos directamente con las áreas de negocio dueñas de ellos."
+        ]
+      }
     },
     {
       "row": 7,
@@ -72,13 +93,21 @@
       "location": "Lima, Peru",
       "startDate": "2019",
       "endDate": "2021",
-      "summary": "",
-      "highlights": [
-        "Led solution architecture and technical delivery across 4 cross-functional squads (22+ engineers) for the bank's COVID-19 credit response — state-guaranteed lending (Reactiva Perú), mass loan rescheduling and payment-schedule updates — under statutory deadlines announced at short notice.",
-        "Took on hands-on implementation when the emergency demanded it, building .NET jobs that queued mass credit updates into the bank's nightly batch processing.",
-        "Delivered USD 8M in business value through platform modernization focused on operational efficiency and revenue growth.",
-        "Co-defined and implemented the bank's Automation Center of Excellence — governance framework, engineering standards and operating model for enterprise-scale delivery."
-      ]
+      "summary": { "en": "", "es": "" },
+      "highlights": {
+        "en": [
+          "Led solution architecture and technical delivery across 4 cross-functional squads (22+ engineers) for the bank's COVID-19 credit response — state-guaranteed lending (Reactiva Perú), mass loan rescheduling and payment-schedule updates — under statutory deadlines announced at short notice.",
+          "Took on hands-on implementation when the emergency demanded it, building .NET jobs that queued mass credit updates into the bank's nightly batch processing.",
+          "Delivered USD 8M in business value through platform modernization focused on operational efficiency and revenue growth.",
+          "Co-defined and implemented the bank's Automation Center of Excellence — governance framework, engineering standards and operating model for enterprise-scale delivery."
+        ],
+        "es": [
+          "Lideré la arquitectura de soluciones y la entrega técnica en 4 squads multifuncionales (22+ ingenieros) para la respuesta crediticia del banco ante el COVID-19 — préstamos con garantía estatal (Reactiva Perú), reprogramación masiva de créditos y actualización de cronogramas de pago — bajo plazos legales anunciados con poco margen.",
+          "Asumí implementación práctica cuando la emergencia lo exigió, construyendo jobs en .NET que encolaban actualizaciones masivas de crédito en el proceso batch nocturno del banco.",
+          "Entregué USD 8M en valor de negocio mediante la modernización de la plataforma, enfocada en eficiencia operativa y crecimiento de ingresos.",
+          "Co-definí e implementé el Centro de Excelencia de Automatización del banco — marco de gobierno, estándares de ingeniería y modelo operativo para entregas a escala empresarial."
+        ]
+      }
     },
     {
       "row": 6,
@@ -87,11 +116,17 @@
       "location": "Lima, Peru",
       "startDate": "2016",
       "endDate": "2019",
-      "summary": "",
-      "highlights": [
-        "Founded the bank's automation practice, delivering Scotiabank Latam's first production solution (USD 500K initial impact) and growing it into a standing team.",
-        "Led a team of 9 engineers, defining the governance model, engineering standards and security practices the area operated under."
-      ]
+      "summary": { "en": "", "es": "" },
+      "highlights": {
+        "en": [
+          "Founded the bank's automation practice, delivering Scotiabank Latam's first production solution (USD 500K initial impact) and growing it into a standing team.",
+          "Led a team of 9 engineers, defining the governance model, engineering standards and security practices the area operated under."
+        ],
+        "es": [
+          "Fundé la práctica de automatización del banco, entregando la primera solución en producción de Scotiabank Latam (USD 500K de impacto inicial) y convirtiéndola en un equipo permanente.",
+          "Lideré un equipo de 9 ingenieros, definiendo el modelo de gobierno, los estándares de ingeniería y las prácticas de seguridad bajo las que operaba el área."
+        ]
+      }
     },
     {
       "row": 5,
@@ -100,11 +135,17 @@
       "location": "Lima, Peru",
       "startDate": "2014",
       "endDate": "2016",
-      "summary": "",
-      "highlights": [
-        "Built the Wholesale Banking credit approval flow end to end, from proposal through disbursement across three core banking systems — origination, covenant tracking and credit line disbursement.",
-        "Built the web layer for savings account onboarding against an AS/400 COBOL core, cutting time per client from over an hour to five minutes and paper use by 95%."
-      ]
+      "summary": { "en": "", "es": "" },
+      "highlights": {
+        "en": [
+          "Built the Wholesale Banking credit approval flow end to end, from proposal through disbursement across three core banking systems — origination, covenant tracking and credit line disbursement.",
+          "Built the web layer for savings account onboarding against an AS/400 COBOL core, cutting time per client from over an hour to five minutes and paper use by 95%."
+        ],
+        "es": [
+          "Construí de extremo a extremo el flujo de aprobación de crédito de Banca Mayorista, desde la propuesta hasta el desembolso, sobre tres sistemas core bancarios — originación, seguimiento de covenants y desembolso de líneas de crédito.",
+          "Construí la capa web para la apertura de cuentas de ahorro contra un core AS/400 en COBOL, reduciendo el tiempo por cliente de más de una hora a cinco minutos y el uso de papel en 95%."
+        ]
+      }
     },
     {
       "row": 1,
@@ -113,8 +154,11 @@
       "location": "",
       "startDate": "2011",
       "endDate": "2014",
-      "summary": "Banking applications through two consultancies — loan processing, mortgage lending, and customer identification against RENIEC, Peru's national identity registry — and, at MINEDU, the nationwide admission system for Peru's pedagogical institutes.",
-      "highlights": []
+      "summary": {
+        "en": "Banking applications through two consultancies — loan processing, mortgage lending, and customer identification against RENIEC, Peru's national identity registry — and, at MINEDU, the nationwide admission system for Peru's pedagogical institutes.",
+        "es": "Aplicaciones bancarias a través de dos consultoras — procesamiento de préstamos, créditos hipotecarios e identificación de clientes contra RENIEC, el registro nacional de identidad de Perú — y, en MINEDU, el sistema nacional de admisión para los institutos pedagógicos del Perú."
+      },
+      "highlights": { "en": [], "es": [] }
     }
   ],
   "education": [

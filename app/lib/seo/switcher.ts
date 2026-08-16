@@ -96,15 +96,11 @@ function identityForRoute(
     // sends it to the home page in the other Locale.
     case "catchall":
       return index("/");
-    case "resume": {
-      // No loader (`resume/_resume.tsx`'s own note explains why), so `data`
-      // never arrives here. `existingLocales` mirrors that route's own
-      // `meta` — restricted to `["en"]` until #48 gives the Resume its
-      // Spanish text — for documentation only: `switcherDestination` never
-      // reads it for an `index`, because `/cv` is mounted in both branches
-      // today regardless (ADR 0010) and always resolves.
-      return { identity: { kind: "index", path: "/cv" }, existingLocales: ["en"] };
-    }
+    // No loader (`resume/_resume.tsx`'s own note explains why), so `data`
+    // never arrives here — `index()` needs none of it, the same as every
+    // other index below.
+    case "resume":
+      return index("/cv");
     case "blog-slug": {
       const doc = documentData(data);
       return doc && { identity: { kind: "post", slug: doc.slug, seriesSlug: null }, existingLocales: doc.existingLocales };

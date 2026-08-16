@@ -59,7 +59,7 @@ describe("switcherDestinationForRoute — the 404", () => {
 });
 
 describe("switcherDestinationForRoute — the Resume", () => {
-  it("goes to /es/cv even with no loader data and no Spanish text yet", () => {
+  it("goes to /es/cv even with no loader data", () => {
     // `/cv` is mounted in both branches today (ADR 0010) and always
     // resolves — unlike a Post, Series or Project, it is not a document that
     // can 404 for lacking a Translation, so the switcher does not need

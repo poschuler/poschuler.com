@@ -6,6 +6,7 @@ import { Hero } from "~/routes/resume/hero";
 import { Skills } from "~/routes/resume/skills";
 import { KeyboardManager } from "~/routes/resume/keyboard-manager";
 import type { MetaFunction } from "react-router";
+import { LOCALES, type Locale } from "~/context";
 import { documentAddresses } from "~/lib/seo/alternates";
 import { PERSON_CORE, SITE } from "~/lib/seo/person";
 import { basics, certificates, education, languages } from "~/routes/resume/resume.json";
@@ -23,10 +24,13 @@ import { basics, certificates, education, languages } from "~/routes/resume/resu
  *
  * `sameAs` is not restated either: it comes from `PERSON_CORE`, which derives
  * it from the same two profiles this page links to.
+ *
+ * `mainEntityOfPage` is deliberately not here — it is the one field that
+ * depends on the Locale the request arrived under, so `meta()` below adds it
+ * once it knows which one that is.
  */
-const PERSON = {
+const PERSON_BASE = {
   ...PERSON_CORE,
-  mainEntityOfPage: `${SITE}/cv`,
   email: `mailto:${basics.email}`,
   knowsLanguage: languages.map(({ language }) => language),
   alumniOf: education.map(({ institution, url }) => ({
@@ -59,16 +63,37 @@ const RESUME_DESCRIPTION =
  */
 
 /**
- * No loader, so no `locale` arrives from `localeContext` the way every other
- * page's does — deliberately, for the reason above this file's `meta` used to
- * carry alone. The route is mounted at `/cv` in both Locales (ADR 0010), but
- * this page still canonicalises at the English one until Phase 3's Part 8
- * gives the Resume its Spanish text (`evolution-plan/15-phase-3-spanish.md`),
- * so the Locale it renders is written here rather than threaded through a
- * loader added for this alone.
+ * The page's own Locale, read off `root.tsx`'s loader data through `matches`
+ * rather than a loader of this route's own — the same bridge `useLocale()`
+ * (`app/context.ts`) crosses for every component below this route, reached
+ * differently here only because `meta()` runs on the server with no component
+ * tree to call a hook from. `matches` is what `MetaFunction` hands every
+ * route regardless of whether it has a loader, so this costs nothing the
+ * route did not already have.
+ *
+ * Defaults to `"en"` the same way `useLocale()` does, so a match with no
+ * `loaderData` yet — never true in practice, since `root`'s loader always
+ * runs first — degrades to the site's default branch rather than throwing.
  */
-export const meta: MetaFunction = () => {
-  const { canonical } = documentAddresses({ kind: "index", path: "/cv" }, "en", ["en"]);
+function localeFromMatches(matches: Parameters<MetaFunction>[0]["matches"]): Locale {
+  const root = matches.find((match) => match.id === "root");
+
+  return (root?.loaderData as { locale?: Locale } | undefined)?.locale ?? "en";
+}
+
+/**
+ * `/cv` is mounted in both Locales (ADR 0010) and, since Phase 3's Part 8
+ * (`evolution-plan/15-phase-3-spanish.md`, #48), each branch now carries its
+ * own text — so unlike before, this page canonicalises at whichever address it
+ * was actually served from, `LOCALES` rather than `["en"]` for the same reason
+ * every other index passes it: `/cv` cannot 404 for lacking a Translation
+ * (`app/lib/seo/switcher.ts`'s own `resume` case), so both entries always
+ * resolve.
+ */
+export const meta: MetaFunction = ({ matches }) => {
+  const locale = localeFromMatches(matches);
+  const { canonical } = documentAddresses({ kind: "index", path: "/cv" }, locale, LOCALES);
+  const person = { ...PERSON_BASE, mainEntityOfPage: canonical };
 
   return [
     { title: RESUME_TITLE },
@@ -82,7 +107,7 @@ export const meta: MetaFunction = () => {
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
     { property: "og:url", content: canonical },
-    { "script:ld+json": PERSON },
+    { "script:ld+json": person },
   ];
 };
 

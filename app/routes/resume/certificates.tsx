@@ -1,10 +1,13 @@
 import { chip } from "~/components/chip";
+import { useStrings } from "~/lib/catalog";
 import { Section } from "./section";
 import { certificates } from "./resume.json";
 
 export function Certificates() {
+  let strings = useStrings();
+
   return (
-    <Section title="Certificates">
+    <Section title={strings.resume.headings.certificates}>
       {/* Two columns, not three. The page column is `max-w-measure`, so a third
         * column left each card about 200px — narrower than the certificate
         * names it has to hold. The `-mx-3` that pulled this grid outside the

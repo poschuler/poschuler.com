@@ -475,9 +475,12 @@ export function buildSitemapRoutes(
     0.5,
   );
 
-  // --- The Resume: `/cv` only, until #48 gives it Spanish text — the same
-  // restriction `app/lib/seo/switcher.ts`'s own `resume` case documents.
-  const cvRoutes = routesFor({ kind: "index", path: "/cv" }, ["en"], () => resumeLastmod, "monthly", 0.8);
+  // --- The Resume: both Locales, like Home, Bookmarks and Timeline above —
+  // `/cv` is mounted in both branches (ADR 0010) and, since Phase 3's Part 8
+  // (#48), each carries its own text, so there is no empty Locale to exclude.
+  // Dated by the same `resumeLastmod` on both sides: one document, one
+  // `meta.lastModified`, regardless of which Locale is asking.
+  const cvRoutes = routesFor({ kind: "index", path: "/cv" }, LOCALES, () => resumeLastmod, "monthly", 0.8);
 
   return [
     ...homeRoutes,
