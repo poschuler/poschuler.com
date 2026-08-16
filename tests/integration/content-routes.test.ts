@@ -93,9 +93,12 @@ describe("/ — the landing page", () => {
 });
 
 /**
- * `/blog` changed unit: loose Posts plus each Series as a single entry. A Part
- * appearing here individually would mean publishing part nine lengthens the
- * page, which is exactly what the change exists to prevent.
+ * `/blog` changed unit: loose Posts plus each Container — Series or Project —
+ * as a single entry. A Part or a Field Note appearing here individually would
+ * mean publishing part nine, or a new note, lengthens the page, which is
+ * exactly what the change exists to prevent. The fixtures carry no published
+ * Field Note (`field-notes.test.ts` covers a Project that has one), so this
+ * file only asserts a loose Post has no Container at all.
  */
 describe("/blog", () => {
   const load = () => blogLoader(routeArgs<ArgsOf<typeof blogLoader>>(platform, get("/blog")));
@@ -110,15 +113,18 @@ describe("/blog", () => {
       if (entry.kind === "post") {
         expect(entry.post.type).toBe("post");
         expect(entry.post.seriesSlug).toBeNull();
+        expect(entry.post.projectSlug).toBeNull();
       }
     }
   });
 
-  it("orders both units by date, newest first — a Series by its most recent Part", async () => {
+  it("orders every unit by date, newest first — a Container by its most recent child", async () => {
     const { entries } = await load();
-    const dates = entries.map((entry) =>
-      entry.kind === "post" ? entry.post.publishedAt : entry.series.publishedAt,
-    );
+    const dates = entries.map((entry) => {
+      if (entry.kind === "post") return entry.post.publishedAt;
+      if (entry.kind === "series") return entry.series.publishedAt;
+      return entry.project.publishedAt;
+    });
 
     expect(dates.every(Boolean)).toBe(true);
     expect(dates).toEqual([...dates].sort().reverse());

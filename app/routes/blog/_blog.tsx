@@ -1,38 +1,48 @@
 import { useLoaderData, type MetaFunction } from "react-router";
 import { findLoosePosts, type PostRowType } from "~/models/content.server";
 import { findAllSeries, type SeriesListingRowType } from "~/models/series.server";
+import { findProjectsWithNotes, type ProjectListingRowType } from "~/models/project.server";
 import { ContentItem } from "~/components/content-item";
 import { SeriesItem } from "~/components/series-item";
+import { ProjectItem } from "~/components/project-item";
 import type { Route } from "./+types/_blog";
 import { cloudflareContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 
-/** One row on this page: a loose Post, or a whole Series as a single entry. */
+/** One row on this page: a loose Post, or a whole Container — Series or Project — as a single entry. */
 type BlogEntry =
   | { kind: "post"; post: PostRowType }
-  | { kind: "series"; series: SeriesListingRowType };
+  | { kind: "series"; series: SeriesListingRowType }
+  | { kind: "project"; project: ProjectListingRowType };
 
 /**
- * `/blog` answers *what has this person written*, and a series is one thing
- * written — not fifteen. So it lists **loose Posts plus each Series as a single
- * entry**, linking to its landing. Publishing part nine updates a row here
- * instead of lengthening the page.
+ * `/blog` answers *what has this person written*, and a Container is one thing
+ * written — not fifteen. The rule generalises rather than gaining an exception
+ * for a Project: it lists **a Post with no Container, or a Container that holds
+ * Posts** — loose Posts, plus each Series and each Project with at least one
+ * published Field Note, all as single entries linking to their landing.
+ * Publishing part nine, or a new Field Note, updates a row here instead of
+ * lengthening the page.
  *
- * The alternative — loose Posts only, with series exclusively at `/series` — is
- * cleaner as a model and worse as a site: this page would hold one row while
- * most of the writing lived elsewhere, and `/blog` is the address a reader
- * guesses.
+ * The alternative — loose Posts only, with Series and Projects exclusively at
+ * their own indexes — is cleaner as a model and worse as a site: this page
+ * would hold one row while most of the writing lived elsewhere, and `/blog` is
+ * the address a reader guesses.
  *
- * A Series has no Published At, so it sorts by its **most recent** Part. Its
- * first would sink an actively-written series to the bottom. One with nothing
- * published yet is left out entirely: it is announced, not written, and
- * `/series` is the page that answers what is running.
+ * Neither Container has a Published At of its own, so each sorts by its **most
+ * recent** child. A Series' first Part would sink an actively-written series to
+ * the bottom; the same is true of a Project's first note. A Series with nothing
+ * published yet is left out entirely (`/series` answers what is running); a
+ * Project with no published notes is left out the same way, and `/projects`
+ * answers what exists — `findProjectsWithNotes` excludes it by construction, so
+ * nothing changes on this page until the first note publishes.
  */
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
-  const [posts, series] = await Promise.all([
+  const [posts, series, projects] = await Promise.all([
     findLoosePosts(env.POSCHULER_BD),
     findAllSeries(env.POSCHULER_BD),
+    findProjectsWithNotes(env.POSCHULER_BD),
   ]);
 
   const entries: BlogEntry[] = [
@@ -40,10 +50,14 @@ export async function loader({ context }: Route.LoaderArgs) {
     ...series
       .filter((one) => one.publishedAt !== null)
       .map((one): BlogEntry => ({ kind: "series", series: one })),
+    ...projects.map((project): BlogEntry => ({ kind: "project", project })),
   ];
 
-  const dateOf = (entry: BlogEntry) =>
-    entry.kind === "post" ? entry.post.publishedAt : (entry.series.publishedAt ?? "");
+  const dateOf = (entry: BlogEntry) => {
+    if (entry.kind === "post") return entry.post.publishedAt;
+    if (entry.kind === "series") return entry.series.publishedAt ?? "";
+    return entry.project.publishedAt;
+  };
 
   entries.sort((left, right) => dateOf(right).localeCompare(dateOf(left)));
 
@@ -88,17 +102,24 @@ export default function Blog() {
         </div>
       </section>
 
-      {/* `showKind` on the Series rows: this list interleaves two units, so a
-        * row that is a whole series has to say so before the reader clicks it
-        * expecting one article. */}
+      {/* `showKind` on the Series rows, and `ProjectItem` always says its own:
+        * this list interleaves three units, so a row that is a whole
+        * Container has to say so before the reader clicks it expecting one
+        * article. */}
       <section className="mx-auto w-full max-w-measure">
-        {entries.map((entry) =>
-          entry.kind === "post" ? (
-            <ContentItem key={`post:${entry.post.idContent}`} item={entry.post} />
-          ) : (
-            <SeriesItem key={`series:${entry.series.idSeries}`} series={entry.series} showKind />
-          ),
-        )}
+        {entries.map((entry) => {
+          if (entry.kind === "post") {
+            return <ContentItem key={`post:${entry.post.idContent}`} item={entry.post} />;
+          }
+
+          if (entry.kind === "series") {
+            return (
+              <SeriesItem key={`series:${entry.series.idSeries}`} series={entry.series} showKind />
+            );
+          }
+
+          return <ProjectItem key={`project:${entry.project.idProject}`} project={entry.project} />;
+        })}
       </section>
     </main>
   );

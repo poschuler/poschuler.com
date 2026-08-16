@@ -1,11 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { loader as blogLoader } from "~/routes/blog/_blog";
 import { loader as blogSlugLoader } from "~/routes/blog-slug/_$blog-slug";
 import { loader as projectNoteLoader } from "~/routes/project-note/_$project-note";
 import { loader as projectLandingLoader } from "~/routes/project-slug/_$project-slug";
 
 import { findLoosePosts } from "~/models/content.server";
-import { findProjectNotes } from "~/models/project.server";
+import { findProjectNotes, findProjectsWithNotes } from "~/models/project.server";
 
 import { kvKeyFor } from "../../seed/kv/kv-keys";
 import { openTestPlatform, routeArgs, type TestPlatform } from "../setup/platform";
@@ -126,6 +127,72 @@ describe("findProjectNotes", () => {
 
   it("returns nothing for a Project with no published notes", async () => {
     expect(await findProjectNotes(platform.env.POSCHULER_BD, "poschuler-com")).toEqual([]);
+  });
+});
+
+/**
+ * The read `/blog` needs to list a Project with Field Notes as a single entry
+ * (Part 10 of `evolution-plan/14-phase-1b-field-notes.md`).
+ */
+describe("findProjectsWithNotes", () => {
+  it("returns a Project with at least one published note, dated by the most recent", async () => {
+    const projects = await findProjectsWithNotes(platform.env.POSCHULER_BD);
+    const chekalo = projects.find((project) => project.slug === PROJECT_SLUG);
+
+    expect(chekalo?.publishedStringDate).toBe("2026-08-02");
+  });
+
+  it("omits a Project with no published notes", async () => {
+    const projects = await findProjectsWithNotes(platform.env.POSCHULER_BD);
+
+    expect(projects.some((project) => project.slug === "poschuler-com")).toBe(false);
+  });
+});
+
+/**
+ * `/blog` changes unit: a Project with Field Notes appears as one entry, not
+ * one per note (1b/6, Part 10).
+ */
+describe("/blog — a Project with Field Notes is one entry", () => {
+  const load = () => blogLoader(routeArgs<ArgsOf<typeof blogLoader>>(platform, get("/blog")));
+
+  it("appears exactly once, dated by its most recent note", async () => {
+    const { entries } = await load();
+    const projectEntries = entries.filter(
+      (entry) => entry.kind === "project" && entry.project.slug === PROJECT_SLUG,
+    );
+
+    expect(projectEntries).toHaveLength(1);
+    expect(
+      projectEntries[0]!.kind === "project" && projectEntries[0]!.project.publishedStringDate,
+    ).toBe("2026-08-02");
+  });
+
+  it("does not list either of its notes individually", async () => {
+    const { entries } = await load();
+    const postSlugs = entries
+      .filter((entry) => entry.kind === "post")
+      .map((entry) => entry.kind === "post" && entry.post.slug);
+
+    expect(postSlugs).not.toContain(NOTE_SLUG);
+    expect(postSlugs).not.toContain(NOTE_SLUG_2);
+  });
+
+  it("links to the Project landing", async () => {
+    const { entries } = await load();
+    const projectEntry = entries.find(
+      (entry) => entry.kind === "project" && entry.project.slug === PROJECT_SLUG,
+    );
+
+    expect(projectEntry?.kind === "project" && projectEntry.project.slug).toBe(PROJECT_SLUG);
+  });
+
+  it("leaves out a Project with no published notes", async () => {
+    const { entries } = await load();
+
+    expect(
+      entries.some((entry) => entry.kind === "project" && entry.project.slug === "poschuler-com"),
+    ).toBe(false);
   });
 });
 

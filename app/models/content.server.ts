@@ -109,9 +109,10 @@ export function findAllPosts(db: D1Database) {
  * page. Every other list — the Timeline, the home page — keeps Parts and Field
  * Notes individually, because their question is *what happened lately*.
  *
- * `/blog` does not list a Project-with-notes as an entry of its own yet — this
- * query only guarantees a Field Note is not double-counted as a loose Post the
- * day that lands (1b/6, `evolution-plan/14-phase-1b-field-notes.md` Part 10).
+ * `/blog` lists a Project-with-notes as an entry of its own — see
+ * `findProjectsWithNotes` — and this query is what keeps a Field Note from
+ * also being double-counted here as a loose Post (1b/6,
+ * `evolution-plan/14-phase-1b-field-notes.md` Part 10).
  */
 export function findLoosePosts(db: D1Database) {
   return findContent<PostRowType>(
