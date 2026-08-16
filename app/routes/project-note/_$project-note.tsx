@@ -4,9 +4,9 @@ import { cloudflareContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { validateRevisions } from "~/lib/revisions";
 import { findPostBySlug } from "~/models/content.server";
-import { findProjectBySlug } from "~/models/project.server";
+import { findProjectBySlug, findProjectNotes } from "~/models/project.server";
 import type { Route } from "./+types/_$project-note";
-import { ProjectBreadcrumb } from "./orientation";
+import { NoteSiblings, ProjectBreadcrumb } from "./orientation";
 
 const SITE = "https://poschuler.com";
 
@@ -46,7 +46,14 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     throw new Response("Not Found", { status: 404 });
   }
 
-  const post = await findPostBySlug(env.POSCHULER_BD, params.noteSlug, project.lang);
+  const [post, notes] = await Promise.all([
+    findPostBySlug(env.POSCHULER_BD, params.noteSlug, project.lang),
+    // The sibling list at the foot (Part 11 of
+    // `evolution-plan/14-phase-1b-field-notes.md`). Read alongside the Post
+    // rather than after it: whether this Slug 404s does not change whose
+    // notes the Project holds.
+    findProjectNotes(env.POSCHULER_BD, project.slug, project.lang),
+  ]);
 
   if (!post || post.projectSlug !== project.slug) {
     throw new Response("Not Found", { status: 404 });
@@ -85,6 +92,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     // A malformed list is caught at build time; a page is better off without
     // its revision line than not rendering at all.
     revisions: "revisions" in revisions ? revisions.revisions : [],
+    notes,
   };
 }
 
@@ -112,6 +120,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 export default function ProjectNote() {
   const {
+    slug,
     projectSlug,
     projectTitle,
     title,
@@ -120,6 +129,7 @@ export default function ProjectNote() {
     repository,
     revisions,
     html,
+    notes,
   } = useLoaderData<typeof loader>();
 
   return (
@@ -140,9 +150,17 @@ export default function ProjectNote() {
         html={html}
       />
 
-      {/* No sibling notes and no link back to the Project here — that index
-        * is 1b/5 (`evolution-plan/14-phase-1b-field-notes.md` Part 11). No
-        * previous/next, ever: a Project promises no reading order. */}
+      {/* No previous/next, ever: a Project promises no reading order. What
+        * is offered instead is the other notes and the way back to the
+        * Project (Part 11 of `evolution-plan/14-phase-1b-field-notes.md`) —
+        * `NoteSiblings` renders nothing when there is only one note, and
+        * carries its own layout so nothing renders around it either. */}
+      <NoteSiblings
+        projectSlug={projectSlug}
+        projectTitle={projectTitle}
+        notes={notes}
+        currentSlug={slug}
+      />
     </main>
   );
 }

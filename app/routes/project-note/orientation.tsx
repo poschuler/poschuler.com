@@ -1,5 +1,6 @@
 import { Link } from "react-router";
-import { projectHref } from "~/lib/hrefs";
+import { postHref, projectHref } from "~/lib/hrefs";
+import type { ProjectNoteRowType } from "~/models/project.server";
 
 /**
  * The Project named above a Field Note's title (Part 11 of
@@ -36,6 +37,65 @@ export function ProjectBreadcrumb({
           </Link>
         </li>
       </ol>
+    </nav>
+  );
+}
+
+/**
+ * The way onward, at the foot of a note (Part 11 of
+ * `evolution-plan/14-phase-1b-field-notes.md`). `SectionIndex` in
+ * `series-part/orientation.tsx` is the same idea for a Part's neighbours
+ * inside its section; this is its Project sibling — a flat list rather than
+ * one grouped by section, because a Project declares no sections.
+ *
+ * `notes` is the Project's whole manifest order; the current note is filtered
+ * out here rather than by the caller, so the "only one note" rule — do not
+ * render at all — and the sibling list stay one computation instead of two
+ * that have to agree.
+ *
+ * **No previous/next.** A Project promises no reading order, so nothing here
+ * claims one.
+ */
+export function NoteSiblings({
+  projectSlug,
+  projectTitle,
+  notes,
+  currentSlug,
+}: {
+  projectSlug: string;
+  projectTitle: string;
+  notes: ProjectNoteRowType[];
+  currentSlug: string;
+}) {
+  const siblings = notes.filter((note) => note.slug !== currentSlug);
+
+  if (siblings.length === 0) {
+    return null;
+  }
+
+  return (
+    <nav
+      aria-label={`More Field Notes from ${projectTitle}`}
+      className="mx-auto mt-8 w-full max-w-measure space-y-4 border-default border-t pt-6 pb-8"
+    >
+      <p className="font-semibold text-sm">More Field Notes from {projectTitle}</p>
+
+      <ol className="space-y-1 text-sm">
+        {siblings.map((note) => (
+          <li key={note.slug}>
+            <Link
+              to={postHref({ slug: note.slug, seriesSlug: null, projectSlug })}
+              className={`text-low ${linkClassName}`}
+            >
+              {note.title}
+            </Link>
+          </li>
+        ))}
+      </ol>
+
+      <Link to={projectHref(projectSlug)} className={`block text-low text-sm ${linkClassName}`}>
+        → {projectTitle}, the project
+      </Link>
     </nav>
   );
 }

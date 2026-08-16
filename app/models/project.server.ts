@@ -109,3 +109,43 @@ export async function findProjectBySlug(db: D1Database, slug: string, lang = "en
 
   return rows[0] ? hydrate(rows[0]) : null;
 }
+
+/** A Field Note as a Project's index and sibling list need it — no more. */
+export type ProjectNoteRowType = {
+  slug: string;
+  title: string;
+  /** The line a listing shows under the title. `null` is rendered as absent. */
+  summary: string | null;
+  publishedStringDate: string;
+};
+
+/**
+ * The published Field Notes of one Project, in manifest order (Part 8 of
+ * `evolution-plan/14-phase-1b-field-notes.md`) — the order the author chose,
+ * not the order they were written, so the strongest note can lead.
+ *
+ * A Draft holds no `content` row at all, so it is absent from this list by
+ * construction, and reappears in the position it already had the moment its
+ * flag is deleted. Both the landing's index and a note's sibling list read
+ * this same query — the landing renders it whole, a note filters its own
+ * Slug out — so the order is computed once.
+ */
+export async function findProjectNotes(
+  db: D1Database,
+  projectSlug: string,
+  lang = "en",
+): Promise<ProjectNoteRowType[]> {
+  return dbQuery<ProjectNoteRowType>(
+    db,
+    `select
+        slug as "slug",
+        title as "title",
+        description as "summary",
+        strftime('%Y-%m-%d', published_at) as "publishedStringDate"
+      from content
+      where type = 'post' and project_slug = ? and lang = ?
+      order by container_order asc
+    `,
+    [projectSlug, lang],
+  );
+}
