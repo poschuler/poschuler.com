@@ -53,6 +53,13 @@ const part = (
   publishedStringDate: string,
 ): SitemapContentItem => ({ slug, type: "post", publishedStringDate, seriesSlug });
 
+/** A Field Note: a Post whose Container is a Project rather than a Series. */
+const note = (
+  slug: string,
+  projectSlug: string,
+  publishedStringDate: string,
+): SitemapContentItem => ({ slug, type: "post", publishedStringDate, projectSlug });
+
 /** `updates` arrives as the stored JSON string, the form the column holds. */
 const project = (slug: string, ...dates: string[]): SitemapProject => ({
   slug,
@@ -281,6 +288,66 @@ describe("a Series in the sitemap", () => {
 
     expect(urls).not.toContain("/series");
     expect(urls.some((url) => url.startsWith("/series/"))).toBe(false);
+  });
+});
+
+/**
+ * A Field Note is a Post whose Container is a Project (1b/7), served under it
+ * the same way a Part is served under its Series. A Draft never reaches this
+ * seam at all — it produces no `content` row, so there is nothing here to
+ * filter; what these assert is that a published note gets a URL, and that
+ * nothing here invents one for a Slug that was never passed in.
+ */
+describe("a Field Note in the sitemap", () => {
+  const withNotes = [
+    note("product-matching", "chekalo", "2026-08-15"),
+    item("a-loose-post", "post", "2026-01-15"),
+  ];
+
+  const projects: SitemapProject[] = [project("chekalo", "2025-01-01")];
+
+  it("serves a published note under its Project, never under /blog", () => {
+    const urls = urlsOf(routesFor(withNotes, FALLBACK, RESUME_LASTMOD, projects));
+
+    expect(urls).toContain("/projects/chekalo/product-matching");
+    expect(urls).not.toContain("/blog/product-matching");
+    expect(urls).toContain("/blog/a-loose-post");
+  });
+
+  /**
+   * A Draft produces no `content` row, so it is never in `items` to begin
+   * with — the same reason it 404s at its own route. This is that absence,
+   * asserted the only way it can be from this seam: nothing but the one
+   * published note's own Slug appears under `/projects/chekalo/`.
+   */
+  it("advertises no address for a Draft, because a Draft is never in the list to begin with", () => {
+    const urls = urlsOf(routesFor(withNotes, FALLBACK, RESUME_LASTMOD, projects));
+    const chekaloUrls = urls.filter((url) => url.startsWith("/projects/chekalo/"));
+
+    expect(chekaloUrls).toEqual(["/projects/chekalo/product-matching"]);
+  });
+
+  it("dates a note by its latest revision, like any other Post", () => {
+    const revised: SitemapContentItem = {
+      ...note("product-matching", "chekalo", "2026-08-15"),
+      updates: JSON.stringify([{ date: "2026-09-01", note: "Clarified the diagram." }]),
+    };
+    const routes = routesFor([revised], FALLBACK, RESUME_LASTMOD, projects);
+
+    expect(routes.find((route) => route.url === "/projects/chekalo/product-matching")?.lastmod).toBe(
+      "2026-09-01",
+    );
+  });
+
+  /**
+   * Unlike a Series landing, a Project's own `lastmod` does not follow its
+   * notes — `SitemapProject`'s own doc explains why: a Project is revised in
+   * place, and its own revisions are the only date it has.
+   */
+  it("does not let a note's date move its Project's own landing", () => {
+    const routes = routesFor(withNotes, FALLBACK, RESUME_LASTMOD, projects);
+
+    expect(routes.find((route) => route.url === "/projects/chekalo")?.lastmod).toBe("2025-01-01");
   });
 });
 

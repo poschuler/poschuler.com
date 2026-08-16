@@ -6,6 +6,7 @@ import {
   breadcrumbList,
   creativeWorkSeries,
   HOME_CRUMB,
+  projectId,
   seriesId,
 } from "~/lib/seo/structured-data";
 
@@ -23,6 +24,14 @@ const PART = {
   description: "Where a Node.js project's structure comes from.",
   datePublished: "2025-12-25",
   seriesSlug: "pragmatic-nodejs-api",
+};
+
+const NOTE = {
+  path: "/projects/chekalo/product-matching",
+  title: "Matching products across retailers without a shared id",
+  description: "The problem, and the shape of the solution.",
+  datePublished: "2026-08-15",
+  projectSlug: "chekalo",
 };
 
 describe("blogPosting", () => {
@@ -79,6 +88,18 @@ describe("blogPosting", () => {
   it("says nothing about containment for a Post that has no Container", () => {
     expect(blogPosting({ ...PART, seriesSlug: null })).not.toHaveProperty("isPartOf");
     expect(blogPosting({ ...PART, seriesSlug: undefined })).not.toHaveProperty("isPartOf");
+  });
+
+  /** A Field Note's Container is a Project, not a Series (Part 11 of the field notes). */
+  it("attaches a Field Note to its Project by the identifier the landing declares", () => {
+    const article = blogPosting(NOTE);
+
+    expect(article.isPartOf).toEqual({ "@id": projectId("chekalo") });
+  });
+
+  it("says nothing about containment for a Field Note with no projectSlug given", () => {
+    expect(blogPosting({ ...NOTE, projectSlug: null })).not.toHaveProperty("isPartOf");
+    expect(blogPosting({ ...NOTE, projectSlug: undefined })).not.toHaveProperty("isPartOf");
   });
 });
 

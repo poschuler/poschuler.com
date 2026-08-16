@@ -26,6 +26,12 @@ export type SitemapContentItem = {
    * since the route started redirecting.
    */
   seriesSlug?: string | null;
+  /**
+   * The other Container a Post can have — a Field Note is served under its
+   * Project the same way a Part is served under its Series, and for the same
+   * reason: `/blog/<slug>` redirects it rather than serving it.
+   */
+  projectSlug?: string | null;
 };
 
 /**
@@ -124,9 +130,11 @@ export function buildSitemapRoutes(
 ): SitemapRoute[] {
   const posts = items.filter((item) => item.type === "post");
   const bookmarks = items.filter((item) => item.type === "link");
-  // A Part is served under its Container; everything else under `/blog`.
+  // A Part or a Field Note is served under its Container; everything else
+  // under `/blog`.
   const parts = posts.filter((post) => post.seriesSlug);
-  const loosePosts = posts.filter((post) => !post.seriesSlug);
+  const notes = posts.filter((post) => post.projectSlug);
+  const loosePosts = posts.filter((post) => !post.seriesSlug && !post.projectSlug);
 
   const lastModOf = (list: SitemapContentItem[]) =>
     list.length > 0 ? list[0].publishedStringDate : fallbackLastmod;
@@ -141,6 +149,21 @@ export function buildSitemapRoutes(
     latestRevision(parseRevisions(document.updates ?? "[]"))?.date ?? fallback;
 
   const newest = (dates: string[]) => dates.reduce((a, b) => (a > b ? a : b));
+
+  /**
+   * A Part's or a Field Note's own date, revisions included — the same rule
+   * every other Post follows. Shared between the two rather than duplicated:
+   * both read the same two columns of the same table, only the Container
+   * differs.
+   *
+   * It is also what dates a Series landing above its Parts — the newest thing
+   * that happened to a Series is the newest thing that happened to one of its
+   * Parts. **Not** so for a Project: `SitemapProject`'s own doc explains why —
+   * a Project is revised in place and dated by its own revisions, not by what
+   * was written about it, so a note's date never reaches `/projects/<slug>`.
+   */
+  const containedPostLastmod = (post: SitemapContentItem) =>
+    revisedAt(post, post.publishedStringDate);
 
   // Dated by the most recently revised project, not by a clock and not by the
   // index page's own existence.
@@ -159,19 +182,17 @@ export function buildSitemapRoutes(
             changefreq: "monthly" as const,
             priority: 0.7,
           })),
+          ...notes.map((note) => ({
+            url: `/projects/${note.projectSlug}/${note.slug}`,
+            lastmod: containedPostLastmod(note),
+            changefreq: "monthly" as const,
+            priority: 0.7,
+          })),
         ]
       : [];
 
-  /**
-   * A Part's own date, revisions included — the same rule every other Post
-   * follows. It is also what dates the landing above it, because the newest
-   * thing that happened to a Series is the newest thing that happened to one of
-   * its Parts.
-   */
-  const partLastmod = (part: SitemapContentItem) => revisedAt(part, part.publishedStringDate);
-
   const seriesLastmod = (slug: string) => {
-    const dates = parts.filter((part) => part.seriesSlug === slug).map(partLastmod);
+    const dates = parts.filter((part) => part.seriesSlug === slug).map(containedPostLastmod);
 
     // A Series exists the moment it is announced — the arc is the point, not
     // the word count — so a landing with nothing published behind it is an
@@ -196,7 +217,7 @@ export function buildSitemapRoutes(
           })),
           ...parts.map((part) => ({
             url: `/series/${part.seriesSlug}/${part.slug}`,
-            lastmod: partLastmod(part),
+            lastmod: containedPostLastmod(part),
             changefreq: "monthly" as const,
             priority: 0.7,
           })),

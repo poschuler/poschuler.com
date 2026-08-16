@@ -3,6 +3,7 @@ import { PostArticle } from "~/components/post-article";
 import { cloudflareContext } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { validateRevisions } from "~/lib/revisions";
+import { blogPosting, breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
 import { findPostBySlug } from "~/models/content.server";
 import { findProjectBySlug, findProjectNotes } from "~/models/project.server";
 import type { Route } from "./+types/_$project-note";
@@ -99,7 +100,8 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  const { title, description, projectSlug, slug } = loaderData;
+  const { title, description, projectSlug, projectTitle, slug, datePublished, revisions } =
+    loaderData;
   const path = `/projects/${projectSlug}/${slug}`;
   const url = `${SITE}${path}`;
 
@@ -115,6 +117,28 @@ export function meta({ loaderData }: Route.MetaArgs) {
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "article" },
     { property: "og:url", content: url },
+    {
+      "script:ld+json": blogPosting({
+        path,
+        title,
+        description,
+        datePublished,
+        // Newest first, guaranteed by `validateRevisions`.
+        dateRevised: revisions[0]?.date,
+        projectSlug,
+      }),
+    },
+    // Home › Projects › the Project › this note — four levels, none of them
+    // a claim the site cannot back with a URL (Part 11 of
+    // `evolution-plan/14-phase-1b-field-notes.md`).
+    {
+      "script:ld+json": breadcrumbList([
+        HOME_CRUMB,
+        { name: "Projects", path: "/projects" },
+        { name: projectTitle, path: `/projects/${projectSlug}` },
+        { name: title, path },
+      ]),
+    },
   ];
 }
 
