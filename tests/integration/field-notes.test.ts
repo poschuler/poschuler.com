@@ -47,10 +47,10 @@ async function insertNote(
 ) {
   await platform.env.POSCHULER_BD.prepare(
     `insert into content
-      (slug, lang, type, title, description, published_at, project_slug, section_order, container_order)
-      values (?, 'en', 'post', ?, ?, ?, ?, ?, ?)`,
+      (slug, lang, type, title, description, published_at, project_slug, container_order)
+      values (?, 'en', 'post', ?, ?, ?, ?, ?)`,
   )
-    .bind(slug, title, summary, `2026-08-0${order + 1}`, projectSlug, order, order)
+    .bind(slug, title, summary, `2026-08-0${order + 1}`, projectSlug, order)
     .run();
 
   const key = kvKeyFor(`blog/${slug}.en.json`);

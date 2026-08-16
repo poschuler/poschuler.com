@@ -135,13 +135,13 @@ describe("contentRowFor — Posts", () => {
       VOCABULARY,
     ) as SeededRow;
 
-    expect(row.statement).toContain("(slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, project_slug, section_order, container_order, updated_at)");
+    expect(row.statement).toContain("(slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, project_slug, container_order, updated_at)");
     expect(row.statement).not.toContain("external_url");
   });
 
   /**
    * The Container columns travel together or not at all, which is why nothing
-   * checks that they do: a loose Post is written with five NULLs rather than
+   * checks that they do: a loose Post is written with four NULLs rather than
    * with the columns omitted, so a Post that leaves a Series or a Project
    * cannot keep half of one.
    */
@@ -152,7 +152,7 @@ describe("contentRowFor — Posts", () => {
       VOCABULARY,
     ) as SeededRow;
 
-    expect(row.statement).toContain("'[]', NULL, NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'[]', NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP)");
   });
 
   /**
@@ -396,7 +396,7 @@ describe("contentRowFor — Parts of a Series", () => {
     const row = contentRowFor(partPath, post(), VOCABULARY, placement) as SeededRow;
 
     expect(row.key).toBe("project-setup:en");
-    expect(row.statement).toContain("'pragmatic-nodejs-api', 'fundamentals', NULL, 1, 1, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'pragmatic-nodejs-api', 'fundamentals', NULL, 1, CURRENT_TIMESTAMP)");
   });
 
   /** Zero is a position, and a falsy one. It must survive the round trip. */
@@ -406,23 +406,28 @@ describe("contentRowFor — Parts of a Series", () => {
       order: 0,
     }) as SeededRow;
 
-    expect(row.statement).toContain("'fundamentals', NULL, 0, 0, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'fundamentals', NULL, 0, CURRENT_TIMESTAMP)");
   });
 
   /**
-   * `container_order` is what every query reads now; `section_order` stays
-   * only for the previously deployed Worker, still asking for it by that name
-   * during this publication's migrate-then-deploy window. Both have to carry
-   * the same position, or that Worker and the one about to replace it would
-   * disagree about where a Part sits.
+   * What *writes both order columns with the same value* became. Its invariant
+   * went with the column: `section_order` was written beside `container_order`,
+   * unread, for the Worker still deployed during the rename's expand step, and
+   * `0007` dropped it once that publication was live.
+   *
+   * What is left worth pinning is that there is no second copy at all — the
+   * statement names one order column and carries one position. The
+   * `not.toContain` is the load-bearing half; the position is asserted beside
+   * it so the test cannot pass against a statement that writes nothing.
    */
-  it("writes both order columns with the same value", () => {
+  it("writes the position once, into the only order column left", () => {
     const row = contentRowFor(partPath, post(), VOCABULARY, {
       ...placement,
       order: 3,
     }) as SeededRow;
 
-    expect(row.statement).toContain("'fundamentals', NULL, 3, 3, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'fundamentals', NULL, 3, CURRENT_TIMESTAMP)");
+    expect(row.statement).not.toContain("section_order");
   });
 
   /**
@@ -488,17 +493,22 @@ describe("contentRowFor — Field Notes of a Project", () => {
     const row = contentRowFor(notePath, post(), VOCABULARY, placement) as SeededRow;
 
     expect(row.key).toBe("product-matching:en");
-    expect(row.statement).toContain("NULL, NULL, 'chekalo', 0, 0, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("NULL, NULL, 'chekalo', 0, CURRENT_TIMESTAMP)");
   });
 
-  /** Both order columns carry the same value, as a Part's do. */
-  it("writes both order columns with the same value", () => {
+  /**
+   * As a Part's is — and with a non-zero position, because the test above
+   * uses zero and a generator that wrote `0` whatever the manifest said would
+   * satisfy that one.
+   */
+  it("writes the position once, into the only order column left", () => {
     const row = contentRowFor(notePath, post(), VOCABULARY, {
       ...placement,
       order: 2,
     }) as SeededRow;
 
-    expect(row.statement).toContain("'chekalo', 2, 2, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'chekalo', 2, CURRENT_TIMESTAMP)");
+    expect(row.statement).not.toContain("section_order");
   });
 
   /**

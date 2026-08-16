@@ -77,10 +77,11 @@ A Post's Container is recorded on `content` as `series_slug` + `series_section`
 for a Series, or `project_slug` for a Project — never both — plus
 `container_order` for its position in whichever list holds it. `schema.sql`
 carries the reasoning for why that is two specific columns rather than one
-generic pair, and for `container_order` replacing `section_order` under an
-expand-and-contract rename still mid-flight: the previously deployed Worker
-reads the old name until the publication that switches it is confirmed live
-(ADR 0006, amended).
+generic pair, and for `container_order` having replaced `section_order` — a
+rename that could not be one statement, so it took two publications: `0006`
+added the new column and `0007` dropped the old one, once the Worker reading
+the new name was the one serving (ADR 0006, amended). `section_order` survives
+only on `series_section`, where it means a section's position within the arc.
 
 A document under any tree may declare itself a Draft (`draft: true`) rather
 than being placed outside it — checked exactly as strictly as a published one,
@@ -134,7 +135,7 @@ The primary key is `(slug, lang, tag)`, plus a partial unique index on `(slug, t
 
 Rows exist for both kinds, and which of them a page lists is a policy of the page: `app/models/tag.server.ts` filters to `type = 'post'` in both queries, so a Tag page and its count on the index describe the same set. Deciding at render is what lets that policy change without a migration.
 
-`content` used to carry a JSON `tags` column, seeded from the front matter and read by nothing once `content_tag` arrived. Migration `0005` dropped it, in the publication *after* the one that stopped selecting it — ADR 0006's amendment says why that order is not optional, and this column is its worked example.
+`content` used to carry a JSON `tags` column, seeded from the front matter and read by nothing once `content_tag` arrived. Migration `0005` dropped it, in the publication *after* the one that stopped selecting it — ADR 0006's amendment says why that order is not optional, and this column is the first of its two worked examples. The second is the `section_order` → `container_order` rename above, which cost two publications rather than three because its reader moved in the expand step.
 
 The row types encode the same split as the indexes: `ContentRowType` is `PostRowType | BookmarkRowType`, discriminated on `type`, so the columns a kind does not carry are typed `null` rather than `string`.
 

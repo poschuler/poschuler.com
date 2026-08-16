@@ -339,21 +339,20 @@ export function contentRowFor(
     // never both — which is why the invariant that they are all present or
     // all absent is not checked anywhere: it is not representable.
     //
-    // The position is written twice, once per order column: `container_order`
-    // is the one every query reads, and `section_order` is written beside it,
-    // unread, only because the previously deployed Worker still asks for it by
-    // that name during this publication's migrate-then-deploy window (ADR
-    // 0006's amendment). Dropped, and this duplication with it, once that
-    // publication is confirmed live.
+    // The position is written once, into `container_order`. It was written
+    // twice for one publication: `section_order` carried the same value,
+    // unread, because the Worker deployed while `0006` ran still asked for it
+    // by that name (ADR 0006's amendment). `0007` dropped the column once that
+    // publication was live, and this duplication went with it.
     const containerColumns = !container
-      ? "NULL, NULL, NULL, NULL, NULL"
+      ? "NULL, NULL, NULL, NULL"
       : isPartPlacement(container)
-        ? `${escapeSql(container.seriesSlug)}, ${escapeSql(container.section)}, NULL, ${container.order}, ${container.order}`
-        : `NULL, NULL, ${escapeSql(container.projectSlug)}, ${container.order}, ${container.order}`;
+        ? `${escapeSql(container.seriesSlug)}, ${escapeSql(container.section)}, NULL, ${container.order}`
+        : `NULL, NULL, ${escapeSql(container.projectSlug)}, ${container.order}`;
 
     return {
       statement: `
-INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, project_slug, section_order, container_order, updated_at)
+INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, project_slug, container_order, updated_at)
 VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attributes.description)}, ${publishedAt}, ${escapeSql(attributes.repository)}, ${escapeSql(JSON.stringify(revisions.revisions))}, ${containerColumns}, CURRENT_TIMESTAMP);
 `,
       key: `${slug}:${lang}`,

@@ -158,8 +158,9 @@ type ArcJoinRow = {
  * the article, and previous/next are positions inside it. Ordering is
  * `series_section.section_order` — the position of a section in the
  * manifest's list — and `content.container_order` — the position of a Part in
- * that section's. Two different columns now, not one name meaning both: see
- * `schema.sql` and migration 0006. Neither number appears in any content file.
+ * that section's. Two different columns, not one name meaning both: see
+ * `schema.sql` and migrations 0006 and 0007, which renamed the second across
+ * two publications. Neither number appears in any content file.
  *
  * The `left join` is what keeps a planned section in the result. It renders on
  * the landing with its summary and no list, and it is what a finished section
