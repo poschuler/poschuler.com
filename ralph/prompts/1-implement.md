@@ -71,8 +71,10 @@ Skip nothing, and keep the order:
 
 6. **Commit to the current branch**, one commit, in this repo's commit format.
 
-7. **Close the issue with the report below.** If the issue names a PRD and this
-   was its last open child, close the PRD too, with a summary comment.
+7. **Close the issue with the report below.** Close this issue and no other —
+   the map above it, if it has one, is not yours to touch. The runner asks
+   whether every child has landed once the whole batch is done, which is a
+   question it can answer and you cannot: you only ever see one ticket.
 
 ## The closing comment
 

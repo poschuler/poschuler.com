@@ -109,6 +109,9 @@ RALPH_BLOCK_CODE_REVIEW="${RALPH_BLOCK_CODE_REVIEW:-1}"
 # Run the repo's pre-commit checklist after every commit a session makes,
 # instead of taking its word that it did. Set to 0 to trust the sessions.
 RALPH_VERIFY="${RALPH_VERIFY:-1}"
+# When every child of a map is closed, close the map too. Set to 0 to leave
+# every parent for you.
+RALPH_CLOSE_PARENT="${RALPH_CLOSE_PARENT:-1}"
 # What that checklist is. Defaults to the five commands AGENTS.md names, in the
 # order CI runs them — cheap checks first, the one needing a build last.
 if [[ -z "${RALPH_CHECKLIST+x}" ]]; then
@@ -357,6 +360,79 @@ issue_advisory() {
   [[ -n "$findings" ]] || return 0
 
   printf '**#%s** — [the review](%s)\n%s\n' "$issue" "$url" "$findings"
+}
+
+# ── The map above a ticket, and closing it when its last child lands ─────────
+# This used to be the implementation session's errand — "if the issue names a
+# PRD and this was its last open child, close the PRD too" — and it never once
+# fired, for a reason worth keeping: the prompt looked for a `PRD: #NN` line
+# that no issue in this repo has ever carried. Meanwhile `RALPH.md` documented
+# that line as the mechanism, and `docs/agents/issue-tracker.md` documented
+# native sub-issues as the convention. Three conventions, none of them running.
+#
+# It is also work a script does better: "are all the siblings closed" is a
+# question with an answer, not a judgement, and asking a model to walk it costs
+# tokens to get a worse version of `wc -l`.
+#
+# issue_parent <issue> — the map's number, or empty. Native sub-issue first,
+# since that is what issue-tracker.md calls a child ticket and what GitHub can
+# answer in both directions; then the `## Parent` section every issue here
+# actually writes. One call: the native field and the body come back together.
+issue_parent() {
+  local issue="$1" raw native
+  raw="$(gh api "repos/{owner}/{repo}/issues/$issue" \
+    --jq '((.parent.number // "") | tostring) + "\n" + (.body // "")' 2>/dev/null)" || return 0
+  native="$(head -1 <<< "$raw")"
+  if [[ -n "$native" ]]; then printf '%s\n' "$native"; return 0; fi
+  awk 'NR==1{next}
+       /^##[[:space:]]+Parent/{f=1; next}
+       f && match($0, /#[0-9]+/){print substr($0, RSTART + 1, RLENGTH - 1); exit}' <<< "$raw"
+}
+
+# parent_children <parent> — "<number> <state>" per child, native first and a
+# body scan second. The scan reads every issue in the repo, which is affordable
+# here and would not be in a big one; it only runs when the map has no native
+# children at all.
+parent_children() {
+  local parent="$1" native
+  native="$(gh api "repos/{owner}/{repo}/issues/$parent/sub_issues?per_page=100" \
+    --jq '.[] | "\(.number) \(.state)"' 2>/dev/null)"
+  if [[ -n "$native" ]]; then printf '%s\n' "$native"; return 0; fi
+  gh api --paginate "repos/{owner}/{repo}/issues?state=all&per_page=100" \
+    --jq '.[] | select(.pull_request == null) | {number, state, body}' 2>/dev/null |
+    jq -r --arg p "#$parent" 'select(.body != null)
+      | select(.body | test("(^|\n)##[ \t]+Parent[ \t]*\r?\n+[ \t]*" + $p + "\\b"))
+      | "\(.number) \(.state)"'
+}
+
+# close_parent_if_done <parent> — close it only when every child has landed.
+# Never fails the run: this is bookkeeping at the end of the work, and a map
+# left open costs a glance, while a run aborted over one costs the batch.
+close_parent_if_done() {
+  local parent="$1" state children still_open lines
+  state="$(gh api "repos/{owner}/{repo}/issues/$parent" --jq .state 2>/dev/null)" || return 0
+  if [[ "$state" != "open" ]]; then return 0; fi
+
+  children="$(parent_children "$parent")"
+  if [[ -z "$children" ]]; then
+    echo "ralph: #$parent — no children found, leaving it open."
+    return 0
+  fi
+  still_open="$(awk '$2 == "open" { printf " #%s", $1 }' <<< "$children")"
+  if [[ -n "$still_open" ]]; then
+    echo "ralph: #$parent stays open —$still_open still to land."
+    return 0
+  fi
+
+  lines="$(awk '{ printf "- #%s\n", $1 }' <<< "$children")"
+  if gh issue comment "$parent" --body "Every child of this map has landed:
+
+$lines
+Closed by ralph run $RUN_TS." >/dev/null 2>&1 && gh issue close "$parent" >/dev/null 2>&1; then
+    echo "ralph: #$parent closed — every child landed."
+  else
+    echo "ralph: #$parent — could not be closed (GitHub unreadable?); close it by hand." >&2
+  fi
 }
 
 # The FIXABLE count out of a verdict line ("" when there is no line).
@@ -999,6 +1075,20 @@ for n in "${ISSUE_NUMBERS[@]}"; do
     fi
   fi
 done
+
+# Maps whose last child may have landed in this run — asked once per map, after
+# the whole list drains rather than inside it, so a batch that works three
+# siblings asks once instead of three times.
+if [[ "$RALPH_CLOSE_PARENT" == "1" && "${#PROCESSED_ISSUES[@]}" -gt 0 ]]; then
+  declare -A SEEN_PARENTS=()
+  for n in "${PROCESSED_ISSUES[@]}"; do
+    parent="$(issue_parent "$n")"
+    [[ -n "$parent" ]] || continue
+    [[ -z "${SEEN_PARENTS[$parent]:-}" ]] || continue
+    SEEN_PARENTS[$parent]=1
+    close_parent_if_done "$parent"
+  done
+fi
 
 open_pr "$WORKDIR"
 cd "$REPO_ROOT"

@@ -81,6 +81,12 @@ RALPH_BLOCK_CODE_REVIEW=1
 # session the checklist is the runner's job, which stops being true if you do.
 RALPH_VERIFY=1
 
+# When every child of a map is closed, close the map too. Ralph finds the map
+# through GitHub's native sub-issue link first, and falls back to the `## Parent`
+# section the issues in this repo actually write. It runs once per map after the
+# whole list drains, and never fails a run: a map left open costs a glance.
+RALPH_CLOSE_PARENT=1
+
 # What that checklist is: one command per entry, run in this order, each retried
 # once before it counts as red (two of these rebuild the local D1 and can col-
 # lide with a session that was just using it). Defaults to the five commands

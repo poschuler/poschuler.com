@@ -158,6 +158,7 @@ describe("expectationFrom — placement and Locale", () => {
 
     const expectation = expectationFrom(docs);
 
+    expect(expectation.project).toEqual(new Set(["chekalo:en"]));
     expect(expectation.content.size).toBe(0);
     expect(expectation.series.size).toBe(0);
   });
@@ -299,6 +300,25 @@ describe("expectationFrom — the Container columns", () => {
     ];
 
     expect(expectationFrom(docs).containers.get("onboarding-flow:en")?.containerOrder).toBe(1);
+  });
+
+  /**
+   * Settles #56's own review, where the Spec axis called this a gap and the
+   * Tests axis called the suite sound: the loose-Post test above covers the
+   * same empty-Container shape, but a Bookmark reaches it through a different
+   * branch and under a different identity — Slug with an empty Locale, not
+   * Slug with a Locale. Asserting the identity, not only the columns, is what
+   * catches a mis-keyed entry rather than only a missing one.
+   */
+  it("expects a Bookmark to have no Container, keyed by its Slug with an empty Locale", () => {
+    const docs = [document("bookmarks/how-i-would-do-auth.md")];
+
+    expect(expectationFrom(docs).containers.get("how-i-would-do-auth:")).toEqual({
+      seriesSlug: null,
+      seriesSection: null,
+      projectSlug: null,
+      containerOrder: null,
+    });
   });
 });
 
