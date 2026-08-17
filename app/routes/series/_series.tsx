@@ -5,7 +5,8 @@ import { cloudflareContext, localeContext, LOCALES } from "~/context";
 import { useStrings } from "~/lib/catalog";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { alternateLinks, documentAddresses, emptyIndexRobots } from "~/lib/seo/alternates";
-import { breadcrumbList, siteCrumb } from "~/lib/seo/structured-data";
+import { breadcrumbList } from "~/lib/seo/structured-data";
+import { indexCrumb } from "~/lib/trail";
 import { findAllSeries } from "~/models/series.server";
 import type { Route } from "./+types/_series";
 
@@ -62,8 +63,8 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
     // describe themselves one click away.
     {
       "script:ld+json": breadcrumbList([
-        siteCrumb("home", loaderData.locale),
-        siteCrumb("series", loaderData.locale),
+        indexCrumb("home", loaderData.locale),
+        indexCrumb("series", loaderData.locale),
       ]),
     },
     ...emptyIndexRobots(loaderData.series.length === 0),

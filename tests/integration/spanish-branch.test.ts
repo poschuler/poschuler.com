@@ -2,7 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { LOCALES } from "~/context";
 import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
-import { breadcrumbList, siteCrumb } from "~/lib/seo/structured-data";
+import { breadcrumbList } from "~/lib/seo/structured-data";
+import { indexCrumb } from "~/lib/trail";
 
 import { loader as blogLoader, meta as blogMeta } from "~/routes/blog/_blog";
 import { loader as blogSlugLoader } from "~/routes/blog-slug/_$blog-slug";
@@ -224,10 +225,10 @@ describe("an index with nothing behind it in Spanish", () => {
     );
 
     expect(tagsMeta({ loaderData: tagsData } as never)).toContainEqual({
-      "script:ld+json": breadcrumbList([siteCrumb("home", "es"), siteCrumb("tags", "es")]),
+      "script:ld+json": breadcrumbList([indexCrumb("home", "es"), indexCrumb("tags", "es")]),
     });
 
-    const trail = breadcrumbList([siteCrumb("home", "es"), siteCrumb("tags", "es")]) as {
+    const trail = breadcrumbList([indexCrumb("home", "es"), indexCrumb("tags", "es")]) as {
       itemListElement: Array<{ name: string; item: string }>;
     };
 

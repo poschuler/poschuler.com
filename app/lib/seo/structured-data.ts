@@ -1,6 +1,6 @@
 import type { Locale } from "~/context";
-import { STRINGS } from "~/lib/catalog";
-import { postHref, projectHref, seriesHref, withLocale } from "~/lib/hrefs";
+import { postHref, projectHref, seriesHref } from "~/lib/hrefs";
+import type { Crumb } from "~/lib/trail";
 import { AUTHOR, SITE } from "./person";
 
 /**
@@ -25,21 +25,10 @@ import { AUTHOR, SITE } from "./person";
 export type JsonLd = Record<string, unknown>;
 
 /**
- * One step on the path of URLs that leads to a page.
- *
- * **A Series Section is not one of these**, and that is why the visual
- * breadcrumb on a Part and this list do not match. A `BreadcrumbList` describes
- * URLs a visitor can reach; a Section has no page. Naming it here would declare
- * a level of hierarchy that cannot be visited. The visual breadcrumb may show
- * it, because there it is context for a human rather than a claim about the
- * structure of the site.
+ * `Crumb` lives in `~/lib/trail`, alongside `indexCrumb` — the function that
+ * builds the ones a `BreadcrumbList` step needs. This module keeps only the
+ * emission: the vocabulary a trail is built from is not its concern.
  */
-export type Crumb = {
-  name: string;
-  /** Path relative to the origin, e.g. `/series`. */
-  path: string;
-};
-
 export function breadcrumbList(crumbs: Crumb[]): JsonLd {
   return {
     "@context": "https://schema.org",
@@ -50,49 +39,6 @@ export function breadcrumbList(crumbs: Crumb[]): JsonLd {
       name: crumb.name,
       item: `${SITE}${crumb.path}`,
     })),
-  };
-}
-
-/** A section of this site a trail can pass through — each one an index with an address. */
-export type SiteSection = "home" | "blog" | "projects" | "series" | "tags";
-
-const SECTION_PATH: Record<SiteSection, string> = {
-  home: "/",
-  blog: "/blog",
-  projects: "/projects",
-  series: "/series",
-  tags: "/tags",
-};
-
-/**
- * A fixed step on a trail — the home page, or the index a document sits under.
- * The steps below it are the document's own and each route builds those itself.
- *
- * **Both halves follow the page's Locale**, which is the whole reason this is a
- * function rather than the constant it replaced. A Spanish page used to declare
- * a trail made of English names pointing at English URLs — on `/es/series` and
- * `/es/tags` the entire list was the English one, so not a single step was the
- * page emitting it, while the canonical three lines above said `/es/…`. One
- * `<head>` contradicting itself is worse than a missing `BreadcrumbList`.
- *
- * The name is the one the section already renders as its own heading, read from
- * the same catalogue the header reads (`app/lib/catalog.ts`) — through
- * `STRINGS[locale]` rather than `useStrings()`, because `meta()` is not a
- * component and cannot call a hook. So `/blog` is *Articles*, which is what that
- * page has always been titled and what the trail said in neither Locale.
- *
- * The home page's step has no trailing slash in English — `withLocale("/", …)`
- * gives the empty string there — and that is deliberate: it matches, character
- * for character, the canonical the home page declares for itself. A trail that
- * named `https://poschuler.com/` while the page called itself
- * `https://poschuler.com` would be two URLs for one page in one document.
- */
-export function siteCrumb(section: SiteSection, locale: Locale): Crumb {
-  const strings = STRINGS[locale];
-
-  return {
-    name: section === "home" ? strings.home.crumb : strings[section].heading,
-    path: withLocale(SECTION_PATH[section], locale),
   };
 }
 
