@@ -315,6 +315,50 @@ tally_field() {
   awk -v f="$2" '{print $f}' <<< "$1"
 }
 
+# issue_advisory <issue> — the review's `## Advisory` findings for this issue,
+# already shaped as a block for the PR body, or empty when there were none.
+#
+# Advisory findings are the ones nobody acts on by design — smells, scope creep,
+# a weak test — and until now they ended their life in a comment on a CLOSED
+# issue, which is the one place nobody goes back to. They are only ever
+# actionable with the diff in front of you, and there is exactly one moment when
+# that is true: reading the draft PR. So they travel there.
+#
+# Through the REST API rather than gh_read, for two reasons: it hands over the
+# comment's own URL as html_url, and on 17 Aug 2026 it kept answering through a
+# GraphQL outage that had `gh issue view --json` returning 503 on every retry.
+#
+# per_page rides in the query string, and it has to: `gh api -F per_page=100`
+# turns the call into a POST, which on this endpoint means *create a comment*.
+# It failed 422 for want of a body, which is the only reason a read here was
+# merely a read.
+#
+# A missing block is a poorer PR body, never a failed run — every path here
+# returns empty rather than failing.
+issue_advisory() {
+  local issue="$1" try raw url findings
+  for try in 1 2 3; do
+    raw="$(gh api "repos/{owner}/{repo}/issues/$issue/comments?per_page=100" \
+      --jq 'map(select(.body | test("(^|\n)[ \t]*RALPH-VERDICT:"))) | last | (.html_url + "\n" + .body)' \
+      2>/dev/null)" && [[ -n "$raw" ]] && break
+    raw=""
+    [[ "$try" -lt 3 ]] && sleep 2
+  done
+  [[ -n "$raw" ]] || return 0
+
+  url="$(head -1 <<< "$raw")"
+  # Everything under the Advisory heading, stopping at the verdict line that
+  # closes every report.
+  findings="$(awk 'NR==1{next}
+                   /^##[[:space:]]+Advisory/{f=1; next}
+                   f && /^[[:space:]]*RALPH-VERDICT:/{f=0}
+                   f && /^##[[:space:]]/{f=0}
+                   f' <<< "$raw" | sed '/^[[:space:]]*$/d')"
+  [[ -n "$findings" ]] || return 0
+
+  printf '**#%s** — [the review](%s)\n%s\n' "$issue" "$url" "$findings"
+}
+
 # The FIXABLE count out of a verdict line ("" when there is no line).
 verdict_fixable() {
   [[ -n "$1" ]] || { echo ""; return; }
@@ -516,10 +560,29 @@ pr_title() {
 
 pr_body() {
   local -a issues=("$@")
-  local body="Autonomous run — issues in this PR:" n
+  local body="Autonomous run — issues in this PR:" n block advisory=""
   for n in "${issues[@]}"; do
     body+=$'\n'"- #${n} $(issue_title "$n")"
   done
+
+  # Every advisory finding the run raised, gathered here from the issues that
+  # raised them. Reading them together is the part a single issue's comment
+  # cannot give you: one smell across three issues of the same batch is not
+  # three notes, it is a pattern, and probably a line in AGENTS.md.
+  for n in "${issues[@]}"; do
+    block="$(issue_advisory "$n")"
+    [[ -n "$block" ]] && advisory+=$'\n\n'"$block"
+  done
+  if [[ -n "$advisory" ]]; then
+    body+=$'\n\n'"## Advisory — raised, and deliberately not acted on"
+    body+=$'\n\n'"The review sessions found these and left them alone on purpose: smells, scope"
+    body+=$'\n'"creep, weak tests, judgement calls. **This is the moment to decide on them** —"
+    body+=$'\n'"you have the diff in front of you. Whatever you don't act on here goes back to"
+    body+=$'\n'"being findable only in a comment on a closed issue, so decide rather than defer:"
+    body+=$'\n'"open a ticket for what should outlive this PR, and let the rest go on purpose."
+    body+="$advisory"
+  fi
+
   body+=$'\n\n'"Draft — review, then merge into \`$RALPH_BASE_REF\`."
   echo "$body"
 }
