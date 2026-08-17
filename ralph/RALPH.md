@@ -80,16 +80,28 @@ observable behaviour per line** (something a test or a command can answer), and
 cannot settle is what sends the issue back to you labelled `needs-info`, which
 is the right outcome but a slow one.
 
-**Optional PRD auto-close.** If an issue belongs to a PRD and you want Ralph to
-close that PRD when the last child is done, add a line to the issue body:
+**Say which map a ticket belongs to, and ralph closes the map for you.** When
+every child of a map is closed, the runner comments and closes it — once per
+map, after the whole list drains. It looks in two places, in this order:
 
-```
-PRD: #19
-```
+1. **GitHub's native sub-issue link**, which is what `docs/agents/issue-tracker.md`
+   calls a child ticket:
+   `gh api --method POST repos/<owner>/<repo>/issues/<map>/sub_issues -F sub_issue_id=<child-db-id>`,
+   where the id is the child's numeric **database** id (`gh api repos/<owner>/<repo>/issues/<n> --jq .id`),
+   not its `#number`. Prefer this: GitHub answers it in both directions and shows
+   the map's progress in its own UI.
+2. **A `## Parent` section** naming the map, which is what the issues in this
+   repo write today:
 
-After closing an issue, the session lists the siblings that declare the same
-`PRD: #NN`; if they're all closed, it closes the PRD too. No `PRD:` line → that
-step is simply skipped.
+   ```markdown
+   ## Parent
+
+   #52
+   ```
+
+Either works, neither is required — a ticket with no map is closed and nothing
+else happens. A map with **any** child still open stays open, and the run says
+which children it is waiting on.
 
 ### 2. List the issues to work
 
@@ -399,6 +411,7 @@ the review's report and the fixer's account of what it applied and refused.
 | `RALPH_DISALLOWED_TOOLS`| `ScheduleWakeup`    | Space-separated tools banned in **every** session (`""` = none). |
 | `RALPH_BLOCK_CODE_REVIEW` | `1`               | Enforce "no code review in this session" with a `PreToolUse` hook instead of trusting the prompt. Needs `jq`. `0` = prompts only. |
 | `RALPH_VERIFY`          | `1`                 | Run the pre-commit checklist after every commit a session makes, instead of believing it ran green. `0` = take their word. |
+| `RALPH_CLOSE_PARENT`    | `1`                 | Close a map once every child has landed. Finds it via the native sub-issue link, then via `## Parent`. |
 | `RALPH_CHECKLIST`       | the five in `AGENTS.md` | What that checklist is — one command line per entry, in order, each retried once before it counts as red. |
 | `RALPH_PROMPT_FILE`     | `ralph/prompts/1-implement.md` | What the implementation session is told. A relative path is read from the repo root. |
 | `RALPH_REVIEW_PROMPT_FILE` | `ralph/prompts/2-review.md` | What the review session is told.                     |
@@ -504,5 +517,16 @@ Command-line flags: `--dry-run`, `--max-iterations N`, `-h`/`--help`.
   `summary.md` row to see which issue broke. The worktree is left intact;
   fix it, then re-run — closed issues stay skipped and ralph resumes from the
   next open one.
-- **PRD auto-close needs the `PRD: #NN` line** in the issue body. Without it,
-  ralph closes the issue but never touches a PRD.
+- **A map closes when its last child lands, and the runner is the one who asks.**
+  It finds the map through GitHub's **native sub-issue link** first — what
+  `docs/agents/issue-tracker.md` calls a child ticket — and falls back to reading
+  the `## Parent` section the issues here actually write. Then, once per map and
+  only after the whole list drains: every child closed → comment and close;
+  anything still open → say which, and leave it.
+  This was the implementation session's errand until 17 Aug 2026 and never once
+  fired, because the prompt looked for a `PRD: #NN` line that no issue in this
+  repo has ever carried — while this file documented that line as the mechanism
+  and `issue-tracker.md` documented sub-issues as the convention. Three
+  conventions, none of them running. It is also the wrong job for a session:
+  "are all the siblings closed" has an answer rather than a judgement, and a
+  session only ever sees one ticket. `RALPH_CLOSE_PARENT=0` turns it off.
