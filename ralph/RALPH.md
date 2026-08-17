@@ -48,7 +48,8 @@ Configuration lives in [`ralph.config.sh`](./ralph.config.sh); the loop is in
   `prompts/*.md`, in git.
 - When the list drains, Ralph pushes and opens **one draft PR back to `dev`**,
   titled after the issues it worked (so it reads well even though the branch is a
-  timestamp).
+  timestamp). Its body carries **every advisory finding the run raised**, gathered
+  from the issues that raised them — see below.
 - **Ralph never merges.** Reviewing and merging is your job — the human gate.
 
 This fits the repo's branching model: `main` = production, `dev` = integration;
@@ -461,6 +462,19 @@ Command-line flags: `--dry-run`, `--max-iterations N`, `-h`/`--help`.
   the behaviour already lives. Refusing is the cheapest thing that session can
   do, and the counts are what stop "the review was wrong five times" from
   reaching you looking exactly like "this session did nothing".
+- **The advisory findings ride to the PR, because that is the only place you can
+  act on them.** They are the ones nobody touches by design — smells, scope
+  creep, a weak test — and their natural end was a comment on a *closed* issue,
+  which is the one place nobody goes back to. A finding like that is only ever
+  actionable with the diff in front of you, and there is exactly one moment when
+  that is true: reading the draft PR. So the PR body collects them all, each
+  linked to the review that raised it.
+  Two things follow. Reading them **together** is what a single issue's comment
+  cannot give you — one smell across three issues of a batch is not three notes,
+  it is a pattern, and probably a line in `AGENTS.md`. And nothing survives the
+  merge: what you don't act on there goes back to being findable only on a closed
+  issue, so open a ticket for what should outlive the PR and let the rest go on
+  purpose. Discarded is not the same as lost.
 - **A `ready-for-human` label on a CLOSED issue is a deferred finding.** When
   settling one needs a judgement only you can make, the fixer names the missing
   decision and labels the issue rather than guessing or burying it as a refusal.
