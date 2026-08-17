@@ -80,99 +80,55 @@ pnpm run dev
 
 ## Adding content
 
-A **Post** is a folder plus a locale-suffixed file, `app/content/blog/<slug>/<slug>.en.md`:
+**[`docs/authoring.md`](docs/authoring.md) is the guide** — the front matter of
+every kind, the languages, drafts, the commands and what fails the build. What
+follows is the shape it assumes.
 
-```yaml
----
-type: 'post'
-title: 'Implementing Value Objects in Node.js'
-description: 'A practical guide to…'
-tags: ['nodejs', 'typescript', 'ddd']
-publishedAt: '2025-11-02'
-repository: 'https://github.com/…'   # optional, renders a repo link
-updates:                             # optional, newest first, curated
-  - date: '2026-08-14'
-    note: 'Updated for Node 24; the Express 4 examples now use Express 5.'
----
+Everything published lives under `app/content/`, in one of four trees, and **the
+path is what says what a file is**: the front matter's `type` is checked against
+its placement rather than believed (ADR 0004).
+
+```
+app/content/
+  tags.json                                 the closed Tag vocabulary
+  blog/<slug>/<slug>.en.md                  a Post with no Container
+  bookmarks/<slug>.md                       a Bookmark — front matter only, no Locale
+  projects/<project>/<project>.en.md        a Project
+  projects/<project>/<note>/<note>.en.md    a Field Note — a Post in that Project
+  series/<series>/<series>.en.md            a Series manifest — the whole arc
+  series/<series>/<part>/<part>.en.md       a Part — a Post in that Series
 ```
 
-`tags` is drawn from a closed vocabulary: `app/content/tags.json` lists every Tag this site may use, and one that is not declared there fails the build — as does one that is not a lower-case kebab-case slug, with a different message. A Tag is written exactly one way and that same string is its URL, so writing about a new subject means adding a line to that file first. Each Tag some Post carries gets a page at `/tags/<tag>` with no route to declare; a Tag no Post carries is a 404, and the index at `/tags` never lists it. See [ADR 0008](docs/adr/0008-a-tag-is-its-slug-and-the-vocabulary-is-declared.md).
+The file named after its folder *is* that folder, and a subfolder is content
+living inside it. That one rule is how a Series manifest is told apart from its
+Parts, and a Project from its Field Notes — neither a Part nor a Field Note
+declares where it sits, because the manifest above it already does
+([ADR 0007](docs/adr/0007-the-manifest-declares-the-arc-a-part-does-not-know-where-it-is.md)).
+Nothing nests under `blog/` or `bookmarks/`, and a directory no generator walks
+fails the build rather than publishing nothing in silence.
 
-`updates` is what the author says changed, not a commit log — the fine-grained history is already in git. It never reorders the Timeline, and it does date the page in the sitemap. See [ADR 0005](docs/adr/0005-revisions-are-a-curated-list-in-the-content.md).
+Four things beyond the shape, each with its own decision behind it:
 
-A **Project** is a folder plus a locale-suffixed file, `app/content/projects/<slug>/<slug>.en.md`. It is not a Content Item — no publication date, no place in the Timeline — so it carries revisions instead, and needs at least one:
+- **A Tag is its slug, and the vocabulary is closed.** `app/content/tags.json`
+  lists every Tag this site may use; one that is not declared there fails the
+  build, so writing about a new subject starts by adding a line to that file
+  ([ADR 0008](docs/adr/0008-a-tag-is-its-slug-and-the-vocabulary-is-declared.md)).
+- **A Revision is what the author says changed**, not a commit log — the
+  fine-grained history is already in git. It never reorders the Timeline, and it
+  does date the page in the sitemap
+  ([ADR 0005](docs/adr/0005-revisions-are-a-curated-list-in-the-content.md)).
+- **Any document may carry `draft: true`.** It is checked exactly as strictly as
+  a published one and only then produces no row, no payload and no address;
+  publishing is deleting that line. `pnpm run preview:drafts` reads it at its
+  real address without touching a tracked file
+  ([ADR 0009](docs/adr/0009-a-draft-is-a-document-the-build-validates-and-refuses-to-publish.md)).
+- **The filename is the Slug, and it never changes once published** — it is the
+  URL. If one has to move anyway, add the old address to `app/lib/redirects.ts`;
+  a test walks that map against the database, so a redirect pointing at a page
+  that no longer exists fails the build.
 
-```yaml
----
-type: 'project'
-title: 'Chekalo'
-summary: 'One or two sentences, outcome first. This is what the index shows.'
-description: 'The SEO meta description.'
-tier: 'flagship'          # flagship | supporting | experiment
-status: 'active'          # active | archived
-stack: ['TypeScript', 'Node.js']
-liveUrl: 'https://chekalo.pe'        # optional
-repoUrl: 'https://github.com/…'      # optional
-sortOrder: 1
-updates:
-  - date: '2026-08-20'
-    note: 'First published.'
----
-```
-
-`tier` is weight, never route shape: promoting a project that grew is a change to this field, and its URL never moves.
-
-A **Bookmark** is a single file, `app/content/bookmarks/<slug>.md`, front matter only — the body stays at the source:
-
-```yaml
----
-type: 'link'
-title: "The Copenhagen Book"
-source: 'pilcrow'
-externalUrl: "https://thecopenhagenbook.com/"
-publishedAt: '2024-07-30'
-tags: ['auth', 'security', 'webdev']
----
-```
-
-A **Series** is one manifest plus a folder per part. The manifest is `app/content/series/<slug>/<slug>.en.md`, and it declares the whole arc — every section in order, and inside each, the slugs of its parts in order:
-
-```yaml
----
-type: 'series'
-title: 'Pragmatic Node.js API'
-description: 'The SEO meta description.'
-status: 'ongoing'                    # ongoing | complete — complete is the only declarable one
-startingPoint: 'What the reader is assumed to already be able to do.'
-destination: 'What they end up with. Immutable once the first part ships.'
-outOfScope: ['Microservices', 'Event sourcing']
-audience: 'Who this is for, and who it is not for.'
-sections:
-  - slug: 'fundamentals'
-    title: 'Fundamentals'
-    summary: 'One or two sentences. This is what the landing renders.'
-    parts:                           # omit entirely for a section not started yet
-      - 'project-setup'
-      - 'schema-validation-and-error-handling'
----
-```
-
-A **part** is then an ordinary Post one level deeper, `app/content/series/<series>/<part>/<part>.en.md`, with the same front matter any Post has. It declares nothing about the series: its container is the folder it sits in, and its position is wherever the manifest lists it. A section with no parts is planned and a section with parts is in progress, so neither is ever written down. See [ADR 0007](docs/adr/0007-the-manifest-declares-the-arc-a-part-does-not-know-where-it-is.md).
-
-A **Field Note** is the same idea under a Project instead of a Series: an ordinary Post, one level deeper, `app/content/projects/<project>/<note>/<note>.en.md`, served at `/projects/<project>/<note>`. A Project's own front matter declares which notes it holds and in what order, in a flat `notes:` list rather than a Series' sections and destination — a Project accumulates what happened; it does not promise where it is going:
-
-```yaml
-# app/content/projects/chekalo/chekalo.en.md, alongside its existing front matter
-notes:
-  - 'product-matching'
-  - 'alias-flip-vs-reindex-in-place'
-```
-
-Reconciliation is bidirectional, the same check a Series' manifest already runs: a listed note with no file fails the build, a file the manifest does not list fails, and the same note listed twice fails. Recorded on `content` as `project_slug` and `container_order` — the second having replaced `section_order`, a name that meant two different things on two tables. See the amendment to [ADR 0007](docs/adr/0007-the-manifest-declares-the-arc-a-part-does-not-know-where-it-is.md) for what the manifest declares, [ADR 0006](docs/adr/0006-migrations-for-the-deployed-database-schema-sql-for-the-shape.md) for why that rename cost two publications, and the comments in `seed/d1/schema.sql`.
-
-Any document under `app/content/` — a loose Post, a Part, a Field Note, a Project or a Series landing — can carry `draft: true`. It is checked exactly as strictly as a published document, and only then produces no row, no payload and no address; publishing is deleting that one line. It is not privacy — the repository is public — it is a state between *absent* and *live* the tree previously had no way to express. `pnpm run preview:drafts` renders every Draft into a gitignored `preview/` directory and applies it to the local D1 and KV, so a Draft reads at its real address without touching a tracked file. See [ADR 0009](docs/adr/0009-a-draft-is-a-document-the-build-validates-and-refuses-to-publish.md).
-
-The filename is the Slug, and it never changes once published — it is the URL. If one has to move anyway, add the old address to `app/lib/redirects.ts`; a test walks that map against the database, so a redirect pointing at a page that no longer exists fails the build. Re-run both seed scripts after adding a file; the KV upload replaces every `blog:` key rather than merging.
+Re-run both seed scripts after adding or editing a file, D1 before KV; the KV
+upload replaces every payload rather than merging.
 
 ## Commands
 
@@ -219,14 +175,17 @@ seed/             Build-time generators for D1 and KV
 workers/app.ts    The Worker entry point
 tests/            Vitest — unit and integration, never beside the code
 scripts/          Local tooling, including the cold-start smoke test
-docs/             Architecture, design conventions and ADRs
+docs/             Authoring, architecture and design conventions
+docs/adr/         The decisions worth recording, indexed in its own README
+docs/templates/   One front matter template per kind, copied to start a document
+docs/agents/      How an agent working in this repo finds the tracker and the domain docs
 ```
 
 Tests live in `tests/` rather than next to what they cover, because `app/` holds only code reachable from a route — a `.test.ts` there would be an orphan by this repo's own rule.
 
 ## CI
 
-Every push to `main` or `dev`, and every pull request into `main`, runs a typecheck, the test suite, a build, and a cold start: the built Worker is served with no secrets and no `.dev.vars`, and each public route has to answer and carry content. That last step exists because a missing variable once took the whole site down, and the only environment where it showed was the one nobody had — an empty one.
+Every push to `main` or `dev`, and every pull request into `main`, runs a typecheck, the test suite, a build, and a cold start: the built Worker is served with no secrets and no `.dev.vars`, and a route from each namespace, in both languages, has to answer and carry content. That last step exists because a missing variable once took the whole site down, and the only environment where it showed was the one nobody had — an empty one.
 
 The tests and the cold start do not overlap. The cold start proves the Worker boots with nothing configured; the tests prove it answers correctly — a route returning 200 with the wrong content passes the first and fails the second. Both seed their stores from the fixtures committed under `seed/`, applied with `--local`, so neither needs credentials.
 
@@ -239,9 +198,11 @@ The order is the point: the seed, the deploy and the check are one sequence with
 ## Documentation
 
 - [`CONTEXT.md`](CONTEXT.md) — the domain vocabulary. What a Post, a Bookmark, a Series, a Part and the Timeline mean here.
+- [`docs/authoring.md`](docs/authoring.md) — how a document is written, checked and published: front matter by kind, languages, drafts, the commands, and what fails the build. Templates in [`docs/templates/`](docs/templates/).
 - [`docs/architecture.md`](docs/architecture.md) — runtime shape, the content pipeline, data stores, caching, known defects.
+- [`docs/runbook.md`](docs/runbook.md) — what to do when production is wrong: a failed publication, a rollback and what it does not undo, reverting content, and the symptoms with a known cause.
 - [`docs/design.md`](docs/design.md) — UI and module conventions: color, theming, component layers, data access.
-- [`docs/adr/`](docs/adr/) — the decisions worth recording, and why.
+- [`docs/adr/`](docs/adr/) — the decisions worth recording, and why. Its [index](docs/adr/README.md) lists all eleven with their state, and says which ones were later amended or half superseded.
 
 ## Licensing
 
