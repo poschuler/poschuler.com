@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   compareContainers,
   comparePresence,
+  compareSectionOrder,
   expectationFrom,
   type DocumentInput,
 } from "../../../seed/store-expectation";
@@ -65,6 +66,20 @@ describe("expectationFrom — a Series and its Sections", () => {
     expect(expectation.sections).toEqual(
       new Set(["pragmatic-nodejs-api:en:fundamentals", "pragmatic-nodejs-api:en:persistence"]),
     );
+  });
+});
+
+describe("expectationFrom — a Series Section's position in the arc", () => {
+  it("expects a Section's position to be the index its manifest lists it at", () => {
+    const docs = [
+      document("series/pragmatic-nodejs-api/pragmatic-nodejs-api.en.md", {
+        sections: [{ slug: "fundamentals" }, { slug: "persistence" }],
+      }),
+    ];
+
+    expect(
+      expectationFrom(docs).sectionOrder.get("pragmatic-nodejs-api:en:persistence"),
+    ).toBe(1);
   });
 });
 
@@ -331,6 +346,37 @@ describe("compareContainers", () => {
     ]);
 
     expect(compareContainers(expected, new Map())).toEqual([]);
+  });
+});
+
+/**
+ * #57: symmetric to #56 at one level up — a Series Section's own position in
+ * the arc, derived from its index in the manifest's `sections` array, gets
+ * the same kind of comparison a Part's `container_order` already has: a value
+ * on a row that already exists, named by the Section's identity and both
+ * positions rather than as a missing/unexpected pair.
+ */
+describe("compareSectionOrder", () => {
+  it("names a Section whose stored position disagrees with the manifest's, with its identity and both positions", () => {
+    const expected = new Map([["pragmatic-nodejs-api:en:persistence", 1]]);
+    const present = new Map([["pragmatic-nodejs-api:en:persistence", 0]]);
+
+    expect(compareSectionOrder(expected, present)).toEqual([
+      { identity: "pragmatic-nodejs-api:en:persistence", stored: 0, expected: 1 },
+    ]);
+  });
+
+  it("finds nothing wrong when the stored position agrees with the manifest's", () => {
+    const expected = new Map([["pragmatic-nodejs-api:en:persistence", 1]]);
+    const present = new Map([["pragmatic-nodejs-api:en:persistence", 1]]);
+
+    expect(compareSectionOrder(expected, present)).toEqual([]);
+  });
+
+  it("skips a Section the store has no row for — the presence comparison already names it missing", () => {
+    const expected = new Map([["pragmatic-nodejs-api:en:persistence", 1]]);
+
+    expect(compareSectionOrder(expected, new Map())).toEqual([]);
   });
 });
 

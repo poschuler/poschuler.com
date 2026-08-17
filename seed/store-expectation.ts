@@ -67,6 +67,8 @@ export interface Expectation {
   sections: Set<string>;
   /** A Content Item's identity → its expected Container columns. */
   containers: Map<string, ContainerColumns>;
+  /** A Series Section's identity → its expected position in the manifest's arc. */
+  sectionOrder: Map<string, number>;
 }
 
 /** A Content Item with no Container — a loose Post, a Bookmark. */
@@ -173,6 +175,7 @@ export function expectationFrom(documents: DocumentInput[]): Expectation {
     series: new Set<string>(),
     sections: new Set<string>(),
     containers: new Map<string, ContainerColumns>(),
+    sectionOrder: new Map<string, number>(),
   };
 
   const manifestPlacements = readManifestPlacements(documents);
@@ -251,12 +254,17 @@ export function expectationFrom(documents: DocumentInput[]): Expectation {
 
       expectation.series.add(`${slug}:${lang}`);
 
-      // The sections are read straight off the manifest, not off the
-      // generated SQL: a generator that dropped one would otherwise agree
-      // with itself (ADR 0012).
-      for (const section of attributes.sections ?? []) {
-        expectation.sections.add(`${slug}:${lang}:${section.slug}`);
-      }
+      // The sections, and each one's position in the arc, are read straight
+      // off the manifest's own array — an indexed iteration and nothing else
+      // — not off the generated SQL: a generator that dropped one, or wrote
+      // it at the wrong position, would otherwise agree with itself
+      // (ADR 0012).
+      (attributes.sections ?? []).forEach((section, index) => {
+        const identity = `${slug}:${lang}:${section.slug}`;
+
+        expectation.sections.add(identity);
+        expectation.sectionOrder.set(identity, index);
+      });
     }
   }
 
@@ -280,6 +288,43 @@ export function comparePresence(
     missing: [...expected].filter((key) => !present.has(key)),
     extra: [...present].filter((key) => !expected.has(key)),
   };
+}
+
+/**
+ * One Series Section whose stored position disagrees with the index its
+ * manifest lists it at — named by the Section's identity and both positions,
+ * the same reasoning as `ContainerFinding`: a wrong position is one number
+ * against another, not a missing row plus an unexpected one.
+ */
+export interface SectionOrderFinding {
+  identity: string;
+  stored: number;
+  expected: number;
+}
+
+/**
+ * The Container comparison's reasoning applied one level up: a Series
+ * Section's own position in the arc is a value on a row that already
+ * exists, not a presence set. An identity missing from `present` is skipped
+ * here too — the presence comparison for Sections already names it missing.
+ */
+export function compareSectionOrder(
+  expected: Map<string, number>,
+  present: Map<string, number>,
+): SectionOrderFinding[] {
+  const findings: SectionOrderFinding[] = [];
+
+  for (const [identity, expectedOrder] of expected) {
+    const storedOrder = present.get(identity);
+
+    if (storedOrder === undefined || storedOrder === expectedOrder) {
+      continue;
+    }
+
+    findings.push({ identity, stored: storedOrder, expected: expectedOrder });
+  }
+
+  return findings;
 }
 
 const CONTAINER_COLUMNS: (keyof ContainerColumns)[] = [
