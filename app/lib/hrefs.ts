@@ -56,6 +56,26 @@ export function withLocale(path: string, locale: Locale): string {
 }
 
 /**
+ * The same rule, for a `<Link to>` rather than for an address.
+ *
+ * The difference is the one path `withLocale` deliberately returns empty: the
+ * English root is `""`, because `alternates.ts` composes `${SITE}${path}` and
+ * has to land on the origin exactly. Handed to React Router, that empty string
+ * is not the root at all — an empty relative path resolves to *the current
+ * location*. A 404 page's way out, written as `withLocale("/", locale)`, was
+ * measured rendering `href="/the-address-that-404ed"`: the one link on the
+ * page that promised to lead somewhere led back to where the reader already
+ * was, in English only, which is why it survived a phase about Spanish.
+ *
+ * Every other path is identical in both functions, so navigation can call this
+ * one for the whole of a list without the root being a special case at each
+ * call site.
+ */
+export function navHref(path: string, locale: Locale): string {
+  return withLocale(path, locale) || "/";
+}
+
+/**
  * A Post's Container, derived from the two columns that can each hold one —
  * `content.series_slug` and `content.project_slug`, never both (`schema.sql`).
  * Modelled as a discriminated union rather than read as a pair of nullable

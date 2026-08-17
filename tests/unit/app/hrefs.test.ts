@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { postHref, projectHref, seriesHref, tagHref, withLocale } from "../../../app/lib/hrefs";
+import {
+  navHref,
+  postHref,
+  projectHref,
+  seriesHref,
+  tagHref,
+  withLocale,
+} from "../../../app/lib/hrefs";
 
 /**
  * Four lines with a test, because the rule they hold is the one that used to
@@ -132,5 +139,31 @@ describe("withLocale", () => {
    */
   it("localises the English home page to the empty string", () => {
     expect(withLocale("/", "en")).toBe("");
+  });
+});
+
+/**
+ * The same rule for a `<Link to>`, and the one case where that is not the same
+ * string. The empty string the test directly above pins is correct for an
+ * address and wrong for a link: React Router reads an empty relative path as
+ * the current location, so the 404 page's only way out rendered
+ * `href="/the-address-that-404ed"` — in English, where `withLocale` returns
+ * `""`, and only there, which is how it survived a phase spent on Spanish.
+ */
+describe("navHref", () => {
+  it("sends the English home page to the root, not to the current location", () => {
+    expect(navHref("/", "en")).toBe("/");
+  });
+
+  it("localises the home page the way withLocale does", () => {
+    expect(navHref("/", "es")).toBe("/es");
+  });
+
+  it("is withLocale for every other path", () => {
+    for (const path of ["/blog", "/series", "/tags", "/cv"]) {
+      for (const locale of ["en", "es"] as const) {
+        expect(navHref(path, locale)).toBe(withLocale(path, locale));
+      }
+    }
   });
 });

@@ -19,14 +19,18 @@ import {
   SheetContent,
   SheetTrigger,
 } from "~/components/ui/sheet";
+import { useLocale } from "~/context";
 import { useStrings } from "~/lib/catalog";
+import { navHref } from "~/lib/hrefs";
 import { cn } from "~/lib/utils";
 
 /**
  * One list, rendered twice — the row above `lg`, the panel below it. The icon
  * is read only by the panel; see the note on `Header`. `key` looks up its
- * label in the catalogue rather than carrying one, so the same list drives
- * both Locales.
+ * label in the catalogue rather than carrying one, and `to` is the English
+ * path with no prefix, put through `navHref` where it is rendered — so the
+ * same list drives both Locales, and a page added here cannot arrive in one
+ * of them only.
  *
  * **Home is not in here, in either rendering: the wordmark is the way home.**
  * It used to be the first entry, which put two links to `/` side by side in
@@ -132,10 +136,11 @@ function Wordmark({ className }: { className?: string }) {
  */
 export function Header() {
   const strings = useStrings();
+  const locale = useLocale();
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-default border-b bg-subtle px-4 lg:gap-6 lg:px-6">
-      <Link to="/" className="mr-auto shrink-0">
+      <Link to={navHref("/", locale)} className="mr-auto shrink-0">
         <Wordmark />
       </Link>
 
@@ -146,7 +151,7 @@ export function Header() {
         {NAV_ITEMS.map(({ to, key }) => (
           <Link
             key={to}
-            to={to}
+            to={navHref(to, locale)}
             className="whitespace-nowrap transition-colors duration-200 hover:text-default"
           >
             {strings.nav[key]}
@@ -187,7 +192,9 @@ export function Header() {
         <SheetContent
           title={strings.nav.panelTitle}
           heading={
-            <SheetClose render={<Link to="/" className="-m-2 rounded-md p-2" />}>
+            <SheetClose
+              render={<Link to={navHref("/", locale)} className="-m-2 rounded-md p-2" />}
+            >
               <Wordmark />
             </SheetClose>
           }
@@ -200,7 +207,7 @@ export function Header() {
                 key={to}
                 render={
                   <Link
-                    to={to}
+                    to={navHref(to, locale)}
                     className="flex items-center gap-3 rounded-md px-2 py-3 text-low transition-colors hover:bg-hover hover:text-default"
                   />
                 }

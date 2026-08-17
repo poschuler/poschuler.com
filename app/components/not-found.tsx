@@ -1,7 +1,7 @@
 import { Unplug } from "lucide-react";
 import { Link } from "react-router";
 import { useLocale } from "~/context";
-import { withLocale } from "~/lib/hrefs";
+import { navHref } from "~/lib/hrefs";
 import { useStrings } from "~/lib/catalog";
 
 /**
@@ -32,13 +32,20 @@ export function NotFound() {
         * has had its own route ever since — one the header above this offers,
         * along with everywhere else worth going.
         *
-        * `withLocale` rather than a bare `"/"`: a lost visitor under `/es` who
+        * Localised rather than a bare `"/"`: a lost visitor under `/es` who
         * followed this link to the English root would be handed exactly the
         * outcome this phase exists to prevent one click after the 404 that
         * was supposed to prevent it (Part 6 of
-        * `evolution-plan/15-phase-3-spanish.md`). */}
+        * `evolution-plan/15-phase-3-spanish.md`).
+        *
+        * `navHref` and not `withLocale`, which is what this was: the English
+        * root is `""` there, and `<Link to="">` is the current location, so
+        * the only way out of an English 404 pointed at the address that had
+        * just 404ed. Measured, not deduced — the rendered `href` was
+        * `/the-address-that-404ed`. `navHref`'s own docblock carries the
+        * rule. */}
       <Link
-        to={withLocale("/", locale)}
+        to={navHref("/", locale)}
         className="text-low transition-colors duration-200 hover:text-default"
       >
         {strings.notFound.backHome}
