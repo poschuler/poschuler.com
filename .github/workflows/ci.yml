@@ -61,6 +61,23 @@ jobs:
       - name: The committed fixtures match the Markdown
         run: pnpm run check:fixtures
 
+      # `check:fixtures` rebuilds the local D1 from the committed seed but
+      # deliberately leaves the local KV namespace untouched — a developer who
+      # has seeded it should not lose it to a fixtures check. The verifier
+      # below checks D1 *and* KV, so the committed payloads have to land here
+      # first. No credentials: `--local` only, nothing near the deployed
+      # namespace.
+      - name: Seed the local KV from the committed payloads
+        run: pnpm run kv:upload:local
+
+      # The net every later ticket in this chain gets verified by. Both local
+      # stores now hold what the two steps above put there, and this reads
+      # them back and compares against the Markdown — the same verifier
+      # `publish` runs against the deployed stores below, so a defect in it is
+      # caught here instead of by publishing. No credentials, `--local` only.
+      - name: Verify the local stores
+        run: pnpm run verify:stores:local
+
       - run: pnpm build
 
       # The runner has no `.dev.vars` and no secrets, which is the whole point:

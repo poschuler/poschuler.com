@@ -58,6 +58,8 @@ pnpm typecheck
 pnpm test
 pnpm run verify:schema:local     # the migration chain arrives at schema.sql
 pnpm run check:fixtures          # the committed fixtures are what the generators produce
+pnpm run kv:upload:local         # the committed KV payloads land in the local namespace
+pnpm run verify:stores:local     # both local stores hold what the Markdown says
 pnpm run smoke                   # builds, then boots it with no vars and no secrets
 ```
 
