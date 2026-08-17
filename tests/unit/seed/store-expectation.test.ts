@@ -5,6 +5,7 @@ import {
   comparePresence,
   compareSectionOrder,
   expectationFrom,
+  isEmptyContentExpectation,
   type DocumentInput,
 } from "../../../seed/store-expectation";
 
@@ -112,27 +113,40 @@ describe("expectationFrom — a Field Note, nested the same way a Part is", () =
 });
 
 describe("expectationFrom — placement and Locale", () => {
-  it("expects nothing for a path that will not classify", () => {
+  /**
+   * #58: a Document that yields no expectation used to be indistinguishable
+   * from one that is correct — comparing sets makes nothing-against-nothing
+   * pass forever. A placement `placementOf` cannot classify is a thing a
+   * Document *is*, read off its path, so it now stops the run rather than
+   * being skipped — naming the file and the reason, the same shape
+   * `generate-seed-sql.ts` already fails the build with.
+   */
+  it("fails on a Document whose placement will not classify, naming the file and the reason", () => {
     const docs = [document("drafts/something.en.md")];
 
-    expect(expectationFrom(docs).content.size).toBe(0);
+    expect(() => expectationFrom(docs)).toThrow(
+      "drafts/something.en.md is not under a content tree — nothing would read it and nothing would say so",
+    );
   });
 
-  it("expects nothing for a Post with no recognised Locale under a tree that requires one", () => {
+  it("fails on a Post with no recognised Locale under a tree that requires one, naming the file", () => {
     const docs = [document("blog/no-locale/no-locale.md")];
 
-    expect(expectationFrom(docs).content.size).toBe(0);
+    expect(() => expectationFrom(docs)).toThrow(/blog\/no-locale\/no-locale\.md/);
   });
 
-  it("expects nothing for a Series manifest with no recognised Locale", () => {
+  it("fails on a Series manifest with no recognised Locale, naming the file", () => {
     const docs = [
       document("series/api/api.md", { sections: [{ slug: "fundamentals" }] }),
     ];
 
-    const expectation = expectationFrom(docs);
+    expect(() => expectationFrom(docs)).toThrow(/series\/api\/api\.md/);
+  });
 
-    expect(expectation.series.size).toBe(0);
-    expect(expectation.sections.size).toBe(0);
+  it("fails on a Project landing with no recognised Locale, naming the file", () => {
+    const docs = [document("projects/chekalo/chekalo.md")];
+
+    expect(() => expectationFrom(docs)).toThrow(/projects\/chekalo\/chekalo\.md/);
   });
 
   /**
@@ -399,4 +413,44 @@ describe("comparePresence", () => {
     expect(finding.missing).toEqual([]);
     expect(finding.extra).toEqual([]);
   });
+});
+
+/**
+ * #58: comparing two sets makes nothing-against-nothing pass forever, so a
+ * broken derivation — a path constant that moves, a directory read that fails
+ * quietly — would certify an empty store as correct. `generate-seed-sql.ts`
+ * already treats an empty walk as impossible (`buildSeedSql`'s own guard);
+ * the verifier now agrees, for Content Items alone.
+ */
+describe("isEmptyContentExpectation", () => {
+  it("is true when nothing expects a Content Item", () => {
+    expect(isEmptyContentExpectation(expectationFrom([]))).toBe(true);
+  });
+
+  it("is false once at least one Content Item is expected", () => {
+    const docs = [document("blog/value-objects/value-objects.en.md")];
+
+    expect(isEmptyContentExpectation(expectationFrom(docs))).toBe(false);
+  });
+});
+
+/**
+ * The floor #58 refuses to generalise: a Project, a Series and a Series
+ * Section may legitimately be absent — the schema ships before the first one
+ * is written, and that was the normal state until two phases ago. Claiming a
+ * floor there would be a false alarm waiting for someone to delete content on
+ * purpose.
+ */
+describe("comparePresence — an empty expectation for Project, Series or Series Section stays legal", () => {
+  it.each(["Project", "Series", "Series Section"])(
+    "finds nothing wrong when both %s sides are empty",
+    (noun) => {
+      expect(comparePresence(noun, new Set(), new Set())).toEqual({
+        noun,
+        expectedCount: 0,
+        missing: [],
+        extra: [],
+      });
+    },
+  );
 });

@@ -15,6 +15,14 @@
  * alive in the one place whose job was catching it. `attributes.type` is not
  * read here, at all: a Document's identity is read off its path, the same way
  * the generators decide it.
+ *
+ * A placement `placementOf` cannot classify, and a filename carrying no
+ * recognised Locale under a tree that requires one, throw rather than being
+ * skipped: both are things a Document *is*, and a Document that yields no
+ * expectation is indistinguishable from one that is correct once all that is
+ * left is a set comparison. A Draft, and a `draft` that is not a boolean, are
+ * still skipped quietly — those are things a Document *says*, and the build
+ * already owns them (#58, ADR 0012).
  */
 
 import {
@@ -23,6 +31,7 @@ import {
   localeMatchesTree,
   pathSegments,
   placementOf,
+  type ContentTree,
 } from "./d1/content-tree.ts";
 import { parseContentFilename } from "./d1/seed-sql.ts";
 
@@ -110,6 +119,16 @@ function addTags(tags: Set<string>, slug: string, lang: string, values: unknown)
   }
 }
 
+/**
+ * The message a Post, a Project landing or a Series manifest fails the
+ * verification with when its filename carries no recognised Locale under a
+ * tree that requires one — one wording, shared by every branch that checks
+ * it, rather than three copies free to drift apart (#58).
+ */
+function noRecognisedLocale(relativePath: string, tree: ContentTree): string {
+  return `${relativePath} carries no recognised Locale — a file under ${tree}/ must end in .en.md or .es.md`;
+}
+
 /** Where a Part sits, as its Series manifest lists it: its Section and its position in that list. */
 interface PartLocation {
   section: string;
@@ -191,8 +210,16 @@ export function expectationFrom(documents: DocumentInput[]): Expectation {
 
     const placed = placementOf(relativePath);
 
+    // A placement `placementOf` cannot classify is a thing a Document *is*,
+    // read off its path — not something the build already owns, the way a
+    // Draft is. Skipping it would make it indistinguishable from a Document
+    // that is correct: comparing sets finds nothing wrong either way. This is
+    // the one invocation with nothing earlier catching it (`remote` measures
+    // the deployed store, and nothing guarantees the checkout that runs this
+    // is the one that seeded it), so it stops the run rather than being
+    // absorbed (#58, ADR 0012).
     if (isMisplaced(placed)) {
-      continue;
+      throw new Error(placed.error);
     }
 
     const parsed = parseContentFilename(basenameOf(relativePath));
@@ -206,9 +233,12 @@ export function expectationFrom(documents: DocumentInput[]): Expectation {
     if (placed.type === "post") {
       // `lang === null` leads the condition so TypeScript narrows `lang` to
       // `string` below — the same reason `series-sql.ts` and `project-sql.ts`
-      // write the check this way.
+      // write the check this way. A filename carrying no recognised Locale
+      // under a tree that requires one is the same fatal shape as a
+      // placement that will not classify — it is what the file *is*, not
+      // what it *says* — so it stops the run too (#58).
       if (lang === null || !localeMatchesTree(placed.tree, lang)) {
-        continue;
+        throw new Error(noRecognisedLocale(relativePath, placed.tree));
       }
 
       expectation.content.add(`${slug}:${lang}`);
@@ -241,15 +271,15 @@ export function expectationFrom(documents: DocumentInput[]): Expectation {
     } else if (placed.type === "project") {
       // A Project is not a Content Item — no Published At, no place in the
       // Timeline — so it is its own set, keyed the same way `project-sql.ts`
-      // keys the row it seeds.
+      // keys the row it seeds. No recognised Locale is fatal here too (#58).
       if (lang === null || !localeMatchesTree(placed.tree, lang)) {
-        continue;
+        throw new Error(noRecognisedLocale(relativePath, placed.tree));
       }
 
       expectation.project.add(`${slug}:${lang}`);
     } else if (placed.type === "series") {
       if (lang === null || !localeMatchesTree(placed.tree, lang)) {
-        continue;
+        throw new Error(noRecognisedLocale(relativePath, placed.tree));
       }
 
       expectation.series.add(`${slug}:${lang}`);
@@ -269,6 +299,20 @@ export function expectationFrom(documents: DocumentInput[]): Expectation {
   }
 
   return expectation;
+}
+
+/**
+ * Whether the Content Item expectation derived to nothing — the one state
+ * `generate-seed-sql.ts` already treats as impossible (`buildSeedSql`'s own
+ * guard against an empty walk emptying the live table): comparing two empty
+ * sets finds nothing wrong in either direction, so a broken derivation — a
+ * path constant that moves, a directory read that fails quietly — would
+ * otherwise certify an empty store as correct. Scoped to Content Items alone:
+ * a Project, a Series and a Series Section may legitimately be absent, since
+ * the schema ships before the first one is written (#58).
+ */
+export function isEmptyContentExpectation(expectation: Expectation): boolean {
+  return expectation.content.size === 0;
 }
 
 /**

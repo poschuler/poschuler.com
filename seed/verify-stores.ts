@@ -10,6 +10,7 @@ import {
   comparePresence,
   compareSectionOrder,
   expectationFrom,
+  isEmptyContentExpectation,
   type ContainerColumns,
   type DocumentInput,
 } from "./store-expectation.ts";
@@ -152,6 +153,17 @@ async function verify(mode: string): Promise<boolean> {
     // is shared with the generators, tested, and singular.
     const documents = await readContentDir(CONTENT_DIR);
     const expected = expectationFrom(documents);
+
+    // A broken derivation — a path constant that moves, a directory read
+    // that fails quietly — would otherwise produce an empty expectation, and
+    // an empty expectation compared against an empty store finds nothing
+    // wrong in either direction: the presence check below would pass and
+    // certify an empty `content` table. `generate-seed-sql.ts` already treats
+    // this state as impossible; the verifier now agrees (#58).
+    passed = report("Content Item expectation is not empty", !isEmptyContentExpectation(expected),
+        isEmptyContentExpectation(expected)
+            ? "derived to nothing — a broken derivation would certify an empty store"
+            : `${expected.content.size} expected`) && passed;
 
     const contentRows = d1Query<ContentRow>("select slug, lang, type from content", wranglerArgs);
     const tagRows = d1Query<ContentTagRow>("select slug, lang, tag from content_tag", wranglerArgs);
