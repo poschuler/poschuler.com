@@ -5,7 +5,13 @@ import fm from "front-matter";
 
 import { KV_PREFIXES, kvKeyFor } from "./kv/kv-keys.ts";
 import { listPayloadFiles } from "./kv/payload-files.ts";
-import { comparePresence, expectationFrom, type DocumentInput } from "./store-expectation.ts";
+import {
+  compareContainers,
+  comparePresence,
+  expectationFrom,
+  type ContainerColumns,
+  type DocumentInput,
+} from "./store-expectation.ts";
 
 /**
  * Asserts that a seeded store actually holds what this repo says it should.
@@ -32,6 +38,16 @@ interface ContentTagRow {
     slug: string;
     lang: string | null;
     tag: string;
+}
+
+/** The Container columns on `content`, read back with the identity that keys them. */
+interface ContentContainerRow {
+    slug: string;
+    lang: string | null;
+    series_slug: string | null;
+    series_section: string | null;
+    project_slug: string | null;
+    container_order: number | null;
 }
 
 interface ProjectRow {
@@ -136,6 +152,10 @@ async function verify(mode: string): Promise<boolean> {
         "select series_slug, lang, slug from series_section",
         wranglerArgs,
     );
+    const containerRows = d1Query<ContentContainerRow>(
+        "select slug, lang, series_slug, series_section, project_slug, container_order from content",
+        wranglerArgs,
+    );
 
     const presenceFindings = [
         comparePresence("Content Item", expected.content,
@@ -158,6 +178,30 @@ async function verify(mode: string): Promise<boolean> {
         passed = report(`no ${finding.noun} left behind`, finding.extra.length === 0,
             finding.extra.length === 0 ? "none" : `unexpected: ${finding.extra.join(", ")}`) && passed;
     }
+
+    // A Container is a value on a row that already exists, not a presence
+    // difference — comparing it keyed on identity is what names a wrong
+    // `container_order` as itself, rather than as one missing row plus one
+    // unexpected row (ADR 0012).
+    const presentContainers = new Map<string, ContainerColumns>(
+        containerRows.map((row) => [
+            `${row.slug}:${row.lang ?? ""}`,
+            {
+                seriesSlug: row.series_slug,
+                seriesSection: row.series_section,
+                projectSlug: row.project_slug,
+                containerOrder: row.container_order,
+            },
+        ]),
+    );
+    const containerFindings = compareContainers(expected.containers, presentContainers);
+
+    passed = report("every Container column agrees", containerFindings.length === 0,
+        containerFindings.length === 0
+            ? `${expected.containers.size} rows`
+            : containerFindings
+                .map((finding) => `${finding.identity} ${finding.column}: stored ${finding.stored ?? "null"}, expected ${finding.expected ?? "null"}`)
+                .join("; ")) && passed;
 
     console.log(`==> KV (${mode})`);
 

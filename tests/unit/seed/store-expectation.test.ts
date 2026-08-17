@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  compareContainers,
   comparePresence,
   expectationFrom,
   type DocumentInput,
@@ -189,6 +190,147 @@ describe("comparePresence — the project table, both directions", () => {
       missing: [],
       extra: ["retired-project:en"],
     });
+  });
+});
+
+/**
+ * #56: the Container columns on `content` — `series_slug`, `series_section`,
+ * `project_slug` and `container_order` — join the expectation. Presence is a
+ * set difference; a Container is a value on a row that already exists, so it
+ * gets its own comparison keyed by identity rather than widening `content`
+ * (ADR 0012, and the ticket's own reasoning for why widening was rejected).
+ */
+describe("expectationFrom — the Container columns", () => {
+  it("expects a loose Post to have no Container", () => {
+    const docs = [document("blog/value-objects/value-objects.en.md")];
+
+    expect(expectationFrom(docs).containers.get("value-objects:en")).toEqual({
+      seriesSlug: null,
+      seriesSection: null,
+      projectSlug: null,
+      containerOrder: null,
+    });
+  });
+
+  it("expects a Part's Series to be the Series it sits under, as its placement says", () => {
+    const docs = [
+      document(
+        "series/pragmatic-nodejs-api/project-setup/project-setup.en.md",
+      ),
+    ];
+
+    expect(expectationFrom(docs).containers.get("project-setup:en")?.seriesSlug).toBe(
+      "pragmatic-nodejs-api",
+    );
+  });
+
+  it("expects a Field Note's Project to be the Project it sits under, as its placement says", () => {
+    const docs = [document("projects/chekalo/product-matching/product-matching.en.md")];
+
+    expect(expectationFrom(docs).containers.get("product-matching:en")?.projectSlug).toBe(
+      "chekalo",
+    );
+  });
+
+  it("expects a Part's Series Section to be the Section that lists it in the manifest", () => {
+    const docs = [
+      document("series/pragmatic-nodejs-api/pragmatic-nodejs-api.en.md", {
+        sections: [
+          { slug: "fundamentals", parts: ["project-setup"] },
+          { slug: "persistence", parts: ["repositories"] },
+        ],
+      }),
+      document("series/pragmatic-nodejs-api/repositories/repositories.en.md"),
+    ];
+
+    expect(expectationFrom(docs).containers.get("repositories:en")?.seriesSection).toBe(
+      "persistence",
+    );
+  });
+
+  it("expects a Part's position to be the index its Section's manifest lists it at", () => {
+    const docs = [
+      document("series/pragmatic-nodejs-api/pragmatic-nodejs-api.en.md", {
+        sections: [
+          { slug: "fundamentals", parts: ["project-setup", "schema-validation", "vertical-slices"] },
+        ],
+      }),
+      document("series/pragmatic-nodejs-api/vertical-slices/vertical-slices.en.md"),
+    ];
+
+    expect(expectationFrom(docs).containers.get("vertical-slices:en")?.containerOrder).toBe(2);
+  });
+
+  it("expects a Field Note's position to be the index its Project's manifest lists it at", () => {
+    const docs = [
+      document("projects/chekalo/chekalo.en.md", {
+        notes: ["product-matching", "onboarding-flow"],
+      }),
+      document("projects/chekalo/onboarding-flow/onboarding-flow.en.md"),
+    ];
+
+    expect(expectationFrom(docs).containers.get("onboarding-flow:en")?.containerOrder).toBe(1);
+  });
+});
+
+/**
+ * The comparison ADR 0012 says a Container needs and presence does not give:
+ * a value on a row that already exists, named by column rather than reported
+ * as one missing item plus one unexpected item — two long identifiers to diff
+ * by eye (the ticket's own reasoning for rejecting a widened `content` key).
+ */
+describe("compareContainers", () => {
+  it("names a Container column that disagrees, with the identity, the column, the stored value and the expected value", () => {
+    const expected = new Map([
+      [
+        "repositories:en",
+        { seriesSlug: "pragmatic-nodejs-api", seriesSection: "persistence", projectSlug: null, containerOrder: 1 },
+      ],
+    ]);
+    const present = new Map([
+      [
+        "repositories:en",
+        { seriesSlug: "pragmatic-nodejs-api", seriesSection: "fundamentals", projectSlug: null, containerOrder: 1 },
+      ],
+    ]);
+
+    expect(compareContainers(expected, present)).toEqual([
+      { identity: "repositories:en", column: "seriesSection", stored: "fundamentals", expected: "persistence" },
+    ]);
+  });
+
+  it("fails a row that claims a Container for a Content Item the Markdown expects loose", () => {
+    const expected = new Map([
+      ["value-objects:en", { seriesSlug: null, seriesSection: null, projectSlug: null, containerOrder: null }],
+    ]);
+    const present = new Map([
+      [
+        "value-objects:en",
+        { seriesSlug: "pragmatic-nodejs-api", seriesSection: "fundamentals", projectSlug: null, containerOrder: 0 },
+      ],
+    ]);
+
+    expect(compareContainers(expected, present)).toEqual([
+      { identity: "value-objects:en", column: "seriesSlug", stored: "pragmatic-nodejs-api", expected: null },
+      { identity: "value-objects:en", column: "seriesSection", stored: "fundamentals", expected: null },
+      { identity: "value-objects:en", column: "containerOrder", stored: 0, expected: null },
+    ]);
+  });
+
+  it("finds nothing wrong when every column agrees", () => {
+    const columns = { seriesSlug: "pragmatic-nodejs-api", seriesSection: "fundamentals", projectSlug: null, containerOrder: 0 };
+    const expected = new Map([["project-setup:en", columns]]);
+    const present = new Map([["project-setup:en", { ...columns }]]);
+
+    expect(compareContainers(expected, present)).toEqual([]);
+  });
+
+  it("skips an identity the store has no row for — the presence comparison already names it missing", () => {
+    const expected = new Map([
+      ["repositories:en", { seriesSlug: "pragmatic-nodejs-api", seriesSection: "persistence", projectSlug: null, containerOrder: 1 }],
+    ]);
+
+    expect(compareContainers(expected, new Map())).toEqual([]);
   });
 });
 
