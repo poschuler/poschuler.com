@@ -120,13 +120,30 @@ function addTags(tags: Set<string>, slug: string, lang: string, values: unknown)
 }
 
 /**
- * The message a Post, a Project landing or a Series manifest fails the
- * verification with when its filename carries no recognised Locale under a
- * tree that requires one — one wording, shared by every branch that checks
- * it, rather than three copies free to drift apart (#58).
+ * A Post, a Project landing or a Series manifest whose filename carries no
+ * recognised Locale under a tree that requires one — the same fatal shape as
+ * a placement that will not classify, since this is what the file *is*, read
+ * off its path, not what it *says* (#58). One assertion, shared by the three
+ * branches that require a Locale, rather than three inline checks free to
+ * drift apart.
+ *
+ * `lang === null` leads the condition so TypeScript narrows `lang` to
+ * `string` for the caller once this returns — the `asserts lang is string`
+ * return type carries that narrowing across the function boundary, which is
+ * why every branch below can use `lang` as a string without repeating the
+ * check. A Bookmark calls none of this: it carries no Locale, so it has
+ * nothing to assert.
  */
-function noRecognisedLocale(relativePath: string, tree: ContentTree): string {
-  return `${relativePath} carries no recognised Locale — a file under ${tree}/ must end in .en.md or .es.md`;
+function assertRecognisedLocale(
+  relativePath: string,
+  tree: ContentTree,
+  lang: string | null,
+): asserts lang is string {
+  if (lang === null || !localeMatchesTree(tree, lang)) {
+    throw new Error(
+      `${relativePath} carries no recognised Locale — a file under ${tree}/ must end in .en.md or .es.md`,
+    );
+  }
 }
 
 /** Where a Part sits, as its Series manifest lists it: its Section and its position in that list. */
@@ -231,15 +248,7 @@ export function expectationFrom(documents: DocumentInput[]): Expectation {
     const { slug, lang } = parsed;
 
     if (placed.type === "post") {
-      // `lang === null` leads the condition so TypeScript narrows `lang` to
-      // `string` below — the same reason `series-sql.ts` and `project-sql.ts`
-      // write the check this way. A filename carrying no recognised Locale
-      // under a tree that requires one is the same fatal shape as a
-      // placement that will not classify — it is what the file *is*, not
-      // what it *says* — so it stops the run too (#58).
-      if (lang === null || !localeMatchesTree(placed.tree, lang)) {
-        throw new Error(noRecognisedLocale(relativePath, placed.tree));
-      }
+      assertRecognisedLocale(relativePath, placed.tree, lang);
 
       expectation.content.add(`${slug}:${lang}`);
       addTags(expectation.contentTags, slug, lang, attributes.tags);
@@ -271,16 +280,12 @@ export function expectationFrom(documents: DocumentInput[]): Expectation {
     } else if (placed.type === "project") {
       // A Project is not a Content Item — no Published At, no place in the
       // Timeline — so it is its own set, keyed the same way `project-sql.ts`
-      // keys the row it seeds. No recognised Locale is fatal here too (#58).
-      if (lang === null || !localeMatchesTree(placed.tree, lang)) {
-        throw new Error(noRecognisedLocale(relativePath, placed.tree));
-      }
+      // keys the row it seeds.
+      assertRecognisedLocale(relativePath, placed.tree, lang);
 
       expectation.project.add(`${slug}:${lang}`);
     } else if (placed.type === "series") {
-      if (lang === null || !localeMatchesTree(placed.tree, lang)) {
-        throw new Error(noRecognisedLocale(relativePath, placed.tree));
-      }
+      assertRecognisedLocale(relativePath, placed.tree, lang);
 
       expectation.series.add(`${slug}:${lang}`);
 
@@ -351,6 +356,15 @@ export interface SectionOrderFinding {
  * Section's own position in the arc is a value on a row that already
  * exists, not a presence set. An identity missing from `present` is skipped
  * here too — the presence comparison for Sections already names it missing.
+ *
+ * Kept separate from `compareContainers` on purpose, not by oversight: the
+ * two compare different shapes — a record of four Container columns against
+ * a single position — and their findings carry different fields, a
+ * `ContainerFinding` naming the column that disagreed where a
+ * `SectionOrderFinding` has no column to name. A comparator generic over
+ * both would need a column list and a finding constructor, which costs more
+ * to audit than the dozen lines it saves, in a script whose value is being
+ * obviously correct by inspection.
  */
 export function compareSectionOrder(
   expected: Map<string, number>,

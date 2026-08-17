@@ -160,8 +160,10 @@ async function verify(mode: string): Promise<boolean> {
     // wrong in either direction: the presence check below would pass and
     // certify an empty `content` table. `generate-seed-sql.ts` already treats
     // this state as impossible; the verifier now agrees (#58).
-    passed = report("Content Item expectation is not empty", !isEmptyContentExpectation(expected),
-        isEmptyContentExpectation(expected)
+    const contentExpectationIsEmpty = isEmptyContentExpectation(expected);
+
+    passed = report("Content Item expectation is not empty", !contentExpectationIsEmpty,
+        contentExpectationIsEmpty
             ? "derived to nothing — a broken derivation would certify an empty store"
             : `${expected.content.size} expected`) && passed;
 
