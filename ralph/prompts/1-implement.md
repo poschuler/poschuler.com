@@ -123,6 +123,27 @@ And where the ticket named no seam and you had to choose one, add a **Seam**
 line saying which you chose and why. A seam nobody agreed to is worth flagging
 while the reason is still fresh.
 
+### Evidence is quoted, never remembered
+
+Every number and every piece of output in that comment comes from something you
+watched a command print, in this session. Not from memory, not from an estimate,
+not from what the number usually is. This is the part of the report that gets
+checked against the diff, and both times it has gone wrong it went wrong the
+same way — by describing rather than copying:
+
+- **A comparison nobody measured.** *"18 tests, up from 16"* — the 18 was real
+  and the 16 was invented, because knowing it would have meant counting on the
+  commit before this one. It was 14. Either run `git show <sha>:<file>` and
+  count, or give the number you have and make no comparison at all.
+- **An output described instead of pasted.** *"`grep …` returns nothing"*, when
+  it returned two matches in docblock prose. The point being argued was true;
+  the evidence offered for it was not, which is worse than offering none.
+
+Nobody is asking for an impressive number. They are asking for **the** number. A
+line of evidence that turns out to be approximate costs more than a line never
+written: it invites a reader to wonder what else in the account was reconstructed
+at the end rather than seen along the way.
+
 ## Two rules
 
 Both outrank anything else you might have been trained to do at the end of a
