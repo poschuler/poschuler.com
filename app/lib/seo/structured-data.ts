@@ -1,5 +1,6 @@
 import type { Locale } from "~/context";
-import { postHref, projectHref, seriesHref } from "~/lib/hrefs";
+import { STRINGS } from "~/lib/catalog";
+import { postHref, projectHref, seriesHref, withLocale } from "~/lib/hrefs";
 import { AUTHOR, SITE } from "./person";
 
 /**
@@ -52,8 +53,48 @@ export function breadcrumbList(crumbs: Crumb[]): JsonLd {
   };
 }
 
-/** The path of URLs to the home page, which every other list starts from. */
-export const HOME_CRUMB: Crumb = { name: "Home", path: "/" };
+/** A section of this site a trail can pass through — each one an index with an address. */
+export type SiteSection = "home" | "blog" | "projects" | "series" | "tags";
+
+const SECTION_PATH: Record<SiteSection, string> = {
+  home: "/",
+  blog: "/blog",
+  projects: "/projects",
+  series: "/series",
+  tags: "/tags",
+};
+
+/**
+ * A fixed step on a trail — the home page, or the index a document sits under.
+ * The steps below it are the document's own and each route builds those itself.
+ *
+ * **Both halves follow the page's Locale**, which is the whole reason this is a
+ * function rather than the constant it replaced. A Spanish page used to declare
+ * a trail made of English names pointing at English URLs — on `/es/series` and
+ * `/es/tags` the entire list was the English one, so not a single step was the
+ * page emitting it, while the canonical three lines above said `/es/…`. One
+ * `<head>` contradicting itself is worse than a missing `BreadcrumbList`.
+ *
+ * The name is the one the section already renders as its own heading, read from
+ * the same catalogue the header reads (`app/lib/catalog.ts`) — through
+ * `STRINGS[locale]` rather than `useStrings()`, because `meta()` is not a
+ * component and cannot call a hook. So `/blog` is *Articles*, which is what that
+ * page has always been titled and what the trail said in neither Locale.
+ *
+ * The home page's step has no trailing slash in English — `withLocale("/", …)`
+ * gives the empty string there — and that is deliberate: it matches, character
+ * for character, the canonical the home page declares for itself. A trail that
+ * named `https://poschuler.com/` while the page called itself
+ * `https://poschuler.com` would be two URLs for one page in one document.
+ */
+export function siteCrumb(section: SiteSection, locale: Locale): Crumb {
+  const strings = STRINGS[locale];
+
+  return {
+    name: section === "home" ? strings.home.crumb : strings[section].heading,
+    path: withLocale(SECTION_PATH[section], locale),
+  };
+}
 
 export type ArticleFacts = {
   /** This article's own absolute address — `alternates.ts`'s `canonical`, not built again here. */

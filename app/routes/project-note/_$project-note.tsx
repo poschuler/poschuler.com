@@ -6,7 +6,7 @@ import { postHref, projectHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { validateRevisions } from "~/lib/revisions";
 import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
-import { blogPosting, breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
+import { blogPosting, breadcrumbList, siteCrumb } from "~/lib/seo/structured-data";
 import { findPostBySlug } from "~/models/content.server";
 import { findProjectBySlug, findProjectNotes } from "~/models/project.server";
 import type { Route } from "./+types/_$project-note";
@@ -153,8 +153,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
     // `evolution-plan/14-phase-1b-field-notes.md`).
     {
       "script:ld+json": breadcrumbList([
-        HOME_CRUMB,
-        { name: "Projects", path: "/projects" },
+        siteCrumb("home", locale),
+        siteCrumb("projects", locale),
         { name: projectTitle, path: projectHref(projectSlug, locale) },
         { name: title, path },
       ]),

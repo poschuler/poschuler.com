@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 
+import { documentAddresses } from "~/lib/seo/alternates";
 import { PERSON_CORE, PERSON_ID } from "~/lib/seo/person";
 import {
   blogPosting,
   breadcrumbList,
   creativeWorkSeries,
-  HOME_CRUMB,
   projectId,
   seriesId,
+  siteCrumb,
 } from "~/lib/seo/structured-data";
 
 /**
@@ -114,24 +115,61 @@ describe("blogPosting", () => {
 describe("breadcrumbList", () => {
   it("numbers the trail from one, in the order given", () => {
     const list = breadcrumbList([
-      HOME_CRUMB,
-      { name: "Series", path: "/series" },
+      siteCrumb("home", "en"),
+      siteCrumb("series", "en"),
       { name: "Pragmatic Node.js API", path: "/series/pragmatic-nodejs-api" },
     ]) as { itemListElement: Array<{ position: number; name: string; item: string }> };
 
     expect(list.itemListElement.map((entry) => entry.position)).toEqual([1, 2, 3]);
-    expect(list.itemListElement[0].item).toBe("https://poschuler.com/");
+    expect(list.itemListElement[0].item).toBe("https://poschuler.com");
     expect(list.itemListElement[2].name).toBe("Pragmatic Node.js API");
   });
 
   it("gives every step an absolute URL, because a step is a page", () => {
-    const list = breadcrumbList([HOME_CRUMB, { name: "Series", path: "/series" }]) as {
+    const list = breadcrumbList([siteCrumb("home", "en"), siteCrumb("series", "en")]) as {
       itemListElement: Array<{ item: string }>;
     };
 
     for (const entry of list.itemListElement) {
-      expect(entry.item.startsWith("https://poschuler.com/")).toBe(true);
+      expect(entry.item.startsWith("https://poschuler.com")).toBe(true);
     }
+  });
+});
+
+describe("siteCrumb", () => {
+  it("addresses the Locale's own branch, not the English one", () => {
+    expect(siteCrumb("series", "en").path).toBe("/series");
+    expect(siteCrumb("series", "es").path).toBe("/es/series");
+    expect(siteCrumb("home", "es").path).toBe("/es");
+  });
+
+  /**
+   * The defect this function replaced a constant to close: `/es/series` and
+   * `/es/tags` emitted the English trail verbatim, so the page emitting the
+   * `BreadcrumbList` was not among its own steps.
+   */
+  it("names a section the way that section titles itself, in that Locale", () => {
+    expect(siteCrumb("tags", "en").name).toBe("Tags");
+    expect(siteCrumb("tags", "es").name).toBe("Etiquetas");
+    expect(siteCrumb("projects", "es").name).toBe("Proyectos");
+    expect(siteCrumb("home", "en").name).toBe("Home");
+    expect(siteCrumb("home", "es").name).toBe("Inicio");
+  });
+
+  /** The trail said "Blog" while the page it names has always been titled "Articles". */
+  it("calls the blog what the blog calls itself", () => {
+    expect(siteCrumb("blog", "en").name).toBe("Articles");
+    expect(siteCrumb("blog", "es").name).toBe("Artículos");
+  });
+
+  /**
+   * Character for character what `documentAddresses` returns for the home page,
+   * so one document never carries two URLs for one page.
+   */
+  it("matches the home page's own canonical, trailing slash and all", () => {
+    const { canonical } = documentAddresses({ kind: "index", path: "/" }, "en", ["en"]);
+
+    expect(`https://poschuler.com${siteCrumb("home", "en").path}`).toBe(canonical);
   });
 });
 

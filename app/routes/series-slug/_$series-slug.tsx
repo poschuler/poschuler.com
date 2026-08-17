@@ -5,7 +5,7 @@ import { useStrings } from "~/lib/catalog";
 import { postHref, seriesHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
-import { breadcrumbList, creativeWorkSeries, HOME_CRUMB } from "~/lib/seo/structured-data";
+import { breadcrumbList, creativeWorkSeries, siteCrumb } from "~/lib/seo/structured-data";
 import { readingOrder, type ArcSection } from "~/lib/series-arc";
 import { cn } from "~/lib/utils";
 import { findSeriesArc, findSeriesBySlug } from "~/models/series.server";
@@ -107,8 +107,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
     },
     {
       "script:ld+json": breadcrumbList([
-        HOME_CRUMB,
-        { name: "Series", path: "/series" },
+        siteCrumb("home", locale),
+        siteCrumb("series", locale),
         { name: title, path: seriesHref(slug, locale) },
       ]),
     },

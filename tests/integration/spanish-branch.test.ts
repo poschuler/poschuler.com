@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { LOCALES } from "~/context";
 import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
+import { breadcrumbList, siteCrumb } from "~/lib/seo/structured-data";
 
 import { loader as blogLoader, meta as blogMeta } from "~/routes/blog/_blog";
 import { loader as blogSlugLoader } from "~/routes/blog-slug/_$blog-slug";
@@ -207,6 +208,34 @@ describe("an index with nothing behind it in Spanish", () => {
     for (const link of expected) {
       expect(blogMeta({ loaderData: blogData } as never)).toContainEqual(link);
     }
+  });
+
+  /**
+   * The trail a Spanish index publishes about itself. It used to be the English
+   * one verbatim — *Home* and *Tags* pointing at `poschuler.com/` and
+   * `/tags` — so the page emitting the `BreadcrumbList` was not among its own
+   * steps, three lines under a canonical that said `/es/tags`. Read out of the
+   * real `meta()` and matched whole, because the defect was not one wrong field
+   * but a trail belonging to the other branch.
+   */
+  it("names itself in its own trail, in its own Locale and its own branch", async () => {
+    const tagsData = await tagsLoader(
+      routeArgs<ArgsOf<typeof tagsLoader>>(platform, get("/es/tags")),
+    );
+
+    expect(tagsMeta({ loaderData: tagsData } as never)).toContainEqual({
+      "script:ld+json": breadcrumbList([siteCrumb("home", "es"), siteCrumb("tags", "es")]),
+    });
+
+    const trail = breadcrumbList([siteCrumb("home", "es"), siteCrumb("tags", "es")]) as {
+      itemListElement: Array<{ name: string; item: string }>;
+    };
+
+    expect(trail.itemListElement.map((step) => step.name)).toEqual(["Inicio", "Etiquetas"]);
+    expect(trail.itemListElement.map((step) => step.item)).toEqual([
+      "https://poschuler.com/es",
+      "https://poschuler.com/es/tags",
+    ]);
   });
 
   /**

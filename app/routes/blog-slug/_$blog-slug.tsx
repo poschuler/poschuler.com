@@ -5,7 +5,7 @@ import { PostArticle } from "~/components/post-article";
 import { formatPostDate } from "~/lib/dates";
 import { postHref } from "~/lib/hrefs";
 import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
-import { blogPosting, breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
+import { blogPosting, breadcrumbList, siteCrumb } from "~/lib/seo/structured-data";
 import { validateRevisions } from "~/lib/revisions";
 import { findPostBySlug } from "~/models/content.server";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
@@ -162,8 +162,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
         },
         {
             "script:ld+json": breadcrumbList([
-                HOME_CRUMB,
-                { name: "Blog", path: "/blog" },
+                siteCrumb("home", locale),
+                siteCrumb("blog", locale),
                 { name: title, path },
             ]),
         },

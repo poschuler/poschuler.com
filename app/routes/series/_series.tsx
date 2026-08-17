@@ -5,7 +5,7 @@ import { cloudflareContext, localeContext, LOCALES } from "~/context";
 import { useStrings } from "~/lib/catalog";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { alternateLinks, documentAddresses, emptyIndexRobots } from "~/lib/seo/alternates";
-import { breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
+import { breadcrumbList, siteCrumb } from "~/lib/seo/structured-data";
 import { findAllSeries } from "~/models/series.server";
 import type { Route } from "./+types/_series";
 
@@ -61,7 +61,10 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
     // series here would be a second description of documents that each already
     // describe themselves one click away.
     {
-      "script:ld+json": breadcrumbList([HOME_CRUMB, { name: "Series", path: "/series" }]),
+      "script:ld+json": breadcrumbList([
+        siteCrumb("home", loaderData.locale),
+        siteCrumb("series", loaderData.locale),
+      ]),
     },
     ...emptyIndexRobots(loaderData.series.length === 0),
   ];

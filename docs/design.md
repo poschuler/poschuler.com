@@ -221,6 +221,8 @@ Resource routes sit outside that function and exist once — the theme cookie, `
 
 **Orientation around a document is route-local, and no two are alike.** `routes/series-part/orientation.tsx` and `routes/project-note/orientation.tsx` are siblings of the routes that render them, because a Series and a Project orient a reader differently: a Part gets its Section's neighbours and a previous/next, a Field Note gets a flat list of its siblings and no reading order at all, because a Project promises none. **Neither shows a number.** *Part 3 of 5* needs a denominator nobody has — the manifest lists Parts that exist, so nothing knows how many are coming — and *Part 3 of 3* is available and worse than nothing, because in a section still being written it tells the reader they have reached the end.
 
+**A trail's upper steps come from `siteCrumb(section, locale)`, never from a literal.** Home, and the index the document sits under, named with the heading that page already renders and addressed on the page's own branch — the steps below it are the document's own and the route builds those from `postHref` / `seriesHref` / `projectHref`. Writing `{ name: "Series", path: "/series" }` by hand is what made every Spanish trail the English one.
+
 The visual breadcrumb and the `BreadcrumbList` in the structured data are allowed to differ, and do: the visible one may name a Series Section, the JSON-LD may not. A `BreadcrumbList` describes URLs a visitor can reach and a Section has no page, so naming it there would declare a level of hierarchy that cannot be visited. Above the article it is context for a human, not a claim about the shape of the site.
 
 ## Data access
@@ -267,6 +269,7 @@ What *is* shared is every fact a route would otherwise have to reconstruct, and 
 | `alternateLinks(addresses)` | the reciprocal `hreflang` links and the `x-default`, spread into the array |
 | `emptyIndexRobots(isEmpty)` | `noindex, follow` while an index has nothing on it, and nothing when it does |
 | `breadcrumbList`, `blogPosting`, `creativeWorkSeries` | the JSON-LD, from `app/lib/seo/structured-data.ts` |
+| `siteCrumb(section, locale)` | a trail's fixed upper steps — the home page, and the index a document sits under — named and addressed in the page's own Locale |
 | `PERSON_CORE`, `AUTHOR`, `SITE` | the one identity every page points at, from `app/lib/seo/person.ts` — a route spreads it and adds what only that page knows |
 
 The distinction is worth keeping straight: a *fact about an address* is derived, because two routes deriving it separately is how a canonical and a `hreflang` end up disagreeing. A page's *own words* are written out, because that is the one thing no helper can know.

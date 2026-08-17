@@ -14,9 +14,17 @@ import { type Locale, useLocale } from "~/context";
  * a Project's summary, the home page's biography, `<meta>`/`og:` copy — is
  * content, not chrome: it is written once, in the language it is written in,
  * the same way a Post's body is. Cataloguing it here would mean this module
- * inventing Spanish marketing prose no author reviewed. Nothing in `meta()`
- * changes for this reason, on any route; that is deliberate, not an
+ * inventing Spanish marketing prose no author reviewed. **No `meta()` reads
+ * this catalogue for its copy**, on any route; that is deliberate, not an
  * oversight.
+ *
+ * The one thing inside `meta()` that does read it is `siteCrumb`
+ * (`app/lib/seo/structured-data.ts`), and it is the exception that shows where
+ * the line runs: a `BreadcrumbList` names *sections of this site*, not the
+ * document — so its steps are the same chrome the header renders, and they were
+ * left in English for a while precisely because they sat in `meta()`, where
+ * `useStrings()` cannot be called. Reading `STRINGS[locale]` directly is what
+ * the hook does anyway.
  *
  * **No runtime test asserts this catalogue is complete.** The type below is
  * the check: `STRINGS` is declared `Record<Locale, Chrome>`, so a Locale
@@ -99,6 +107,13 @@ type Chrome = {
     readInEnglish: string;
   };
   home: {
+    /**
+     * What the home page is called when something has to name it. Every other
+     * section is named by the `heading` it already renders; the home page shows
+     * none — it opens on the biography — so the one place that needs a name for
+     * it, the breadcrumb trail, has nowhere else to read it from.
+     */
+    crumb: string;
     whatIBuild: string;
     allProjects: string;
     recentWriting: string;
@@ -243,6 +258,7 @@ export const STRINGS: Record<Locale, Chrome> = {
       readInEnglish: "Read it in English →",
     },
     home: {
+      crumb: "Home",
       whatIBuild: "What I build",
       allProjects: "All projects →",
       recentWriting: "Recent writing",
@@ -367,6 +383,7 @@ export const STRINGS: Record<Locale, Chrome> = {
       readInEnglish: "Leerlo en inglés →",
     },
     home: {
+      crumb: "Inicio",
       whatIBuild: "Lo que construyo",
       allProjects: "Todos los proyectos →",
       recentWriting: "Escritos recientes",
