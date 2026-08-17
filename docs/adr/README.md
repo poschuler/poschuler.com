@@ -17,6 +17,7 @@ The decisions worth recording, and why — each one written when it was made, an
 | [0009](./0009-a-draft-is-a-document-the-build-validates-and-refuses-to-publish.md) | A Draft is a document the build validates and refuses to publish | Stands |
 | [0010](./0010-english-at-the-root-spanish-under-es.md) | English at the root, Spanish under `/es`, one path map for both | Stands |
 | [0011](./0011-the-interface-language-is-a-typed-catalogue.md) | The interface language is a typed catalogue, not an i18n library | Stands |
+| [0012](./0012-the-verifier-shares-the-rules-never-the-rows.md) | The verifier shares the rules, never the rows | Stands |
 
 ## What changed after the fact
 

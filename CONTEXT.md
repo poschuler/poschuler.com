@@ -6,6 +6,10 @@ The personal site of Paul Osorio Schuler: what he writes, what he reads, and who
 
 ### Content
 
+**Document**:
+One Markdown file under `app/content/`, published or not. The widest noun this site has: every Content Item is a Document, but so are a Series manifest and a Project landing, which are not Content Items at all. What makes them one kind is that the pipeline holds all of them to the same rules — where the file sits decides what it is, its front matter is checked against that, its Tags against the vocabulary, its Locale against its tree — and a Draft is a Document that passes every one of those and then produces nothing. So *Document* is what a rule is written about when the rule does not care whether the thing has a Published At.
+_Avoid_: file, markdown, content file, entry
+
 **Content Item**:
 Anything that appears on the site with a publication date and earns a place in the Timeline. Exactly two kinds exist: a Post or a Bookmark.
 _Avoid_: entry, record, item
