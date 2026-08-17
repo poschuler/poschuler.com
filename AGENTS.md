@@ -9,11 +9,33 @@ The split is deliberate: the repo is a public, English-language artifact; the co
 
 ## How work arrives
 
-**Understanding first, then the document, then the code — and the last step is his.** Paul works a subject through in conversation before anything is written down: one question at a time, until the shape is settled. What comes out of that is a phase document under `evolution-plan/`, which is planning material and deliberately not versioned here. The tickets and the implementation follow from it, and **he is the one who triggers them**. Reaching the end of an exploration is not permission to start building.
+**Understanding first, then the spec, then the tickets, then the code.** A piece of work moves through five skills in this order, and Paul starts each one:
 
-So: propose, and wait. An answer that ends in a diff nobody asked for costs more to review than it saved. The same holds one level down — write the code that was asked for, not the adjacent thing you found on the way. Report what you found; let him scope it.
+```
+/grill-with-docs  →  /to-spec  →  /to-tickets  →  /implement  →  /code-review
+```
+
+`/improve-codebase-architecture` runs every so often, outside that line: it looks for architectural friction rather than for the next feature, and whatever it surfaces re-enters at the top as its own grilling.
+
+None of these steps starts itself. Reaching the end of one is not permission to begin the next — say what you would do and wait. An answer that ends in a diff nobody asked for costs more to review than it saved.
+
+### The grilling is the part that matters
+
+Everything downstream is synthesis of what was settled here, so a rushed session produces a confident spec for the wrong thing. How to run it:
+
+- **One question at a time, and stop.** Wait for the answer before asking the next. A numbered list of six questions is not an interview; it is a form, and it gets a form's answers.
+- **Ground each question in this codebase.** Name the file, the function, the row, the URL that makes the question real. "How should this behave in Spanish?" is a worse question than "`/es/tags` serves this trail today — is that what it should say?"
+- **Teach while you ask.** Where a decision turns on how something works — how React Router resolves a relative `to`, what a crawler does with a one-sided `hreflang` — explain it, with the example, before asking him to choose. He is deciding, not guessing, and cannot decide against a mechanism nobody described.
+- **Recommend, and say why.** Lay out the options honestly, then name the one you would take and the reasoning that got you there. A neutral menu pushes the work back onto him; a recommendation he can reject moves it forward.
+- **He directs the session and every decision in it.** Follow the thread he pulls, even when another looks more interesting, and put the alternative on the table rather than steering. The goal is a shared understanding — the same picture on both sides — not agreement extracted from him.
+
+### The rest of the line
+
+`/to-spec` synthesises the conversation, without a second interview. `/to-tickets` cuts it into vertical slices with their blocking edges. Both publish to the tracker — GitHub issues in `poschuler/poschuler.com` (`docs/agents/issue-tracker.md`). `/implement` builds from those tickets, and `/code-review` reads the diff since a fixed point against this repo's standards and against what the ticket asked for. That last one shares its name with Claude Code's own `/code-review`; in this flow it means Matt Pocock's.
 
 **What he writes himself is labelled.** `ready-for-human` on an issue means content — a Post, a landing, a Field Note — and no agent picks those up; `ready-for-agent` is the gate ralph reads (`docs/agents/triage-labels.md`). A phase whose code is done and whose content is not is the normal state of this repository, not a stalled one.
+
+**Write what was asked for, not the adjacent thing you found on the way.** Report the finding and let him scope it — that is what the top of this line is for.
 
 **Commit when asked, never by default**, and never push without being told. The work stands or falls in the working tree until he says otherwise.
 
