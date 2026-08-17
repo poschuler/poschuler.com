@@ -41,9 +41,13 @@ type Chrome = {
     breadcrumb: string;
   };
   nav: {
-    home: string;
     projects: string;
     blog: string;
+    /**
+     * Lower case like its neighbours, so it is the nav's own label rather
+     * than `series.heading`, which is the page's title and capitalised.
+     */
+    series: string;
     bookmarks: string;
     timeline: string;
     /**
@@ -227,9 +231,9 @@ export const STRINGS: Record<Locale, Chrome> = {
       breadcrumb: "Breadcrumb",
     },
     nav: {
-      home: "home",
       projects: "projects",
       blog: "blog",
+      series: "series",
       bookmarks: "bookmarks",
       timeline: "timeline",
       resume: "resume",
@@ -352,9 +356,9 @@ export const STRINGS: Record<Locale, Chrome> = {
       breadcrumb: "Ruta de navegación",
     },
     nav: {
-      home: "inicio",
       projects: "proyectos",
       blog: "blog",
+      series: "series",
       bookmarks: "marcadores",
       timeline: "cronología",
       resume: "resume",

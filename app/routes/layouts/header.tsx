@@ -4,7 +4,7 @@ import {
   Clock,
   FileCode2,
   Hammer,
-  HomeIcon,
+  Layers,
   Menu,
   NotebookPen,
   Terminal,
@@ -27,11 +27,26 @@ import { cn } from "~/lib/utils";
  * is read only by the panel; see the note on `Header`. `key` looks up its
  * label in the catalogue rather than carrying one, so the same list drives
  * both Locales.
+ *
+ * **Home is not in here, in either rendering: the wordmark is the way home.**
+ * It used to be the first entry, which put two links to `/` side by side in
+ * the row — the mark and the word *home* beside it. The panel dodged that by
+ * leaving its own copy of the mark inert, but the fix was asymmetric: the same
+ * component meant two different things depending on which breakpoint drew it.
+ * The mark is now the link in both, and the list is destinations the mark does
+ * not already cover.
+ *
+ * `/series` is here because it was reachable from exactly one place — the
+ * orientation block inside a Part (`routes/series-part/orientation.tsx`) — so
+ * the index of the namespace could only be found by someone already inside it.
+ * `/tags` is deliberately still not here: a Tag is found from the Post
+ * carrying it, and its index is a secondary way in rather than a seventh
+ * top-level destination.
  */
 const NAV_ITEMS = [
-  { to: "/", key: "home", Icon: HomeIcon },
   { to: "/projects", key: "projects", Icon: Hammer },
   { to: "/blog", key: "blog", Icon: NotebookPen },
+  { to: "/series", key: "series", Icon: Layers },
   { to: "/bookmarks", key: "bookmarks", Icon: BookMarked },
   { to: "/timeline", key: "timeline", Icon: Clock },
   { to: "/cv", key: "resume", Icon: FileCode2 },
@@ -39,9 +54,15 @@ const NAV_ITEMS = [
 
 /**
  * The mark, in the header and again at the head of the open panel. Written
- * once because it is one thing: only the element around it differs. In the
- * header it is the link home; in the panel it is not, because `home` is the
- * first item in the list directly under it.
+ * once because it is one thing, and in both places it is wrapped in the link
+ * home — the panel's copy closes the panel on the way out, the way every link
+ * inside it has to.
+ *
+ * It carries no `aria-label`. Naming it *home* would replace the visible word
+ * with one that isn't on screen, which is what WCAG 2.5.3 (Label in Name) is
+ * about: someone driving the page by voice says what they can read. The
+ * accessible name is *poschuler*, and a mark pointing at the root is the
+ * oldest convention the web has.
  */
 function Wordmark({ className }: { className?: string }) {
   return (
@@ -51,7 +72,7 @@ function Wordmark({ className }: { className?: string }) {
         className,
       )}
     >
-      <Terminal className="size-6" />
+      <Terminal className="size-6" aria-hidden />
       poschuler
     </span>
   );
@@ -93,6 +114,11 @@ function Wordmark({ className }: { className?: string }) {
  * still over 160px inside the 1024px it has to fit in. There is no headless
  * browser in this environment to render and measure directly; this is the
  * estimate that check leaves behind.
+ *
+ * Trading *home* for *series* left that estimate standing: the count of
+ * labels did not change, and the widest of the two swaps is two characters
+ * in English (about 16px) and none in Spanish, where *inicio* and *series*
+ * are the same length.
  *
  * The icons stay in the panel, where they earn their place: a vertical list is
  * scanned down a column of glyphs. Six of them strung along one line is
@@ -155,7 +181,17 @@ export function Header() {
           <span className="sr-only">{strings.nav.openMenu}</span>
         </SheetTrigger>
 
-        <SheetContent title={strings.nav.panelTitle} heading={<Wordmark />}>
+        {/* The panel's mark is the same link the row's is. `-m-2 p-2` grows
+          * the target to something a thumb can hit without moving the mark
+          * off the baseline the close button sits on. */}
+        <SheetContent
+          title={strings.nav.panelTitle}
+          heading={
+            <SheetClose render={<Link to="/" className="-m-2 rounded-md p-2" />}>
+              <Wordmark />
+            </SheetClose>
+          }
+        >
           {/* Every link is a `SheetClose`: client-side navigation leaves the
             * sheet mounted, so the panel has to dismiss itself on the way out. */}
           <nav aria-label={strings.nav.mainLabel} className="grid gap-1 text-lg">
