@@ -9,17 +9,28 @@
 # RALPH_BASE_REF. Each iteration:
 #   1. Skips the issue if it is already CLOSED, or (when RALPH_REQUIRE_LABEL is
 #      set) if it lacks that label.
-#   2. Runs a fresh, non-interactive `claude -p` session to implement it, make one
-#      commit, and — if the acceptance criteria hold — CLOSE the issue with a
-#      summary comment (and close its PRD if it was the last pending issue of
-#      that PRD). This step reviews nothing.
-#   3. Re-reads the issue state from GitHub; if it isn't CLOSED, stops instead of
-#      guessing why and moving on (fail-fast).
-#   4. Runs a second, independent session that code-reviews that commit and posts
-#      its report as a comment on the issue, changing no code (RALPH_REVIEW=0
-#      skips it). The report ends in a RALPH-VERDICT line.
-#   5. If that verdict counts anything FIXABLE, runs a third session that applies
-#      those findings — and only those — and commits them (RALPH_FIX=0 skips it).
+#   2. Runs a fresh, non-interactive `claude -p` session to implement it test
+#      first, make one commit, tick the issue's acceptance criteria and CLOSE it
+#      with a per-criterion report (and close its PRD if it was the last pending
+#      issue of that PRD). This step reviews nothing — a PreToolUse hook denies
+#      the review skills outright, so the ban is enforced and not merely asked
+#      for (see ralph/hooks/no-code-review.sh).
+#   3. Re-reads GitHub and the tree, and stops (fail-fast) unless all four hold:
+#      the issue is CLOSED, no `- [ ]` is left in its body, HEAD moved, and the
+#      worktree is clean. Closing an issue is the cheapest of the four to do
+#      without having done the work, which is why the other three exist.
+#   4. Runs the repo's own pre-commit checklist over that commit — the sessions
+#      all claim to have run it, and this is where the claim is checked
+#      (RALPH_VERIFY=0 goes back to taking their word).
+#   5. Runs a second, independent session that code-reviews that commit on three
+#      axes — standards, spec, tests — and posts its report as a comment on the
+#      issue, changing no code (RALPH_REVIEW=0 skips it). The report ends in a
+#      RALPH-VERDICT line, and a reviewer that commits anyway stops the run.
+#   6. If that verdict counts anything FIXABLE, runs a third session that applies
+#      those findings — and only those — and commits them (RALPH_FIX=0 skips
+#      it). Its commit is checked against the checklist too, its report has to
+#      account for every finding (applied + refused + deferred = fixable), and
+#      it leaves the tree and the issue as it found them.
 #
 # What each session is told lives in ralph/prompts/*.md, versioned with the repo.
 # No step invokes a skill: a skill is installed per user and can change under a
@@ -31,8 +42,9 @@
 # RALPH_BASE_REF for you to review.
 #
 # Each run gets one timestamped folder next to this script, in the MAIN checkout,
-# under ralph/ralph-logs/<run>/ (gitignored): a summary.md plus one log per
-# issue. It survives the worktree being torn down and never dirties your tree.
+# under ralph/ralph-logs/<run>/ (gitignored): a summary.md, one log per issue,
+# and a hooks.log naming every code review the hook refused. It survives the
+# worktree being torn down and never dirties your tree.
 #
 # Usage:
 #   ralph/ralph.sh [--dry-run] [--max-iterations N]
@@ -91,6 +103,23 @@ RALPH_MAX_ITERATIONS="${RALPH_MAX_ITERATIONS:-}"
 # dead end when there is no one to deliver it, and a session that tries burns
 # its turn and exits having done nothing.
 RALPH_DISALLOWED_TOOLS="${RALPH_DISALLOWED_TOOLS-ScheduleWakeup}"
+# Enforce "no code review in this session" with a PreToolUse hook rather than
+# with the prompt alone. Set to 0 to run on the prompt's word only.
+RALPH_BLOCK_CODE_REVIEW="${RALPH_BLOCK_CODE_REVIEW:-1}"
+# Run the repo's pre-commit checklist after every commit a session makes,
+# instead of taking its word that it did. Set to 0 to trust the sessions.
+RALPH_VERIFY="${RALPH_VERIFY:-1}"
+# What that checklist is. Defaults to the five commands AGENTS.md names, in the
+# order CI runs them — cheap checks first, the one needing a build last.
+if [[ -z "${RALPH_CHECKLIST+x}" ]]; then
+  RALPH_CHECKLIST=(
+    "pnpm typecheck"
+    "pnpm test"
+    "pnpm run verify:schema:local"
+    "pnpm run check:fixtures"
+    "pnpm run smoke"
+  )
+fi
 
 # ── Args ─────────────────────────────────────────────────────────────────────
 DRY_RUN=0
@@ -224,6 +253,20 @@ issue_title() {
   gh_read "$1" title '.title' || true
 }
 
+# How many `- [ ]` checkboxes issue $1 still carries — or EMPTY when GitHub
+# cannot be read, which callers must tell apart from zero.
+#
+# Every checkbox counts, not only the ones under `## Acceptance criteria`: the
+# rule the implementer is given is "nothing in this body is left unticked when
+# you close it", and a rule that has to work out which list a box belongs to is
+# a rule two readers will read two ways. The body is authored by hand, so if a
+# box is there it is there to be earned.
+issue_unticked() {
+  local body
+  body="$(gh_read "$1" body '.body')" || return 1
+  grep -cE '^[[:space:]]*[-*][[:space:]]+\[[[:space:]]\]' <<< "$body" || true
+}
+
 issue_comment_count() {
   # How many comments issue $1 carries — or EMPTY when GitHub cannot be read,
   # which is not the same thing as zero. The guards below stop the run over a
@@ -252,17 +295,71 @@ issue_verdict() {
     tail -1 | awk '{print $1, $2, $3, $4, $5}' || true
 }
 
+# The fix session's own tally, or empty if it posted none. Same windowing as
+# issue_verdict and for the same reason: only what this session added counts.
+#
+# The reviewer's verdict has always been machine-readable and the fixer's account
+# never was, which left the one asymmetry that mattered — the runner knew how
+# many findings there were to answer for and had no way to ask whether they were
+# answered. Three counts, and their sum has to be the verdict's FIXABLE.
+issue_fix_tally() {
+  local issue="$1" from="${2:-0}"
+  gh_read "$issue" comments ".comments[${from}:][].body" |
+    grep -oE '^[[:space:]]*RALPH-FIX:[[:space:]]+APPLIED[[:space:]]+[0-9]+[[:space:]]+REFUSED[[:space:]]+[0-9]+[[:space:]]+DEFERRED[[:space:]]+[0-9]+' |
+    tail -1 | awk '{print $1, $2, $3, $4, $5, $6, $7}' || true
+}
+
+# Field <n> of a tally line: 3 = APPLIED, 5 = REFUSED, 7 = DEFERRED.
+tally_field() {
+  [[ -n "$1" ]] || { echo ""; return; }
+  awk -v f="$2" '{print $f}' <<< "$1"
+}
+
 # The FIXABLE count out of a verdict line ("" when there is no line).
 verdict_fixable() {
   [[ -n "$1" ]] || { echo ""; return; }
   awk '{print $3}' <<< "$1"
 }
 
-# One headless session: run_claude <model> <prompt>. All three steps go through
-# here, so a tool banned for one is banned for every one of them, and stdin is
-# closed so a session that asks a question dies instead of hanging the run.
+# ── The no-code-review hook ──────────────────────────────────────────────────
+# Every prompt here says "run no code review in this session", and saying it was
+# never enough: #51 ended with a session taking the native `/code-review`
+# anyway, its work green and uncommitted while it waited on a notification
+# nobody would deliver. The hook is the half a prompt cannot be — a `deny` that
+# arrives as a tool result.
+#
+# It is wired through `--settings`, which loads *in addition to* the repo's own
+# settings, so nothing about your interactive sessions changes: the ban exists
+# only for the length of a headless one. The matcher lists the four routes to a
+# review; which of them is refused, and in which step, is the hook's own call —
+# sub-agents are the review step's whole method and stay open to it.
+HOOK_SCRIPT="$SCRIPT_DIR/hooks/no-code-review.sh"
+HOOK_SETTINGS=""
+
+setup_hook_settings() {
+  [[ "$RALPH_BLOCK_CODE_REVIEW" == "1" ]] || return 0
+  if [[ ! -x "$HOOK_SCRIPT" ]]; then
+    echo "ralph: $HOOK_SCRIPT is missing or not executable — set RALPH_BLOCK_CODE_REVIEW=0 to run without it." >&2
+    exit 1
+  fi
+  command -v jq >/dev/null 2>&1 || {
+    echo "ralph: 'jq' not found on PATH — the no-code-review hook needs it." >&2
+    exit 1
+  }
+  HOOK_SETTINGS="$RUN_DIR/hook-settings.json"
+  jq -n --arg cmd "$HOOK_SCRIPT" \
+    '{hooks:{PreToolUse:[{matcher:"Skill|SlashCommand|Agent|Task",hooks:[{type:"command",command:$cmd}]}]}}' \
+    > "$HOOK_SETTINGS"
+}
+
+# One headless session: run_claude <step> <model> <prompt>, where <step> is
+# implement | review | fix. All three go through here, so a tool banned for one
+# is banned for every one of them, and stdin is closed so a session that asks a
+# question dies instead of hanging the run. The step name reaches the hook as an
+# env var — it is what tells the hook that a reviewing sub-agent is the job in
+# step 2 and a detour in the other two.
 run_claude() {
-  local model="$1" prompt="$2"
+  local step="$1" model="$2" prompt="$3"
   local -a args=(-p "$prompt" --model "$model" --permission-mode "$RALPH_PERMISSION_MODE")
   if [[ -n "$RALPH_DISALLOWED_TOOLS" ]]; then
     # Word-split on purpose: the config holds a space-separated tool list.
@@ -270,7 +367,56 @@ run_claude() {
     local -a banned=($RALPH_DISALLOWED_TOOLS)
     args+=(--disallowedTools "${banned[@]}")
   fi
-  claude "${args[@]}" </dev/null
+  if [[ -n "$HOOK_SETTINGS" ]]; then args+=(--settings "$HOOK_SETTINGS"); fi
+  RALPH_STEP="$step" RALPH_HOOK_LOG="$RUN_DIR/hooks.log" claude "${args[@]}" </dev/null
+}
+
+# ── The checklist, run by the runner ─────────────────────────────────────────
+# run_checklist <label> <log> — the repo's own pre-commit checklist, executed
+# here rather than believed.
+#
+# Every session is told to run it and every session says it did, and until now
+# that claim was the only evidence: nothing between the commit and the draft PR
+# ever executed a line of it. A session that mis-reads its own green is not
+# being dishonest, and the cost of finding out late is what makes this worth a
+# minute — in a batch, the issues after this one are implemented *on top* of a
+# red commit, and every one of their checklists starts red for a reason that
+# isn't theirs. Stopping at the issue that broke it is the whole point.
+#
+# A failing command is retried once before it counts. Two of these rebuild the
+# local D1, and a run of them straight after a session that was using it can
+# fail on nothing at all — measured here, once, at rc=1 in under a second, then
+# green on the retry. A transient like that must not end a batch.
+run_checklist() {
+  local label="$1" log="$2" cmd
+  printf '\n===== %s =====\n' "$label" >> "$log"
+  for cmd in "${RALPH_CHECKLIST[@]}"; do
+    printf -- '--- %s ---\n' "$cmd" >> "$log"
+    # Through `bash -c` so an entry can be a command *line* — a pipe, an `&&`,
+    # a redirection — and not just an argv the caller has to keep quote-free.
+    if bash -c "$cmd" >> "$log" 2>&1; then continue; fi
+    echo "ralph: [$label] '$cmd' failed — retrying once (local stores can collide)."
+    if bash -c "$cmd" >> "$log" 2>&1; then continue; fi
+    echo "ralph: [$label] '$cmd' is red." >&2
+    return 1
+  done
+  return 0
+}
+
+# verify_commit <issue> <label> — run the checklist over what is committed now,
+# and stop the batch if it is red. Called after any session that moved HEAD.
+verify_commit() {
+  local n="$1" label="$2" log="$RUN_DIR/issue-${n}-checklist.log"
+  [[ "$RALPH_VERIFY" == "1" ]] || return 0
+  echo "ralph: #$n — running the pre-commit checklist over $label's commit."
+  if run_checklist "#$n $label" "$log"; then
+    echo "ralph: #$n — checklist green."
+    return 0
+  fi
+  echo "ralph: #$n — the checklist is RED after $label — stopping. See $log"
+  echo "       The commit is on the branch: nothing after this issue should be built on it."
+  record_result "$summary_file" "$n" "RED (checklist failed after $label)" "$(git rev-parse --short HEAD)"
+  exit 1
 }
 
 # render_prompt <prompt-file> <issue-number> [base-ref] — reads the file,
@@ -463,6 +609,27 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
   fi
   echo
   echo "ralph: [dry-run] tools banned in every step: ${RALPH_DISALLOWED_TOOLS:-(none)}"
+  if [[ "$RALPH_BLOCK_CODE_REVIEW" == "1" ]]; then
+    echo "ralph: [dry-run] code review blocked by hook: ${HOOK_SCRIPT#"$REPO_ROOT"/}"
+    if [[ ! -x "$HOOK_SCRIPT" ]]; then
+      echo "ralph: [dry-run] BUT that hook is missing or not executable — a real run would stop here." >&2
+    elif ! command -v jq >/dev/null 2>&1; then
+      echo "ralph: [dry-run] BUT 'jq' is not on PATH, and the hook needs it — a real run would stop here." >&2
+    fi
+  else
+    echo "ralph: [dry-run] code review NOT blocked (RALPH_BLOCK_CODE_REVIEW=0) — prompts only."
+  fi
+  echo "ralph: [dry-run] after step 1 a run stops unless: issue CLOSED, nothing left unticked in its"
+  echo "                 body, HEAD moved, and the worktree is clean."
+  if [[ "$RALPH_VERIFY" == "1" ]]; then
+    echo "ralph: [dry-run] and unless this checklist is green, after every commit:"
+    printf '                 %s\n' "${RALPH_CHECKLIST[@]}"
+  else
+    echo "ralph: [dry-run] the checklist is NOT run (RALPH_VERIFY=0) — the sessions' word stands."
+  fi
+  echo "ralph: [dry-run] the review session must commit nothing and untick nothing, or the run stops."
+  echo "ralph: [dry-run] the fix session must account for every finding (applied + refused + deferred"
+  echo "                 = fixable), leave no uncommitted change, and leave the issue closed and ticked."
   echo "ralph: [dry-run] done."
   exit 0
 fi
@@ -479,7 +646,13 @@ fi
 # empty summary folder behind when a guard above aborts).
 mkdir -p "$RUN_DIR"
 init_summary "$summary_file"
+setup_hook_settings
 echo "ralph: run summary -> $summary_file"
+if [[ -n "$HOOK_SETTINGS" ]]; then
+  echo "ralph: code review is blocked by hook in every session; refusals -> $RUN_DIR/hooks.log"
+else
+  echo "ralph: RALPH_BLOCK_CODE_REVIEW=0 — 'no code review' rests on the prompts alone."
+fi
 
 GLOBAL_ITER=0
 PROCESSED_ISSUES=()   # issues actually implemented + closed this run (names the PR)
@@ -513,9 +686,9 @@ for n in "${ISSUE_NUMBERS[@]}"; do
   prompt="$(render_prompt "$RALPH_PROMPT_FILE" "$n")"
   pre_sha="$(git rev-parse HEAD)"   # base for the post-implement review
 
-  # ── Step 1 (isolated): implement the issue, commit it, close it ──
+  # ── Step 1 (isolated): implement the issue, commit it, tick it, close it ──
   set +e
-  run_claude "$RALPH_MODEL" "$prompt" 2>&1 | tee "$log_file"
+  run_claude implement "$RALPH_MODEL" "$prompt" 2>&1 | tee "$log_file"
   claude_exit="${PIPESTATUS[0]}"
   set -e
 
@@ -539,8 +712,42 @@ for n in "${ISSUE_NUMBERS[@]}"; do
     exit 1
   fi
 
+  # A closed issue used to be the whole proof that the work happened, and it is
+  # the weakest of the four things that should be true by now: closing costs one
+  # `gh` call, and a session can make it having committed nothing. So the tree is
+  # asked too, and the issue's own checkboxes are asked whether the criteria were
+  # met — the implementer ticks them only against something it ran.
+  if [[ -n "$(git status --porcelain)" ]]; then
+    echo "ralph: #$n — closed, but the worktree still holds uncommitted changes — stopping."
+    echo "       The work may be finished and simply not committed: look before you re-run."
+    record_result "$summary_file" "$n" "INCOMPLETE (uncommitted changes)" "-"
+    exit 1
+  fi
+  if [[ "$(git rev-parse HEAD)" == "$pre_sha" ]]; then
+    echo "ralph: #$n — closed without committing anything (HEAD is still $(git rev-parse --short "$pre_sha")) — stopping."
+    echo "       Re-open #$n before re-running: a CLOSED issue is skipped."
+    record_result "$summary_file" "$n" "INCOMPLETE (nothing committed)" "-"
+    exit 1
+  fi
+  unticked="$(issue_unticked "$n")"
+  if [[ -z "$unticked" ]]; then
+    echo "ralph: #$n — cannot read the issue's body from GitHub — stopping."
+    record_result "$summary_file" "$n" "ERROR (GitHub unreadable)" "$(git rev-parse --short HEAD)"
+    exit 1
+  fi
+  if [[ "$unticked" -gt 0 ]]; then
+    noun="criteria"; [[ "$unticked" -eq 1 ]] && noun="criterion"
+    echo "ralph: #$n — closed with $unticked acceptance $noun left unticked — stopping."
+    echo "       Read #$n: either the work is short of what was asked, or the session"
+    echo "       met it and never said so. Both need you, and neither is the next session's."
+    record_result "$summary_file" "$n" "INCOMPLETE ($unticked criteria unticked)" "$(git rev-parse --short HEAD)"
+    exit 1
+  fi
+
+  verify_commit "$n" "implement"
+
   commit="$(git rev-parse --short HEAD)"
-  echo "ralph: #$n closed ($commit)."
+  echo "ralph: #$n closed ($commit), every acceptance criterion ticked, checklist green."
   record_result "$summary_file" "$n" "closed" "$commit"
   PROCESSED_ISSUES+=("$n")
 
@@ -553,7 +760,7 @@ for n in "${ISSUE_NUMBERS[@]}"; do
     review_prompt="$(render_prompt "$RALPH_REVIEW_PROMPT_FILE" "$n" "$pre_sha")"
     pre_comments="$(issue_comment_count "$n")"
     set +e
-    run_claude "$RALPH_REVIEW_MODEL" "$review_prompt" 2>&1 | tee "$review_log"
+    run_claude review "$RALPH_REVIEW_MODEL" "$review_prompt" 2>&1 | tee "$review_log"
     review_exit="${PIPESTATUS[0]}"
     set -e
 
@@ -591,14 +798,36 @@ for n in "${ISSUE_NUMBERS[@]}"; do
       exit 1
     fi
 
+    # The reviewer's one prohibition — "you change no code and commit nothing" —
+    # used to be the only rule here that was noticed and then waved through. It
+    # matters more than it looks: an unasked commit lands inside the range the
+    # fix session inherits as "the implementation", so the third session would be
+    # applying a review to work the reviewer did after writing it.
     review_head="$(git rev-parse --short HEAD)"
     if [[ "$review_head" != "$commit" ]]; then
-      echo "ralph: #$n — review reported on the issue, but also committed ($review_head) — read that commit."
-      record_result "$summary_file" "$n" "reviewed (report + unasked commit)" "$review_head"
-    else
-      echo "ralph: #$n — review reported on the issue: $verdict"
-      record_result "$summary_file" "$n" "reviewed ($verdict)" "$commit"
+      echo "ralph: #$n — the review committed ($review_head) when it was told to commit nothing — stopping."
+      echo "       Read that commit: it is inside what step 3 would treat as the implementation."
+      record_result "$summary_file" "$n" "REVIEW OVERSTEPPED (unasked commit)" "$review_head"
+      exit 1
     fi
+    if [[ -n "$(git status --porcelain)" ]]; then
+      echo "ralph: #$n — the review left uncommitted changes in the worktree — stopping."
+      record_result "$summary_file" "$n" "REVIEW OVERSTEPPED (dirty worktree)" "$commit"
+      exit 1
+    fi
+    # Ticks are the implementer's claim and the review's to dispute in writing,
+    # not to edit away: unticking one here would quietly undo the guard that let
+    # this issue past step 1.
+    review_unticked="$(issue_unticked "$n")"
+    if [[ -n "$review_unticked" && "$review_unticked" -gt 0 ]]; then
+      noun="criteria"; [[ "$review_unticked" -eq 1 ]] && noun="criterion"
+      echo "ralph: #$n — the review unticked $review_unticked acceptance $noun — stopping."
+      echo "       Whatever it found belongs in its report, and its report is already on #$n."
+      record_result "$summary_file" "$n" "REVIEW OVERSTEPPED (unticked criteria)" "$commit"
+      exit 1
+    fi
+    echo "ralph: #$n — review reported on the issue: $verdict"
+    record_result "$summary_file" "$n" "reviewed ($verdict)" "$commit"
 
     # ── Step 3 (isolated, fresh context): apply what the review found ──
     # Only what the review classed FIXABLE is actionable; a report that is all
@@ -615,7 +844,7 @@ for n in "${ISSUE_NUMBERS[@]}"; do
       pre_fix_comments="$(issue_comment_count "$n")"
       reviewed_head="$(git rev-parse --short HEAD)"
       set +e
-      run_claude "$RALPH_FIX_MODEL" "$fix_prompt" 2>&1 | tee "$fix_log"
+      run_claude fix "$RALPH_FIX_MODEL" "$fix_prompt" 2>&1 | tee "$fix_log"
       fix_exit="${PIPESTATUS[0]}"
       set -e
 
@@ -638,13 +867,71 @@ for n in "${ISSUE_NUMBERS[@]}"; do
         exit 1
       fi
 
+      # Every finding has to be accounted for. Refusing all of them is a legal
+      # outcome — a reviewer that cannot be wrong is not worth running — but it
+      # is also the cheapest thing this session can do, and until the counts were
+      # checked "I refused all five" and "I did nothing" reached you as the same
+      # line. They still end the same way; they no longer read the same.
+      tally="$(issue_fix_tally "$n" "$pre_fix_comments")"
+      if [[ -z "$tally" ]]; then
+        echo "ralph: #$n — the fix session's report carries no RALPH-FIX line — stopping. See $fix_log"
+        record_result "$summary_file" "$n" "FIX INCOMPLETE (no tally line)" "$(git rev-parse --short HEAD)"
+        exit 1
+      fi
+      applied="$(tally_field "$tally" 3)"
+      refused="$(tally_field "$tally" 5)"
+      deferred="$(tally_field "$tally" 7)"
+      if (( applied + refused + deferred != fixable )); then
+        echo "ralph: #$n — the fix session accounted for $((applied + refused + deferred)) findings, but the review raised $fixable — stopping."
+        echo "       Read its comment on #$n: something in the 'To fix' list went unanswered."
+        record_result "$summary_file" "$n" "FIX INCOMPLETE (accounted $((applied + refused + deferred))/$fixable)" "$(git rev-parse --short HEAD)"
+        exit 1
+      fi
+
+      # The same two things asked of the review session, for the same reasons —
+      # except that here the tree matters to the *next* issue: nothing cleans the
+      # worktree between iterations, so work left uncommitted by this session
+      # becomes the starting state the next implementation inherits.
+      if [[ -n "$(git status --porcelain)" ]]; then
+        echo "ralph: #$n — the fix session left uncommitted changes in the worktree — stopping."
+        echo "       Nothing cleans the tree between issues: left alone, this lands in the next one's commit."
+        record_result "$summary_file" "$n" "FIX OVERSTEPPED (uncommitted changes)" "$(git rev-parse --short HEAD)"
+        exit 1
+      fi
+      fix_unticked="$(issue_unticked "$n")"
+      if [[ -n "$fix_unticked" && "$fix_unticked" -gt 0 ]]; then
+        noun="criteria"; [[ "$fix_unticked" -eq 1 ]] && noun="criterion"
+        echo "ralph: #$n — the fix session unticked $fix_unticked acceptance $noun — stopping."
+        record_result "$summary_file" "$n" "FIX OVERSTEPPED (unticked criteria)" "$(git rev-parse --short HEAD)"
+        exit 1
+      fi
+      if [[ "$(issue_state "$n")" != "CLOSED" ]]; then
+        echo "ralph: #$n — the fix session re-opened the issue — stopping."
+        echo "       A re-opened issue is worked again from scratch by the next run; whatever it found belongs in its comment."
+        record_result "$summary_file" "$n" "FIX OVERSTEPPED (issue re-opened)" "$(git rev-parse --short HEAD)"
+        exit 1
+      fi
+
+      # Deferred findings don't stop the run: they are not this batch's problem,
+      # and the issues after this one are unaffected. They do have to be findable
+      # later, which is what the label is for — the session adds it, and this says
+      # so out loud rather than leaving it in a comment on a closed issue.
+      tally_text="$applied applied, $refused refused, $deferred deferred"
+      if [[ "$deferred" -gt 0 ]]; then
+        echo "ralph: #$n — $deferred finding(s) deferred to you: gh issue view $n (labelled ready-for-human)."
+      fi
+
       fix_head="$(git rev-parse --short HEAD)"
       if [[ "$fix_head" != "$reviewed_head" ]]; then
-        echo "ralph: #$n — fixes committed ($fix_head)."
-        record_result "$summary_file" "$n" "fixed ($fixable fixable)" "$fix_head"
+        # The fixer is told not to commit unless the checklist is green. Same
+        # claim as the implementer's, checked the same way — and this commit is
+        # the last thing to touch the branch before the PR.
+        verify_commit "$n" "fix"
+        echo "ralph: #$n — fixes committed ($fix_head), checklist green — $tally_text."
+        record_result "$summary_file" "$n" "fixed ($tally_text)" "$fix_head"
       else
-        echo "ralph: #$n — fix session committed nothing; read its comment on #$n."
-        record_result "$summary_file" "$n" "fix: nothing committed (read #$n)" "$fix_head"
+        echo "ralph: #$n — fix session committed nothing — $tally_text. Read its comment on #$n."
+        record_result "$summary_file" "$n" "fix: nothing committed ($tally_text)" "$fix_head"
       fi
     fi
   fi

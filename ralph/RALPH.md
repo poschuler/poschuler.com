@@ -18,16 +18,27 @@ Configuration lives in [`ralph.config.sh`](./ralph.config.sh); the loop is in
 - Ralph runs the whole list in **one git worktree** on a **fresh per-run branch
   `ralph/<timestamp>`**, forked from `dev`. For each issue it runs a **fresh
   Claude session** (fresh context per issue is the point — it avoids context rot)
-  to implement it, then verifies the issue was **closed** on GitHub, and moves on.
+  to implement it, then verifies **four** things before moving on — the issue is
+  closed, nothing is left unticked in its body, `HEAD` moved, and the worktree is
+  clean. A closed issue alone was never proof: closing costs one `gh` call.
 - Each issue gets up to **three** fresh sessions, and they do different jobs:
 
-  1. **Implement** — writes the code, commits it, closes the issue. Reviews
-     nothing.
-  2. **Review** — reads that commit against this repo's standards and against
-     the issue, and **changes no code**. Its report is a comment on the issue,
-     ending in a verdict line that counts what is objectively fixable.
+  1. **Implement** — writes the code **test first**, commits it, ticks the
+     issue's acceptance criteria and closes it with a per-criterion report.
+     Reviews nothing, and cannot: a hook denies the review skills.
+  2. **Review** — reads that commit on three axes (standards, spec, tests) and
+     **changes no code**; if it commits anyway, the run stops. Its report is a
+     comment on the issue, ending in a verdict line that counts what is
+     objectively fixable.
   3. **Fix** — runs only when that count is above zero. Applies those findings,
-     and only those, then commits.
+     and only those, then commits. Every finding ends **applied, refused (with a
+     citation) or deferred to you**, and the three counts have to add up to what
+     the review raised.
+
+  After every commit any of them makes, **the runner itself runs this repo's
+  pre-commit checklist** — the one thing in the pipeline that executes anything
+  rather than believing a session's account of it. About a minute; a red one
+  stops the batch there.
 
   The reviewer sees the diff, not the implementer's context; the fixer reads the
   report, not the reviewer's context. That isolation is the point — each judges
@@ -56,10 +67,17 @@ Nothing to install — `ralph.sh` uses `git`, `claude`, and `gh`. Make sure
 
 ### 1. Author the issues on GitHub
 
-Write each issue with everything an agent needs: problem, solution, and its
-**acceptance criteria** — in this repo those are expressed as the *User Stories*
-plus the *Testing Decisions* / *Implementation Decisions* sections. Label the
-ones ready to be picked up `ready-for-agent`.
+Write each issue with everything an agent needs: problem, solution, and an
+`## Acceptance criteria` section of `- [ ]` lines. Label the ones ready to be
+picked up `ready-for-agent`.
+
+That checkbox list is the part worth spending time on — it is the work plan, the
+test plan and the exit condition at once, and the run stops if the session
+closed the issue with any of it unticked. Two things make it tickable: **one
+observable behaviour per line** (something a test or a command can answer), and
+**no line that needs a decision you haven't made** — a criterion the session
+cannot settle is what sends the issue back to you labelled `needs-info`, which
+is the right outcome but a slow one.
 
 **Optional PRD auto-close.** If an issue belongs to a PRD and you want Ralph to
 close that PRD when the last child is done, add a line to the issue body:
@@ -167,11 +185,12 @@ versioned with the repo and reviewable in a PR like anything else:
 
 ```
 ralph/prompts/
-├── 1-implement.md      # writes the code, commits, closes the issue
-├── 2-review.md         # two axes, two sub-agents, a report and a verdict
+├── 1-implement.md      # test-first code, one commit, criteria ticked, issue closed
+├── 2-review.md         # three axes, three sub-agents, a report and a verdict
 ├── 3-fix.md            # applies what the review classed fixable
 └── parts/
-    ├── tdd.md              # the red → green loop, seams, anti-patterns
+    ├── tdd.md              # the red → green loop, seams, anti-patterns, and
+    │                       # the bar a criterion has to clear to go untested
     ├── smell-baseline.md   # the twelve Fowler smells the review carries
     └── repo-standards.md   # where this repo writes down how code is written
 ```
@@ -220,6 +239,36 @@ the review is its own step here.
 
 As a belt, `RALPH_DISALLOWED_TOOLS` bans `ScheduleWakeup` in all three sessions:
 waiting for a notification is a dead end when there is nobody to deliver one.
+
+### The hook that enforces it
+
+Dropping the slash commands removed the collision; it did not remove the *pull*.
+A session trained to review its own work at the end will look for a way, and
+"please don't" in a prompt is not a mechanism. So the ban has one now —
+[`hooks/no-code-review.sh`](./hooks/no-code-review.sh), a `PreToolUse` hook
+wired in through `--settings`, which loads **in addition to** this repo's own
+settings. Nothing about your interactive sessions changes: the ban exists only
+for the length of a headless one.
+
+It refuses three routes and leaves the rest alone:
+
+| Route | What happens |
+| ----- | ------------ |
+| `Skill` — `code-review`, `security-review`, `simplify`, `ultrareview`, with or without a plugin prefix | Denied in **all three** steps. Step 2 has its own review protocol and a verdict line to produce; the native skill produces neither. |
+| `SlashCommand` — the same names typed as `/code-review` | Denied in all three steps. |
+| `Agent` / `Task` whose brief reads as *"review this diff"* | Denied in steps 1 and 3 — a review under another name is still the review step 2 does. **Allowed in step 2**, where sub-agents are the whole method. |
+
+Sub-agents stay available everywhere for what they're good at: *finding* things.
+The rule is on the brief, not on the tool, so the implementer keeps `Explore`
+and loses only the second opinion it was never meant to convene.
+
+A denial comes back to the model as a tool result carrying a reason written for
+it — what was blocked, why, and what to do instead — because a session that
+stops dead is no better than one that reviews. Every refusal is appended to
+`ralph-logs/<run>/hooks.log`, so "did it try?" is a question with an answer.
+
+`RALPH_BLOCK_CODE_REVIEW=0` lifts all of it and goes back to trusting the
+prompts. The hook needs `jq`.
 
 ---
 
@@ -319,7 +368,10 @@ ralph/ralph-logs/<run-timestamp>/
 ├── issue-50.log            # full Claude output for issue #50 (implementation)
 ├── issue-50-review.log     # …its review session
 ├── issue-50-fix.log        # …its fix session, when the verdict called for one
-└── issue-51.log            # …one set per issue actually run
+├── issue-50-checklist.log  # …the runner's own checklist runs over its commits
+├── issue-51.log            # …one set per issue actually run
+├── hooks.log               # every code review the hook refused, and in which step
+└── hook-settings.json      # the --settings the run wired the hook in with
 ```
 
 Every invocation is its own folder, so each run's result is a self-contained
@@ -344,6 +396,9 @@ the review's report and the fixer's account of what it applied and refused.
 | `RALPH_FIX_MODEL`       | *(= `RALPH_MODEL`)* | Model for the fix session.                                       |
 | `RALPH_PERMISSION_MODE` | `auto`              | `claude -p` permission mode.                                     |
 | `RALPH_DISALLOWED_TOOLS`| `ScheduleWakeup`    | Space-separated tools banned in **every** session (`""` = none). |
+| `RALPH_BLOCK_CODE_REVIEW` | `1`               | Enforce "no code review in this session" with a `PreToolUse` hook instead of trusting the prompt. Needs `jq`. `0` = prompts only. |
+| `RALPH_VERIFY`          | `1`                 | Run the pre-commit checklist after every commit a session makes, instead of believing it ran green. `0` = take their word. |
+| `RALPH_CHECKLIST`       | the five in `AGENTS.md` | What that checklist is — one command line per entry, in order, each retried once before it counts as red. |
 | `RALPH_PROMPT_FILE`     | `ralph/prompts/1-implement.md` | What the implementation session is told. A relative path is read from the repo root. |
 | `RALPH_REVIEW_PROMPT_FILE` | `ralph/prompts/2-review.md` | What the review session is told.                     |
 | `RALPH_FIX_PROMPT_FILE` | `ralph/prompts/3-fix.md` | What the fix session is told.                               |
@@ -357,19 +412,60 @@ Command-line flags: `--dry-run`, `--max-iterations N`, `-h`/`--help`.
 
 - **Issues live on GitHub, not in files.** Ralph reads state and labels via `gh`;
   the "done" signal is the issue being **closed**, not a status line in a file.
-- **Acceptance criteria are implicit.** Repo issues don't carry a literal
-  `## Acceptance criteria` heading; the session reads the issue and infers the
-  bar from its *User Stories* and *Testing/Implementation Decisions*. Write those
-  sections well — "verify every acceptance criterion" is what **all three**
-  sessions check against, and it needs something to check.
+- **The acceptance criteria are the contract, and they are checkboxes.** Every
+  issue here carries an `## Acceptance criteria` section of `- [ ]` lines, and
+  the implementer is told to treat that list as three things at once: the work
+  plan, the test plan, and the exit condition. It ticks each one only against
+  something it ran, and the run **stops** if it closed the issue with any box
+  left unticked — anywhere in the body, not only under that heading. So write
+  criteria that can be ticked: one observable behaviour per line, no line that
+  needs a judgement call to answer. All three sessions check against them.
+- **A `- [ ]` anywhere in the body is a criterion.** The guard doesn't work out
+  which list a box belongs to, because a rule that has to would be read two ways
+  by two readers. A checkbox in an issue is something to be earned.
+- **TDD is asked for explicitly, and it is paid for in the closing comment.**
+  The implementer works one criterion at a time — failing test, watch it fail
+  for the right reason, smallest code that passes, tidy while green — and its
+  closing comment names, per criterion, the test and *the message it failed with
+  the first time*. A criterion with no test has to say which of two reasons
+  applies, and quote the command it was verified with instead. That report is
+  the only durable evidence the loop happened: one commit leaves no trace of
+  red → green, so the comment carries what the diff cannot.
 - **The review's verdict lives on the issue, not in the log.** The log holds the
   session's whole transcript; the comment on the issue *is* the report, and its
   absence is what the run stops over.
+- **The runner runs the checklist; the sessions only claim to.** Every session
+  is told to run it and every session says it did, and until it was executed
+  here that claim was the only evidence — nothing between a commit and the draft
+  PR ever ran a line of it. It costs about a minute per commit. A failing command
+  is retried once first: two of them rebuild the local D1 and can fail on nothing
+  at all when a session was just using it, and a transient must not end a batch.
+- **The reviewer is read-only, and now that is enforced.** A review session that
+  commits, dirties the tree, or unticks a checkbox stops the run. The unasked
+  commit is the one that matters: it would land inside the range the fix session
+  inherits as "the implementation", so the third session would end up applying a
+  review to work the reviewer wrote after reviewing.
+- **The Tests axis reads the closing comment, not just the diff.** It is the one
+  that can tell you the implementer's account of its own work doesn't hold — a
+  test named that isn't there, a failure message that test could not have
+  produced. That finding is advisory (there is no code defect to fix), but the
+  report leads with it, because it bears on how much of the rest to believe.
 - **The fixer only touches what the review called fixable** — a requirement
-  missing or implemented wrong, a documented rule broken. Smells and scope creep
-  are marked advisory and left alone on purpose: refactoring by judgement, or
-  deleting work someone was asked to do, is not something an unattended session
-  should decide. They stay in the report, for you.
+  missing or implemented wrong, a documented rule broken, a criterion left
+  untested. Smells and scope creep are marked advisory and left alone on purpose:
+  refactoring by judgement, or deleting work someone was asked to do, is not
+  something an unattended session should decide. They stay in the report, for you.
+- **Refusing a finding costs a citation.** The fixer may reject what the review
+  said — a reviewer that cannot be wrong is not worth running — but it has to
+  point at the issue's own line, the documented rule, or the file and line where
+  the behaviour already lives. Refusing is the cheapest thing that session can
+  do, and the counts are what stop "the review was wrong five times" from
+  reaching you looking exactly like "this session did nothing".
+- **A `ready-for-human` label on a CLOSED issue is a deferred finding.** When
+  settling one needs a judgement only you can make, the fixer names the missing
+  decision and labels the issue rather than guessing or burying it as a refusal.
+  It does not stop the run — the issues after it are unaffected — so
+  `gh issue list --label ready-for-human --state closed` is where they wait.
 - **A `needs-info` issue is a ticket problem, not a ralph problem.** Rewrite the
   ticket so the decision is already made, then re-run — the run resumes from it.
 - **Fail-fast is intentional.** If ralph stops, read the last `.log` and the

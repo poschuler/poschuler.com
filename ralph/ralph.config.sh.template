@@ -63,6 +63,36 @@ RALPH_PERMISSION_MODE="auto"
 # itself. Set to "" to lift the ban.
 RALPH_DISALLOWED_TOOLS="ScheduleWakeup"
 
+# Enforce "run no code review in this session" with a PreToolUse hook
+# (ralph/hooks/no-code-review.sh) instead of trusting the prompt to hold. It
+# refuses the reviewing skills by name, the same names typed as slash commands,
+# and a sub-agent handed a reviewer's brief — while leaving sub-agents free for
+# finding things, and free to review in step 2, where reviewing is the job. Every
+# refusal is logged to the run's hooks.log. Needs jq. Set to 0 to run on the
+# prompts' word alone.
+RALPH_BLOCK_CODE_REVIEW=1
+
+# Run this repo's own pre-commit checklist after every commit a session makes,
+# instead of taking its word that it ran green. It is the only thing in the
+# whole pipeline that executes anything, and it costs about a minute. A red one
+# stops the batch at the issue that broke it — which matters most in a batch,
+# where every later issue is implemented on top of the bad commit. Set to 0 to
+# trust the sessions — but note that ralph/prompts/2-review.md tells the review
+# session the checklist is the runner's job, which stops being true if you do.
+RALPH_VERIFY=1
+
+# What that checklist is: one command per entry, run in this order, each retried
+# once before it counts as red (two of these rebuild the local D1 and can col-
+# lide with a session that was just using it). Defaults to the five commands
+# AGENTS.md names; override to run a shorter one.
+RALPH_CHECKLIST=(
+  "pnpm typecheck"
+  "pnpm test"
+  "pnpm run verify:schema:local"
+  "pnpm run check:fixtures"
+  "pnpm run smoke"
+)
+
 # ── What each session is told ───────────────────────────────────────────────
 # The prompts live in ralph/prompts/*.md, versioned with the repo and reviewable
 # in a PR — not in this file, and not in a skill. A skill is installed per user

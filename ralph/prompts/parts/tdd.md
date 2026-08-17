@@ -42,9 +42,31 @@ agreed is how a suite grows tests that break on every refactor.
 
 ## Rules of the loop
 
-- **Red before green.** Write the failing test first, then only enough code to
-  pass it. Don't anticipate future tests or add speculative features.
+- **Red before green, and never the reverse.** Write the failing test first, run
+  it, and watch it fail *for the reason you expect* — one that fails on a typo
+  in the import has proved nothing yet. Then only enough code to pass it. Don't
+  anticipate future tests or add speculative features.
 - **One slice at a time.** One seam, one test, one minimal implementation per
   cycle.
-- **Refactoring is not part of the loop.** It belongs to the review, which is a
-  separate session — not to this one.
+- **Tidy inside the slice, while it is green.** Cleaning up what you just wrote,
+  with the suite passing, is the third beat of the cycle and belongs here.
+  Refactoring code this ticket does not touch does not: that is scope nobody
+  gave you, and the review will raise it if it matters.
+
+## When a criterion admits no failing test
+
+Some of what this repo ships has no seam a test can stand on: a step in a CI
+workflow, a generated fixture, a binding in `wrangler.jsonc`, a piece of
+content. Those are real, and pretending otherwise buys you a test asserting that
+a YAML file contains a string — which proves the file and never the behaviour.
+
+The bar is not *"this was awkward to test"*. It is **"nothing in this repo can
+observe this from code"**. Anything that clears the bar you pay for in evidence
+instead: run the thing, and keep what it printed. A criterion covered by
+`pnpm run verify:schema:local` passing is verified; a criterion covered by your
+confidence that it works is not.
+
+Note it down as you go — which criteria got no test, why, and what you ran in
+place of one. Whichever session you are, the comment you post at the end asks
+you to account for it, and reconstructing it once the work is done is how it
+turns into a guess.
