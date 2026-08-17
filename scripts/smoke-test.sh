@@ -126,7 +126,7 @@ fi
 
 POST_SLUG="${LOOSE_POST_SLUGS[0]}"
 
-ROUTES=(/ /blog /bookmarks /cv /robots.txt /sitemap.xml "/blog/${POST_SLUG}")
+ROUTES=(/ /blog /bookmarks /timeline /cv /robots.txt /sitemap.xml "/blog/${POST_SLUG}")
 
 # A Tag page, probed with a Tag some Post actually carries — read from the Post
 # payloads, which is the only place that guarantees it. A hardcoded Tag would
@@ -207,6 +207,20 @@ if [[ "${#PUBLISHED_PROJECT_NOTES[@]}" -gt 0 ]]; then
 
 	ROUTES+=("/projects/${NOTE_PROJECT_SLUG}/${NOTE_SLUG}")
 fi
+
+# The Spanish branch. Hardcoded rather than derived, and that is the difference
+# between this block and every one above it: these four addresses do not depend
+# on any Spanish document existing. An index exists in every Locale whether or
+# not its list has anything in it (Part 6 of Phase 3), the home page is one,
+# and `/es/cv` renders from `resume.json`, which carries both Locales. The
+# routes that *do* need a Translation — a Post, a Series, a Project — answer
+# 404 in Spanish today and correctly so, which is why none of them is here.
+#
+# It is the half of the route table the English probes cannot reach: the Locale
+# is derived from the pathname before the router runs, and an empty index goes
+# on to render `EmptyIndex` against the string catalogue. Both are modules no
+# English request evaluates, which is exactly what a cold start is for.
+ROUTES+=(/es /es/blog /es/timeline /es/cv)
 
 if [[ ! -d build/client ]]; then
 	echo "error: no build found. Run 'pnpm build' first." >&2
@@ -319,10 +333,19 @@ expect_mention() {
 
 echo "==> Those pages carry content, not just a status code"
 
-# These two must name this exact Slug: `/blog` lists every Post, and the Post's
-# own page is that Post.
+# These three must name this exact Slug: `/blog` lists every Post, `/timeline`
+# interleaves every Post with every Bookmark, and the Post's own page is that
+# Post.
 expect_mention /blog "${POST_SLUG}"
+expect_mention /timeline "${POST_SLUG}"
 expect_mention "/blog/${POST_SLUG}" "${POST_SLUG}"
+
+# The Spanish branch reached the Locale, rather than answering 200 in English at
+# a Spanish address — which is what a broken `deriveLocale` looks like from the
+# outside, and what every check above would pass through. `<html lang>` is the
+# claim the page makes about itself, set from the same `localeContext` the
+# loaders read, so it fails if the Locale never arrived.
+expect_mention /es 'lang="es"'
 
 # The Projects index, for the reason this block exists at all: every entry on it
 # comes from one query, so a 200 survives the query returning nothing. Asked for
