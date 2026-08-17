@@ -3,6 +3,7 @@ import { useLocale } from "~/context";
 import { useStrings } from "~/lib/catalog";
 import { postHref, projectHref } from "~/lib/hrefs";
 import type { ProjectNoteRowType } from "~/models/project.server";
+import { indexHref } from "~/lib/trail";
 
 /**
  * The Project named above a Field Note's title (Part 11 of
@@ -31,7 +32,7 @@ export function ProjectBreadcrumb({
     <nav aria-label={strings.a11y.breadcrumb} className="text-low text-sm">
       <ol className="flex flex-wrap items-center gap-x-2">
         <li>
-          <Link to="/projects" className={linkClassName}>
+          <Link to={indexHref("projects", locale)} className={linkClassName}>
             {strings.projects.heading}
           </Link>
         </li>
