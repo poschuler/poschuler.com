@@ -15,7 +15,7 @@ The split is deliberate: the repo is a public, English-language artifact; the co
 /grill-with-docs  →  /to-spec  →  /to-tickets  →  /implement  →  /code-review
 ```
 
-`/improve-codebase-architecture` runs every so often, outside that line: it looks for architectural friction rather than for the next feature, and whatever it surfaces re-enters at the top as its own grilling.
+**All of them are the `mattpocock-skills` ones** (`skills/engineering/` in that plugin), never a similarly named skill from somewhere else. `/improve-codebase-architecture`, from the same plugin, runs every so often outside that line: it looks for architectural friction rather than for the next feature, and whatever it surfaces re-enters at the top as its own grilling.
 
 None of these steps starts itself. Reaching the end of one is not permission to begin the next — say what you would do and wait. An answer that ends in a diff nobody asked for costs more to review than it saved.
 
@@ -31,13 +31,27 @@ Everything downstream is synthesis of what was settled here, so a rushed session
 
 ### The rest of the line
 
-`/to-spec` synthesises the conversation, without a second interview. `/to-tickets` cuts it into vertical slices with their blocking edges. Both publish to the tracker — GitHub issues in `poschuler/poschuler.com` (`docs/agents/issue-tracker.md`). `/implement` builds from those tickets, and `/code-review` reads the diff since a fixed point against this repo's standards and against what the ticket asked for. That last one shares its name with Claude Code's own `/code-review`; in this flow it means Matt Pocock's.
+`/to-spec` synthesises the conversation into a spec, without a second interview. `/to-tickets` cuts that spec into tickets. Both publish to the tracker — GitHub issues in `poschuler/poschuler.com` (`docs/agents/issue-tracker.md`).
+
+### What a ticket has to be
+
+Tickets here are written for a machine to pick up alone, so three constraints hold on every one of them:
+
+- **A vertical slice that can be verified**, and sized so that **one independent Sonnet session can finish it** — not an Opus one. That is not a guess about capability: `ralph/RALPH.md` sets `RALPH_MODEL` to `claude-sonnet-5`, so Sonnet is what actually executes these. A ticket too large for one such session is two tickets.
+- **Strictly sequential, never parallelisable.** Each one blocks the next, in a single line — no fan-out, no "these three can go at once". A publication is one ordered sequence and so is the work that leads to it; two agents landing on `dev` at once is a merge conflict nobody asked for.
+- **No human decision left inside it.** ralph implements these headless, with no one to ask, so anything requiring judgement is either settled up front in the grilling or pulled out into a separate piece of work. A ticket that says *decide whether…* is not a ticket; it is a question that belongs one step earlier. What Paul writes himself is a `ready-for-human` issue, which is the other way of pulling it out.
+
+### Implementing, and reviewing
+
+`/implement` builds from those tickets. **It must not run a code review at the end**, even though its own text tells it to: in a headless session — which is how ralph runs it — the *native* `/code-review` launches background agents whose results come back as deferred notifications nobody will deliver. On 16 Aug 2026 that ended a run with the work complete and green, uncommitted, the issue still open and ralph reporting `INCOMPLETE`. Committing to the current branch *is* part of `/implement`; reviewing is not.
+
+The review is its own step, started by Paul, with `mattpocock-skills`' `/code-review`: the diff since a fixed point, read against this repo's standards and against what the originating ticket asked for. It shares its name with Claude Code's own `/code-review` — in this flow it always means Matt Pocock's. ralph models the same separation, with the review as an isolated second step carrying its own skill and its own model (`RALPH_REVIEW`, `RALPH_REVIEW_SKILL`, `RALPH_REVIEW_MODEL` in `ralph/ralph.config.sh.template`), which is the arrangement to reach for rather than folding a review back into step one.
 
 **What he writes himself is labelled.** `ready-for-human` on an issue means content — a Post, a landing, a Field Note — and no agent picks those up; `ready-for-agent` is the gate ralph reads (`docs/agents/triage-labels.md`). A phase whose code is done and whose content is not is the normal state of this repository, not a stalled one.
 
 **Write what was asked for, not the adjacent thing you found on the way.** Report the finding and let him scope it — that is what the top of this line is for.
 
-**Commit when asked, never by default**, and never push without being told. The work stands or falls in the working tree until he says otherwise.
+**Commit when asked, never by default**, and never push without being told. `/implement` is the one exception, and only for the ticket it is implementing. Everywhere else the work stands or falls in the working tree until he says otherwise.
 
 ## Branches, and what publishes
 
