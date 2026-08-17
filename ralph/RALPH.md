@@ -424,6 +424,13 @@ Command-line flags: `--dry-run`, `--max-iterations N`, `-h`/`--help`.
 - **A `- [ ]` anywhere in the body is a criterion.** The guard doesn't work out
   which list a box belongs to, because a rule that has to would be read two ways
   by two readers. A checkbox in an issue is something to be earned.
+- **Evidence in the closing comment is quoted, not remembered.** The numbers and
+  outputs the implementer reports are checked against the diff by the Tests axis,
+  and the first run of two issues turned up an inaccuracy in each: a test count
+  compared against a figure nobody had measured, and a `grep` described as
+  returning nothing when it returned two matches in prose. Both arguments were
+  sound and both pieces of evidence were not, which is worse than offering none —
+  it makes a reader wonder what else was reconstructed at the end.
 - **TDD is asked for explicitly, and it is paid for in the closing comment.**
   The implementer works one criterion at a time — failing test, watch it fail
   for the right reason, smallest code that passes, tidy while green — and its
@@ -446,6 +453,17 @@ Command-line flags: `--dry-run`, `--max-iterations N`, `-h`/`--help`.
   commit is the one that matters: it would land inside the range the fix session
   inherits as "the implementation", so the third session would end up applying a
   review to work the reviewer wrote after reviewing.
+- **`FIXABLE` means objective, and two things can disqualify a finding from it.**
+  If two axes looked at the same change and reached opposite conclusions, it is
+  advisory however either of them labelled it — two careful readers disagreeing
+  is the definition of not objective. And a finding whose own text says "confirm
+  the scope with Paul" has already been judged not objective by the session that
+  wrote it. Both rules exist because #54 produced exactly that item: Standards
+  read a docblock as a broken rule, Spec read the same change as deliberately
+  deferred, and it went out as the sole thing to fix. The fixer refused it,
+  correctly and with three citations, having spent a whole session on it.
+  Catching the disagreement is the aggregator's job, and only it can — the three
+  axes are blind to each other by design.
 - **The Tests axis reads the closing comment, not just the diff.** It is the one
   that can tell you the implementer's account of its own work doesn't hold — a
   test named that isn't there, a failure message that test could not have

@@ -117,6 +117,12 @@ verbatim or lightly cleaned. **Do not merge them or rank one against the
 other** — a change can pass one axis and fail another, and keeping them apart is
 what stops one from masking the rest.
 
+**Before you classify, read the three reports against each other.** You are the
+only session that can: each axis judged the diff blind to the other two, so the
+one thing none of them could notice is that two of them looked at the same change
+and reached opposite conclusions about it. Presenting them apart still stands —
+what you are hunting for is not a merge, it is a contradiction.
+
 Then classify every finding into exactly one of two buckets, because the third
 session acts on this and on nothing else:
 
@@ -131,16 +137,34 @@ session acts on this and on nothing else:
   the code at all. All of them are for Paul to scope, not for an unattended
   session to act on.
 
-**If Tests returned anything `UNSUPPORTED`, say so in the first line of your
-report**, before the sections. It is the one finding that isn't about this diff:
-it says the account the implementer gave of its own work doesn't hold, and that
-bears on how much of the rest of that account to believe.
+Two rules override those labels, and both exist because `FIXABLE` means
+*objective* — it is the list a session acts on with nobody to ask:
+
+- **Two axes, opposite conclusions about the same change → ADVISORY**, whatever
+  they each called it. Two careful readers arriving at opposite readings is the
+  definition of not objective. Name which axes disagreed and on what; that
+  disagreement is usually more informative than either report alone.
+- **A finding whose own text asks for a human decision cannot be `FIXABLE`.** If
+  you find yourself writing "confirm the scope with Paul" into an item, you have
+  already judged it not objective — classify it that way instead of sending it to
+  a session that has nobody to confirm anything with. On 17 Aug 2026 exactly this
+  reached the fix session as the sole thing to fix (#54): Standards read a
+  docblock as a broken rule, Spec read the same change as deliberately deferred
+  to a later ticket, and the item went out carrying both the `HARD` label and the
+  suggestion to check with Paul. The fixer refused it, correctly and with three
+  citations — after a whole session spent concluding there was nothing to do.
+
+**Lead with the first line of your report** when either of these happened, before
+the sections: an axis disagreement, or an `UNSUPPORTED` from Tests. Neither is a
+finding about the diff. One says two readings of this change exist and you should
+pick; the other says the account the implementer gave of its own work doesn't
+hold, which bears on how much of the rest to believe.
 
 Post the whole thing as a comment on the issue — `gh issue comment {{N}}
 --body-file <file>` — laid out as:
 
 ```
-…one line, only if Tests returned an UNSUPPORTED finding…
+…one line, only if two axes disagreed or Tests returned an UNSUPPORTED finding…
 
 ## Standards
 …the sub-agent's report…
