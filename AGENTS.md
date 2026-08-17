@@ -7,6 +7,16 @@
 
 The split is deliberate: the repo is a public, English-language artifact; the conversation is not.
 
+## How work arrives
+
+**Understanding first, then the document, then the code — and the last step is his.** Paul works a subject through in conversation before anything is written down: one question at a time, until the shape is settled. What comes out of that is a phase document under `evolution-plan/`, which is planning material and deliberately not versioned here. The tickets and the implementation follow from it, and **he is the one who triggers them**. Reaching the end of an exploration is not permission to start building.
+
+So: propose, and wait. An answer that ends in a diff nobody asked for costs more to review than it saved. The same holds one level down — write the code that was asked for, not the adjacent thing you found on the way. Report what you found; let him scope it.
+
+**What he writes himself is labelled.** `ready-for-human` on an issue means content — a Post, a landing, a Field Note — and no agent picks those up; `ready-for-agent` is the gate ralph reads (`docs/agents/triage-labels.md`). A phase whose code is done and whose content is not is the normal state of this repository, not a stalled one.
+
+**Commit when asked, never by default**, and never push without being told. The work stands or falls in the working tree until he says otherwise.
+
 ## Branches, and what publishes
 
 `main` is production and `dev` is integration. Work forks from `dev` and returns to it by pull request; `dev` → `main` is a release.
