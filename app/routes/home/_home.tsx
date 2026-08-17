@@ -9,7 +9,7 @@ import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { CONTACT_LINKS, LOCATION } from "~/lib/contact";
 import { useStrings } from "~/lib/catalog";
 import { projectHref, withLocale } from "~/lib/hrefs";
-import { documentAddresses } from "~/lib/seo/alternates";
+import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
 import { PERSON_CORE } from "~/lib/seo/person";
 
 /**
@@ -74,12 +74,14 @@ const HOME_DESCRIPTION =
   "Senior backend engineer in Lima, Peru, with fifteen years in banking systems. I build and operate Chekalo.pe, a price intelligence platform in TypeScript and Node.js.";
 
 export const meta: Route.MetaFunction = ({ loaderData }) => {
-  const { canonical } = documentAddresses({ kind: "index", path: "/" }, loaderData.locale, LOCALES);
+  const addresses = documentAddresses({ kind: "index", path: "/" }, loaderData.locale, LOCALES);
+  const { canonical } = addresses;
 
   return [
     { title: HOME_TITLE },
     { name: "description", content: HOME_DESCRIPTION },
     { tagName: "link", rel: "canonical", href: canonical },
+    ...alternateLinks(addresses),
     { property: "og:title", content: HOME_TITLE },
     { property: "og:description", content: HOME_DESCRIPTION },
     { property: "og:image", content: "https://poschuler.com/og.png" },

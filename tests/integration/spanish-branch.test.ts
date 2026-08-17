@@ -1,5 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { LOCALES } from "~/context";
+import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
+
 import { loader as blogLoader, meta as blogMeta } from "~/routes/blog/_blog";
 import { loader as blogSlugLoader } from "~/routes/blog-slug/_$blog-slug";
 import { loader as bookmarksLoader } from "~/routes/bookmarks/_bookmarks";
@@ -180,6 +183,30 @@ describe("an index with nothing behind it in Spanish", () => {
     expect(projectsMeta({ loaderData: projectsData } as never)).toContainEqual(robots);
     expect(seriesMeta({ loaderData: seriesData } as never)).toContainEqual(robots);
     expect(tagsMeta({ loaderData: tagsData } as never)).toContainEqual(robots);
+  });
+
+  /**
+   * The other half of what an empty index says about itself. `noindex` keeps
+   * it out of the index; the `hreflang` pair is what tells a crawler the
+   * English address is the same page in another language — and the sitemap
+   * has always declared that pair, so a head that declared nothing left the
+   * two halves disagreeing. Asserted through the real `meta()` for the same
+   * reason the robots check above is: the descriptor a route actually returns.
+   */
+  it("declares its reciprocal hreflang, matching what the sitemap says about it", async () => {
+    const blogData = await blogLoader(
+      routeArgs<ArgsOf<typeof blogLoader>>(platform, get("/es/blog")),
+    );
+
+    const expected = alternateLinks(
+      documentAddresses({ kind: "index", path: "/blog" }, "es", LOCALES),
+    );
+
+    expect(expected).toHaveLength(3);
+
+    for (const link of expected) {
+      expect(blogMeta({ loaderData: blogData } as never)).toContainEqual(link);
+    }
   });
 
   /**

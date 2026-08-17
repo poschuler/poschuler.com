@@ -4,7 +4,7 @@ import { cloudflareContext, localeContext } from "~/context";
 import { PostArticle } from "~/components/post-article";
 import { formatPostDate } from "~/lib/dates";
 import { postHref } from "~/lib/hrefs";
-import { documentAddresses } from "~/lib/seo/alternates";
+import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
 import { blogPosting, breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
 import { validateRevisions } from "~/lib/revisions";
 import { findPostBySlug } from "~/models/content.server";
@@ -125,17 +125,19 @@ export const shouldRevalidate = skipRevalidationOnThemeChange;
 export function meta({ loaderData }: Route.MetaArgs) {
 
     const { title, description, slug, locale, existingLocales, datePublished, revisions } = loaderData;
-    const { canonical } = documentAddresses(
+    const addresses = documentAddresses(
         { kind: "post", slug, seriesSlug: null },
         locale,
         existingLocales,
     );
+    const { canonical } = addresses;
     const path = postHref({ slug, seriesSlug: null }, locale);
 
     return [
         { title: `${title} | Paul Osorio Schuler` },
         { name: "description", content: `${description}` },
         { tagName: "link", rel: "canonical", href: canonical },
+        ...alternateLinks(addresses),
         { property: "og:title", content: `${title}` },
         { property: "og:description", content: `${description}` },
         { property: "og:image", content: "https://poschuler.com/og.png" },

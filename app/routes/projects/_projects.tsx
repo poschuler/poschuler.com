@@ -6,7 +6,7 @@ import { cloudflareContext, localeContext, LOCALES } from "~/context";
 import { useStrings } from "~/lib/catalog";
 import { projectHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
-import { documentAddresses, emptyIndexRobots } from "~/lib/seo/alternates";
+import { alternateLinks, documentAddresses, emptyIndexRobots } from "~/lib/seo/alternates";
 import { findAllProjects, type ProjectRowType } from "~/models/project.server";
 import type { Route } from "./+types/_projects";
 
@@ -25,16 +25,18 @@ export async function loader({ context }: Route.LoaderArgs) {
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export const meta: Route.MetaFunction = ({ loaderData }) => {
-  const { canonical } = documentAddresses(
+  const addresses = documentAddresses(
     { kind: "index", path: "/projects" },
     loaderData.locale,
     LOCALES,
   );
+  const { canonical } = addresses;
 
   return [
     { title: PROJECTS_TITLE },
     { name: "description", content: PROJECTS_DESCRIPTION },
     { tagName: "link", rel: "canonical", href: canonical },
+    ...alternateLinks(addresses),
     { property: "og:title", content: PROJECTS_TITLE },
     { property: "og:description", content: PROJECTS_DESCRIPTION },
     { property: "og:image", content: "https://poschuler.com/og.png" },

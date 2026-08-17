@@ -4,7 +4,7 @@ import { SeriesItem } from "~/components/series-item";
 import { cloudflareContext, localeContext, LOCALES } from "~/context";
 import { useStrings } from "~/lib/catalog";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
-import { documentAddresses, emptyIndexRobots } from "~/lib/seo/alternates";
+import { alternateLinks, documentAddresses, emptyIndexRobots } from "~/lib/seo/alternates";
 import { breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
 import { findAllSeries } from "~/models/series.server";
 import type { Route } from "./+types/_series";
@@ -37,16 +37,18 @@ export async function loader({ context }: Route.LoaderArgs) {
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export const meta: Route.MetaFunction = ({ loaderData }) => {
-  const { canonical } = documentAddresses(
+  const addresses = documentAddresses(
     { kind: "index", path: "/series" },
     loaderData.locale,
     LOCALES,
   );
+  const { canonical } = addresses;
 
   return [
     { title: SERIES_TITLE },
     { name: "description", content: SERIES_DESCRIPTION },
     { tagName: "link", rel: "canonical", href: canonical },
+    ...alternateLinks(addresses),
     { property: "og:title", content: SERIES_TITLE },
     { property: "og:description", content: SERIES_DESCRIPTION },
     { property: "og:image", content: "https://poschuler.com/og.png" },

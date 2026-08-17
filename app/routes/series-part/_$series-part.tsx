@@ -5,7 +5,7 @@ import { formatPostDate } from "~/lib/dates";
 import { postHref, seriesHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { validateRevisions } from "~/lib/revisions";
-import { documentAddresses } from "~/lib/seo/alternates";
+import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
 import { blogPosting, breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
 import { orientationFor } from "~/lib/series-arc";
 import { findSeriesArc, findSeriesBySlug } from "~/models/series.server";
@@ -118,13 +118,15 @@ export function meta({ loaderData }: Route.MetaArgs) {
     revisions,
   } = loaderData;
   const identity = { kind: "post" as const, slug, seriesSlug };
-  const { canonical } = documentAddresses(identity, locale, existingLocales);
+  const addresses = documentAddresses(identity, locale, existingLocales);
+  const { canonical } = addresses;
   const path = postHref(identity, locale);
 
   return [
     { title: `${title} | Paul Osorio Schuler` },
     { name: "description", content: description },
     { tagName: "link", rel: "canonical", href: canonical },
+    ...alternateLinks(addresses),
     { property: "og:title", content: title },
     { property: "og:description", content: description },
     { property: "og:image", content: "https://poschuler.com/og.png" },

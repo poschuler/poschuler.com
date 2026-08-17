@@ -5,7 +5,7 @@ import type { Route } from "./+types/_timeline";
 import { cloudflareContext, localeContext, LOCALES } from "~/context";
 import { useStrings } from "~/lib/catalog";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
-import { documentAddresses } from "~/lib/seo/alternates";
+import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
 
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
@@ -29,16 +29,18 @@ const TIMELINE_DESCRIPTION =
   "Everything Paul Osorio Schuler writes and reads, interleaved and newest first: articles on backend systems and the links worth keeping.";
 
 export const meta: Route.MetaFunction = ({ loaderData }) => {
-  const { canonical } = documentAddresses(
+  const addresses = documentAddresses(
     { kind: "index", path: "/timeline" },
     loaderData.locale,
     LOCALES,
   );
+  const { canonical } = addresses;
 
   return [
     { title: TIMELINE_TITLE },
     { name: "description", content: TIMELINE_DESCRIPTION },
     { tagName: "link", rel: "canonical", href: canonical },
+    ...alternateLinks(addresses),
     { property: "og:title", content: TIMELINE_TITLE },
     { property: "og:description", content: TIMELINE_DESCRIPTION },
     { property: "og:image", content: "https://poschuler.com/og.png" },

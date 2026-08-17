@@ -4,7 +4,7 @@ import { cloudflareContext, localeContext, useLocale } from "~/context";
 import { useStrings } from "~/lib/catalog";
 import { postHref, seriesHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
-import { documentAddresses } from "~/lib/seo/alternates";
+import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
 import { breadcrumbList, creativeWorkSeries, HOME_CRUMB } from "~/lib/seo/structured-data";
 import { readingOrder, type ArcSection } from "~/lib/series-arc";
 import { cn } from "~/lib/utils";
@@ -74,12 +74,14 @@ export const shouldRevalidate = skipRevalidationOnThemeChange;
 export function meta({ loaderData }: Route.MetaArgs) {
   const { title, description, slug, locale, existingLocales, sections } = loaderData;
   const pageTitle = `${title} | Paul Osorio Schuler`;
-  const { canonical } = documentAddresses({ kind: "series", slug }, locale, existingLocales);
+  const addresses = documentAddresses({ kind: "series", slug }, locale, existingLocales);
+  const { canonical } = addresses;
 
   return [
     { title: pageTitle },
     { name: "description", content: description },
     { tagName: "link", rel: "canonical", href: canonical },
+    ...alternateLinks(addresses),
     { property: "og:title", content: pageTitle },
     { property: "og:description", content: description },
     { property: "og:image", content: "https://poschuler.com/og.png" },

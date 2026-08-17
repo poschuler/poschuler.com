@@ -5,7 +5,7 @@ import type { Route } from "./+types/_bookmarks";
 import { cloudflareContext, localeContext, LOCALES } from "~/context";
 import { useStrings } from "~/lib/catalog";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
-import { documentAddresses } from "~/lib/seo/alternates";
+import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
 
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
@@ -20,16 +20,18 @@ export async function loader({ context }: Route.LoaderArgs) {
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export const meta: Route.MetaFunction = ({ loaderData }) => {
-  const { canonical } = documentAddresses(
+  const addresses = documentAddresses(
     { kind: "index", path: "/bookmarks" },
     loaderData.locale,
     LOCALES,
   );
+  const { canonical } = addresses;
 
   return [
     { title: `Bookmarks | Paul Osorio Schuler` },
     { name: "description", content: `External articles Paul Osorio Schuler has read and kept, on TypeScript, web development, auth and security, accessibility and performance.` },
     { tagName: "link", rel: "canonical", href: canonical },
+    ...alternateLinks(addresses),
     { property: "og:title", content: `Bookmarks | Paul Osorio Schuler` },
     { property: "og:description", content: `External articles Paul Osorio Schuler has read and kept, on TypeScript, web development, auth and security, accessibility and performance.` },
     { property: "og:image", content: "https://poschuler.com/og.png" },

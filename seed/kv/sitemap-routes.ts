@@ -1,6 +1,10 @@
 import type { Locale } from "../../app/context.ts";
 import { LOCALES } from "../../app/context.ts";
-import { documentAddresses, type DocumentIdentity } from "../../app/lib/seo/alternates.ts";
+import {
+  documentAddresses,
+  hreflangEntries,
+  type DocumentIdentity,
+} from "../../app/lib/seo/alternates.ts";
 import { postHref, projectHref, seriesHref, withLocale } from "../../app/lib/hrefs.ts";
 import type { ChangeFrequency, SitemapAlternate, SitemapRoute } from "../../app/lib/seo/sitemap.ts";
 import { latestRevision, parseRevisions } from "../../app/lib/revisions.ts";
@@ -190,14 +194,14 @@ function relativePathFor(identity: DocumentIdentity, locale: Locale): string {
 }
 
 /**
- * The reciprocal alternates for a document, from the same module the page
- * `<head>` calls — `documentAddresses` in `app/lib/seo/alternates.ts` — plus
- * `x-default`, sitemaps.org's own name for the same fact `alternates.ts` calls
- * the English address.
+ * The reciprocal alternates for a document — `hreflangEntries` in
+ * `app/lib/seo/alternates.ts`, the exact set each of those documents also
+ * declares in its own `<head>`. Composing it here a second time is what let
+ * the sitemap assert pairs no page confirmed, so this reads the one
+ * definition rather than rebuilding it from `alternates` and `xDefault`.
  *
- * `alternates` and `xDefault` do not depend on which Locale is asking — both
- * are built from `existingLocales` alone (see `documentAddresses`'s own
- * implementation) — so this is computed once per document and reused for
+ * The set does not depend on which Locale is asking — it is built from
+ * `existingLocales` alone — so it is computed once per document and reused for
  * every Locale variant's own `SitemapRoute`, not once per route.
  * `existingLocales[0]` is a placeholder for the one part of the answer that
  * *does* depend on the asking Locale — the canonical — which nothing here
@@ -207,12 +211,7 @@ function alternatesFor(
   identity: DocumentIdentity,
   existingLocales: readonly Locale[],
 ): SitemapAlternate[] {
-  const { alternates, xDefault } = documentAddresses(identity, existingLocales[0], existingLocales);
-
-  return [
-    ...alternates.map(({ locale, href }) => ({ hreflang: locale, href })),
-    { hreflang: "x-default", href: xDefault },
-  ];
+  return hreflangEntries(documentAddresses(identity, existingLocales[0], existingLocales));
 }
 
 /** One `SitemapRoute` per Locale in `existingLocales`, all sharing one alternates set. */

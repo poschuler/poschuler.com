@@ -6,7 +6,7 @@ import { cloudflareContext, localeContext, LOCALES, useLocale } from "~/context"
 import { useStrings } from "~/lib/catalog";
 import { tagHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
-import { documentAddresses, emptyIndexRobots } from "~/lib/seo/alternates";
+import { alternateLinks, documentAddresses, emptyIndexRobots } from "~/lib/seo/alternates";
 import { breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
 import { findTagsWithPostCounts, type TagCountRowType } from "~/models/tag.server";
 import type { Route } from "./+types/_tags";
@@ -69,12 +69,14 @@ export const shouldRevalidate = skipRevalidationOnThemeChange;
  * the index thin (Part 6 of `evolution-plan/15-phase-3-spanish.md`).
  */
 export const meta: Route.MetaFunction = ({ loaderData }) => {
-  const { canonical } = documentAddresses({ kind: "index", path: "/tags" }, loaderData.locale, LOCALES);
+  const addresses = documentAddresses({ kind: "index", path: "/tags" }, loaderData.locale, LOCALES);
+  const { canonical } = addresses;
 
   return [
     { title: TAGS_TITLE },
     { name: "description", content: TAGS_DESCRIPTION },
     { tagName: "link", rel: "canonical", href: canonical },
+    ...alternateLinks(addresses),
     { property: "og:title", content: TAGS_TITLE },
     { property: "og:description", content: TAGS_DESCRIPTION },
     { property: "og:image", content: "https://poschuler.com/og.png" },

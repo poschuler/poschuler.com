@@ -6,7 +6,7 @@ import { GitHubIcon } from "~/components/ui/brand-icons";
 import { RevisionHistory, RevisionLine } from "~/components/revisions";
 import { cloudflareContext, localeContext } from "~/context";
 import { useStrings } from "~/lib/catalog";
-import { documentAddresses } from "~/lib/seo/alternates";
+import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { cn } from "~/lib/utils";
 import { findProjectBySlug, findProjectNotes } from "~/models/project.server";
@@ -72,12 +72,14 @@ export const shouldRevalidate = skipRevalidationOnThemeChange;
 export function meta({ loaderData }: Route.MetaArgs) {
   const { title, description, slug, locale, existingLocales } = loaderData;
   const pageTitle = `${title} | Paul Osorio Schuler`;
-  const { canonical } = documentAddresses({ kind: "project", slug }, locale, existingLocales);
+  const addresses = documentAddresses({ kind: "project", slug }, locale, existingLocales);
+  const { canonical } = addresses;
 
   return [
     { title: pageTitle },
     { name: "description", content: description },
     { tagName: "link", rel: "canonical", href: canonical },
+    ...alternateLinks(addresses),
     { property: "og:title", content: pageTitle },
     { property: "og:description", content: description },
     { property: "og:image", content: "https://poschuler.com/og.png" },

@@ -7,7 +7,7 @@ import { Skills } from "~/routes/resume/skills";
 import { KeyboardManager } from "~/routes/resume/keyboard-manager";
 import type { MetaFunction } from "react-router";
 import { LOCALES, type Locale } from "~/context";
-import { documentAddresses } from "~/lib/seo/alternates";
+import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
 import { PERSON_CORE, SITE } from "~/lib/seo/person";
 import { basics, certificates, education, languages } from "~/routes/resume/resume.json";
 
@@ -92,13 +92,15 @@ function localeFromMatches(matches: Parameters<MetaFunction>[0]["matches"]): Loc
  */
 export const meta: MetaFunction = ({ matches }) => {
   const locale = localeFromMatches(matches);
-  const { canonical } = documentAddresses({ kind: "index", path: "/cv" }, locale, LOCALES);
+  const addresses = documentAddresses({ kind: "index", path: "/cv" }, locale, LOCALES);
+  const { canonical } = addresses;
   const person = { ...PERSON_BASE, mainEntityOfPage: canonical };
 
   return [
     { title: RESUME_TITLE },
     { name: "description", content: RESUME_DESCRIPTION },
     { tagName: "link", rel: "canonical", href: canonical },
+    ...alternateLinks(addresses),
     { property: "og:title", content: RESUME_TITLE },
     { property: "og:description", content: RESUME_DESCRIPTION },
     { property: "og:image", content: `${SITE}/og.png` },

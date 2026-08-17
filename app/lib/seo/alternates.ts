@@ -46,11 +46,68 @@ export type DocumentAddresses = {
    * from the same `existingLocales` the caller already knows to be true, so a
    * document that exists in one Locale never gets an alternate pointing at an
    * address that does not exist.
+   *
+   * Read through `hreflangEntries` below rather than directly: both consumers
+   * — the document head and the sitemap — declare the same set, and that is
+   * what makes the two halves of a `hreflang` pair agree.
    */
   alternates: Alternate[];
   /** The English address — the root, with no prefix. It is what `x-default` names (ADR 0010). */
   xDefault: string;
 };
+
+/** One declared equivalence: a `hreflang` value and the address it names. */
+export type HreflangEntry = { hreflang: string; href: string };
+
+/**
+ * Every `hreflang` a document declares — one per Locale it exists in, this
+ * page's own included, and `x-default` last.
+ *
+ * **The one definition of that set**, because it is asserted in two places and
+ * a crawler compares them: a `<link rel="alternate">` in the document head and
+ * an `<xhtml:link>` inside the sitemap's `<url>`. They were composed separately
+ * for one publication and the head's half was simply never written — the
+ * sitemap declared pairs no page confirmed, which is the shape of `hreflang`
+ * that gets ignored outright. Whatever this returns, both emit.
+ *
+ * Independent of which Locale is asking: `alternates` and `xDefault` are built
+ * from `existingLocales` alone, so the sitemap computes this once per document
+ * and reuses it for every Locale's own entry.
+ */
+export function hreflangEntries(addresses: DocumentAddresses): HreflangEntry[] {
+  return [
+    ...addresses.alternates.map(({ locale, href }) => ({ hreflang: locale, href })),
+    { hreflang: "x-default", href: addresses.xDefault },
+  ];
+}
+
+/**
+ * The same set as `<link>` descriptors, spread into a route's own `meta`
+ * array — `...alternateLinks(addresses)`, the way `emptyIndexRobots` composes.
+ * Thirteen routes emit these, and none of them writes the rule out.
+ *
+ * **The key is `hreflang`, lower-case, and that was checked in a built page
+ * rather than assumed.** A descriptor carrying `tagName` is handed to React as
+ * props, which invites the React spelling `hrefLang` — and React passes that
+ * through verbatim, so the served attribute reads `hrefLang` too. HTML lowers
+ * attribute names when it parses, so both work; only one of them is the name
+ * the specification uses and the one the sitemap already writes.
+ *
+ * A document that exists in one Locale still declares that Locale and an
+ * `x-default` naming the same address. That is not noise: it is the page
+ * confirming what the sitemap says about it, and it is what makes the pair
+ * reciprocal the day a Translation is added to the other side.
+ */
+export function alternateLinks(
+  addresses: DocumentAddresses,
+): { tagName: "link"; rel: "alternate"; hreflang: string; href: string }[] {
+  return hreflangEntries(addresses).map(({ hreflang, href }) => ({
+    tagName: "link",
+    rel: "alternate",
+    hreflang,
+    href,
+  }));
+}
 
 function relativePath(identity: DocumentIdentity, locale: Locale): string {
   switch (identity.kind) {

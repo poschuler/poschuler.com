@@ -10,7 +10,7 @@ import type { Route } from "./+types/_blog";
 import { cloudflareContext, localeContext, LOCALES } from "~/context";
 import { useStrings } from "~/lib/catalog";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
-import { documentAddresses, emptyIndexRobots } from "~/lib/seo/alternates";
+import { alternateLinks, documentAddresses, emptyIndexRobots } from "~/lib/seo/alternates";
 
 /** One row on this page: a loose Post, or a whole Container — Series or Project — as a single entry. */
 type BlogEntry =
@@ -71,12 +71,14 @@ export async function loader({ context }: Route.LoaderArgs) {
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export const meta: Route.MetaFunction = ({ loaderData }) => {
-  const { canonical } = documentAddresses({ kind: "index", path: "/blog" }, loaderData.locale, LOCALES);
+  const addresses = documentAddresses({ kind: "index", path: "/blog" }, loaderData.locale, LOCALES);
+  const { canonical } = addresses;
 
   return [
     { title: "Blog | Paul Osorio Schuler" },
     { name: "description", content: "Long-form articles by Paul Osorio Schuler on building backend systems with Node.js and TypeScript: API structure, domain-driven design and software architecture." },
     { tagName: "link", rel: "canonical", href: canonical },
+    ...alternateLinks(addresses),
     { property: "og:title", content: "Blog | Paul Osorio Schuler" },
     { property: "og:description", content: "Long-form articles by Paul Osorio Schuler on building backend systems with Node.js and TypeScript: API structure, domain-driven design and software architecture." },
     { property: "og:image", content: "https://poschuler.com/og.png" },

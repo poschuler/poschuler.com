@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { documentAddresses, emptyIndexRobots, switcherDestination } from "~/lib/seo/alternates";
+import {
+  alternateLinks,
+  documentAddresses,
+  emptyIndexRobots,
+  hreflangEntries,
+  switcherDestination,
+} from "~/lib/seo/alternates";
 
 /**
  * The one source both the page `<head>` and the sitemap read. What matters
@@ -125,6 +131,74 @@ describe("documentAddresses — an index", () => {
   it("canonicalises the Spanish home page at /es, not /es/", () => {
     expect(documentAddresses({ kind: "index", path: "/" }, "es", ["en", "es"]).canonical).toBe(
       "https://poschuler.com/es",
+    );
+  });
+});
+
+/**
+ * The set both halves of a `hreflang` pair declare. It is asserted here rather
+ * than in either consumer because the failure it guards against is the two
+ * disagreeing — the sitemap advertised these pairs for one publication while
+ * no page confirmed them, which is the state a crawler ignores outright.
+ * `sitemap-routes.test.ts` checks the XML side reads this same function.
+ */
+describe("hreflangEntries", () => {
+  const post = { kind: "post" as const, slug: "implementing-value-objects", seriesSlug: null };
+
+  it("declares the one Locale that exists, plus x-default naming the same address", () => {
+    expect(hreflangEntries(documentAddresses(post, "en", ["en"]))).toEqual([
+      { hreflang: "en", href: "https://poschuler.com/blog/implementing-value-objects" },
+      { hreflang: "x-default", href: "https://poschuler.com/blog/implementing-value-objects" },
+    ]);
+  });
+
+  it("declares both Locales and x-default once a Translation exists", () => {
+    expect(hreflangEntries(documentAddresses(post, "es", ["en", "es"]))).toEqual([
+      { hreflang: "en", href: "https://poschuler.com/blog/implementing-value-objects" },
+      { hreflang: "es", href: "https://poschuler.com/es/blog/implementing-value-objects" },
+      { hreflang: "x-default", href: "https://poschuler.com/blog/implementing-value-objects" },
+    ]);
+  });
+
+  /**
+   * The reason the set is computed from `existingLocales` alone: a page and
+   * its Translation have to declare the *same* pairs, or neither is
+   * reciprocal. Only the canonical differs between them.
+   */
+  it("is identical whichever Locale is asking", () => {
+    expect(hreflangEntries(documentAddresses(post, "en", ["en", "es"]))).toEqual(
+      hreflangEntries(documentAddresses(post, "es", ["en", "es"])),
+    );
+  });
+});
+
+describe("alternateLinks", () => {
+  const addresses = documentAddresses({ kind: "index", path: "/blog" }, "en", ["en", "es"]);
+
+  /**
+   * The key is spelled `hreflang`, not React's `hrefLang`. React passes either
+   * through to the served attribute verbatim, and HTML lowers attribute names
+   * as it parses, so both reach a crawler intact — but only the lower-case one
+   * is the name the specification uses and the one the sitemap already writes,
+   * and having the two halves of a pair spelled differently is how the next
+   * reader concludes they come from different rules.
+   */
+  it("renders the set as link descriptors React will emit", () => {
+    expect(alternateLinks(addresses)).toEqual([
+      { tagName: "link", rel: "alternate", hreflang: "en", href: "https://poschuler.com/blog" },
+      { tagName: "link", rel: "alternate", hreflang: "es", href: "https://poschuler.com/es/blog" },
+      {
+        tagName: "link",
+        rel: "alternate",
+        hreflang: "x-default",
+        href: "https://poschuler.com/blog",
+      },
+    ]);
+  });
+
+  it("carries exactly what the sitemap declares for the same document", () => {
+    expect(alternateLinks(addresses).map(({ hreflang, href }) => ({ hreflang, href }))).toEqual(
+      hreflangEntries(addresses),
     );
   });
 });
