@@ -34,6 +34,11 @@ interface ContentTagRow {
     tag: string;
 }
 
+interface ProjectRow {
+    slug: string;
+    lang: string;
+}
+
 interface SeriesRow {
     slug: string;
     lang: string;
@@ -125,6 +130,7 @@ async function verify(mode: string): Promise<boolean> {
 
     const contentRows = d1Query<ContentRow>("select slug, lang, type from content", wranglerArgs);
     const tagRows = d1Query<ContentTagRow>("select slug, lang, tag from content_tag", wranglerArgs);
+    const projectRows = d1Query<ProjectRow>("select slug, lang from project", wranglerArgs);
     const seriesRows = d1Query<SeriesRow>("select slug, lang from series", wranglerArgs);
     const sectionRows = d1Query<SeriesSectionRow>(
         "select series_slug, lang, slug from series_section",
@@ -136,6 +142,8 @@ async function verify(mode: string): Promise<boolean> {
             new Set(contentRows.map((row) => `${row.slug}:${row.lang ?? ""}`))),
         comparePresence("Tag row", expected.contentTags,
             new Set(tagRows.map((row) => `${row.slug}:${row.lang ?? ""}:${row.tag}`))),
+        comparePresence("Project", expected.project,
+            new Set(projectRows.map((row) => `${row.slug}:${row.lang}`))),
         comparePresence("Series", expected.series,
             new Set(seriesRows.map((row) => `${row.slug}:${row.lang}`))),
         comparePresence("Series Section", expected.sections,

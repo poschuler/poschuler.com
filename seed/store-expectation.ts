@@ -41,6 +41,7 @@ export interface DocumentInput {
 export interface Expectation {
   content: Set<string>;
   contentTags: Set<string>;
+  project: Set<string>;
   series: Set<string>;
   sections: Set<string>;
 }
@@ -70,6 +71,7 @@ export function expectationFrom(documents: DocumentInput[]): Expectation {
   const expectation: Expectation = {
     content: new Set<string>(),
     contentTags: new Set<string>(),
+    project: new Set<string>(),
     series: new Set<string>(),
     sections: new Set<string>(),
   };
@@ -110,6 +112,15 @@ export function expectationFrom(documents: DocumentInput[]): Expectation {
     } else if (placed.type === "link") {
       expectation.content.add(`${slug}:`);
       addTags(expectation.contentTags, slug, "", attributes.tags);
+    } else if (placed.type === "project") {
+      // A Project is not a Content Item — no Published At, no place in the
+      // Timeline — so it is its own set, keyed the same way `project-sql.ts`
+      // keys the row it seeds.
+      if (lang === null || !localeMatchesTree(placed.tree, lang)) {
+        continue;
+      }
+
+      expectation.project.add(`${slug}:${lang}`);
     } else if (placed.type === "series") {
       if (lang === null || !localeMatchesTree(placed.tree, lang)) {
         continue;

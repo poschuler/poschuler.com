@@ -120,18 +120,75 @@ describe("expectationFrom — placement and Locale", () => {
   });
 
   /**
-   * The exact gap ADR 0012 opens with: `type: 'project'` had no branch at all
-   * in the old dispatch, so the `project` table was never compared. This
-   * ticket does not close that gap — it is #55 — but a Project landing must
-   * not accidentally classify as a Content Item or a Series either.
+   * A Project landing must not accidentally classify as a Content Item or a
+   * Series — it is neither: no Published At, no place in the Timeline.
    */
-  it("expects nothing at all for a Project landing — the project table has no expectation here yet", () => {
+  it("expects a Project landing in the project set, not as a Content Item or a Series", () => {
     const docs = [document("projects/chekalo/chekalo.en.md")];
 
     const expectation = expectationFrom(docs);
 
     expect(expectation.content.size).toBe(0);
     expect(expectation.series.size).toBe(0);
+  });
+});
+
+describe("expectationFrom — a Project", () => {
+  /**
+   * The exact gap #52 opens with: `type: 'project'` had no branch at all in
+   * the old dispatch, so the `project` table was never compared. This is the
+   * branch that closes it.
+   */
+  it("expects a Project at (Slug, Locale), keyed the same way project-sql.ts keys the row", () => {
+    const docs = [document("projects/chekalo/chekalo.en.md")];
+
+    expect(expectationFrom(docs).project).toEqual(new Set(["chekalo:en"]));
+  });
+
+  it("expects nothing for a Project manifest declaring itself a Draft", () => {
+    const docs = [document("projects/chekalo/chekalo.en.md", { draft: true })];
+
+    expect(expectationFrom(docs).project.size).toBe(0);
+  });
+});
+
+describe("comparePresence — the project table, both directions", () => {
+  /**
+   * The observable outcome #52 built the acceptance around: a wrong prune of
+   * `project` used to pass a Publication in silence, because the old dispatch
+   * had no branch for it at all. `comparePresence` is what names the row that
+   * went missing — the same function every other table already uses, now fed
+   * from the `project` set.
+   */
+  it("names a Project the Markdown backs that a prune dropped from the table", () => {
+    const docs = [
+      document("projects/chekalo/chekalo.en.md"),
+      document("projects/poschuler-com/poschuler-com.en.md"),
+    ];
+
+    const expected = expectationFrom(docs).project;
+    const present = new Set(["chekalo:en"]);
+
+    expect(comparePresence("Project", expected, present)).toEqual({
+      noun: "Project",
+      expectedCount: 2,
+      missing: ["poschuler-com:en"],
+      extra: [],
+    });
+  });
+
+  it("names a row in the table that no Project manifest backs", () => {
+    const docs = [document("projects/chekalo/chekalo.en.md")];
+
+    const expected = expectationFrom(docs).project;
+    const present = new Set(["chekalo:en", "retired-project:en"]);
+
+    expect(comparePresence("Project", expected, present)).toEqual({
+      noun: "Project",
+      expectedCount: 1,
+      missing: [],
+      extra: ["retired-project:en"],
+    });
   });
 });
 
