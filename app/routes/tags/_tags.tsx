@@ -1,14 +1,15 @@
 import { Tag as TagIcon } from "lucide-react";
 import { useLoaderData } from "react-router";
+import { EmptyIndex } from "~/components/empty-index";
 import { ListingRow } from "~/components/listing-row";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext, LOCALES, useLocale } from "~/context";
+import { useStrings } from "~/lib/catalog";
 import { tagHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
-import { breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
+import { alternateLinks, documentAddresses, emptyIndexRobots } from "~/lib/seo/alternates";
+import { breadcrumbList, siteCrumb } from "~/lib/seo/structured-data";
 import { findTagsWithPostCounts, type TagCountRowType } from "~/models/tag.server";
 import type { Route } from "./+types/_tags";
-
-const SITE = "https://poschuler.com";
 
 const TAGS_TITLE = "Tags | Paul Osorio Schuler";
 const TAGS_DESCRIPTION =
@@ -40,41 +41,57 @@ const TAGS_DESCRIPTION =
  */
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
-  const tags = await findTagsWithPostCounts(env.POSCHULER_BD);
+  const locale = context.get(localeContext);
+  const tags = await findTagsWithPostCounts(env.POSCHULER_BD, locale);
 
-  return { tags };
+  return { tags, locale };
 }
 
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 /**
- * **No robots directive, deliberately.** Every individual Tag page declares
- * `noindex, follow`, and this page is the exception that makes that rule pay:
- * it is the one document in the namespace with something of its own to say —
- * the shape of what this site writes about — rather than a list of links to a
- * single Post. It is also the only `/tags` URL the sitemap advertises, and a
- * sitemap must not advertise a page that asks not to be indexed.
+ * **No robots directive, deliberately — as long as it has something to say.**
+ * Every individual Tag page declares `noindex, follow`, and this page is the
+ * exception that makes that rule pay: it is the one document in the namespace
+ * with something of its own to say — the shape of what this site writes about
+ * — rather than a list of links to a single Post. It is also the only `/tags`
+ * URL the sitemap advertises, and a sitemap must not advertise a page that
+ * asks not to be indexed.
  *
  * A trail and nothing more, as on `/series`: an `ItemList` of the Tags here
  * would be a second description of pages that each already describe themselves
  * one click away — and those pages are `noindex`.
+ *
+ * **The exception has its own exception.** No Tag exists until a Post carries
+ * it, so an empty-content Locale closes this namespace too — `/es/tags` today
+ * — and the same rule every other index follows applies here as well: an
+ * index with nothing to say declares `noindex, follow` rather than entering
+ * the index thin (Part 6 of `evolution-plan/15-phase-3-spanish.md`).
  */
-export const meta: Route.MetaFunction = () => {
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+  const addresses = documentAddresses({ kind: "index", path: "/tags" }, loaderData.locale, LOCALES);
+  const { canonical } = addresses;
+
   return [
     { title: TAGS_TITLE },
     { name: "description", content: TAGS_DESCRIPTION },
-    { tagName: "link", rel: "canonical", href: `${SITE}/tags` },
+    { tagName: "link", rel: "canonical", href: canonical },
+    ...alternateLinks(addresses),
     { property: "og:title", content: TAGS_TITLE },
     { property: "og:description", content: TAGS_DESCRIPTION },
-    { property: "og:image", content: `${SITE}/og.png` },
+    { property: "og:image", content: "https://poschuler.com/og.png" },
     { property: "og:image:width", content: "1200" },
     { property: "og:image:height", content: "630" },
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
-    { property: "og:url", content: `${SITE}/tags` },
+    { property: "og:url", content: canonical },
     {
-      "script:ld+json": breadcrumbList([HOME_CRUMB, { name: "Tags", path: "/tags" }]),
+      "script:ld+json": breadcrumbList([
+        siteCrumb("home", loaderData.locale),
+        siteCrumb("tags", loaderData.locale),
+      ]),
     },
+    ...emptyIndexRobots(loaderData.tags.length === 0),
   ];
 };
 
@@ -91,40 +108,48 @@ export const meta: Route.MetaFunction = () => {
  * page behind the link has to hold.
  */
 function TagRow({ tag, posts }: TagCountRowType) {
+  const locale = useLocale();
+  const strings = useStrings();
+
   return (
     <ListingRow
       title={tag}
-      href={tagHref(tag)}
+      href={tagHref(tag, locale)}
       icon={TagIcon}
-      meta={<span>{`${posts} ${posts === 1 ? "post" : "posts"}`}</span>}
+      meta={<span>{strings.tags.posts(posts)}</span>}
     />
   );
 }
 
 export default function Tags() {
   const { tags } = useLoaderData<typeof loader>();
+  const strings = useStrings();
 
   return (
     <main className="flex flex-1 flex-col gap-4 bg-ui p-4 font-mono md:gap-8 md:p-10">
       <section className="w-full">
         <div className="text-center">
           <h1 className="mt-8 scroll-m-20 font-semibold text-3xl tracking-tight lg:text-4xl">
-            Tags
+            {strings.tags.heading}
           </h1>
         </div>
 
         <div className="mx-auto max-w-[450px]">
           <blockquote className="mt-2 text-center text-lg text-low italic">
-            Everything I write about, most-written-about first
+            {strings.tags.subtitle}
           </blockquote>
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-measure">
-        {tags.map((one) => (
-          <TagRow key={one.tag} tag={one.tag} posts={one.posts} />
-        ))}
-      </section>
+      {tags.length === 0 ? (
+        <EmptyIndex englishHref="/tags" />
+      ) : (
+        <section className="mx-auto w-full max-w-measure">
+          {tags.map((one) => (
+            <TagRow key={one.tag} tag={one.tag} posts={one.posts} />
+          ))}
+        </section>
+      )}
     </main>
   );
 }

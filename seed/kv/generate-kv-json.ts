@@ -8,6 +8,7 @@ import {
     buildSitemapRoutes,
     type SitemapContentItem,
     type SitemapProject,
+    type SitemapSeries,
     type SitemapTag,
 } from "./sitemap-routes.ts";
 import resume from "../../app/routes/resume/resume.json" with { type: "json" };
@@ -37,13 +38,10 @@ const PUBLIC_HOST = "https://poschuler.com";
  */
 interface RenderedDocument { attributes: Record<string, unknown>; html: string; }
 
-type ProjectRowType = SitemapProject & {
-    lang: string;
-};
+type ProjectRowType = SitemapProject;
 
 type ContentRowType = SitemapContentItem & {
     idContent: number;
-    lang: string;
     title: string;
     publishedAt: string;
     description: string;
@@ -58,10 +56,7 @@ type ContentRowType = SitemapContentItem & {
     projectSlug: string | null;
 };
 
-type SeriesRowType = {
-    slug: string;
-    lang: string;
-};
+type SeriesRowType = SitemapSeries;
 
 /** Runs one read against the local D1 and returns its rows. */
 function queryD1<Row>(sql: string): Row[] {
@@ -93,6 +88,15 @@ function fetchAll(): ContentRowType[] {
     // No `tags`: `content` has no such column since migration 0005. Nothing
     // here ever used it — a payload's Tags come from the front matter below,
     // verbatim, and the index at `/tags` is built from `content_tag`.
+    //
+    // No `lang` filter, deliberately — every payload, in every Locale, has to
+    // be rendered. `lang` is still selected, and it is what used to be the
+    // latent defect here: `buildSitemapRoutes` ignored it and built the same
+    // `/blog/<slug>`-shaped URL for both a Post and its Translation, so the
+    // first Spanish Post would have advertised one address twice. It now
+    // groups these rows by Slug and reads `lang` off each one to build the
+    // correct address per Locale (Part 10 of
+    // `evolution-plan/15-phase-3-spanish.md`).
     const rows = queryD1<ContentRowType>(
         `select id_content as "idContent", slug as "slug", lang as "lang", type as "type", title as "title", published_at as "publishedAt", strftime('%Y-%m-%d', published_at) AS "publishedStringDate", description as "description", external_url as "externalUrl", source as "source", updates as "updates", series_slug as "seriesSlug", project_slug as "projectSlug" from content order by published_at desc`,
     );
@@ -140,17 +144,20 @@ function fetchAllSeries(): SeriesRowType[] {
  * NULL to another), and `type = 'post'` is what says so. A Tag carried by
  * Bookmarks alone backs no page and is not an entry on the index.
  *
- * **No Locale filter, where the index's own query reads `en`.** Nothing in this
- * pipeline names a Locale — the seed derives whatever the content declares —
- * and this would be the first line to do it. The divergence is real and its
- * consequence is bounded: a Post written only in Spanish would have this
- * advertise `/tags` while the English index is empty. Whether a Spanish Tag
- * page lists only Spanish Posts is a decision the phase deliberately deferred,
- * and it is the decision that says what belongs here.
+ * **Carries `lang`, where it used to carry no Locale at all.** This was the
+ * one query in the pipeline with no Locale in it, and its own former note
+ * named the deferred decision: *"whether a Spanish Tag page lists only
+ * Spanish Posts."* Part 11 of `evolution-plan/15-phase-3-spanish.md` answers
+ * it — yes, a Tag is a subject and has no language, but an index reading
+ * *ddd · 3 posts* over three English articles would be a lie, so `/es/tags`
+ * counts Spanish Posts only. Selecting `lang` here is what lets
+ * `buildSitemapRoutes` decide, per Locale, whether `/tags` or `/es/tags` has
+ * anything to advertise, the same way it already does for Projects and
+ * Series.
  */
 function fetchTaggedPostTags(): SitemapTag[] {
     return queryD1<SitemapTag>(
-        `select distinct content_tag.tag as "tag" from content_tag join content on content.slug = content_tag.slug and content.lang = content_tag.lang where content.type = 'post' order by content_tag.tag asc`,
+        `select distinct content_tag.tag as "tag", content.lang as "lang" from content_tag join content on content.slug = content_tag.slug and content.lang = content_tag.lang where content.type = 'post' order by content_tag.tag asc, content.lang asc`,
     );
 }
 

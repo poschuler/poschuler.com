@@ -85,8 +85,10 @@ describe("parseContentFilename", () => {
   });
 
   /**
-   * Only `en` and `es` count as a Locale, so `en-old` is absorbed into the slug.
-   * This is the mechanism behind the unpublished draft below.
+   * Only `en` and `es` count as a Locale, so `en-old` is absorbed into the
+   * slug. `localeMatchesTree` (`content-tree.ts`) is what turns this into a
+   * build failure under a tree that requires a Locale — see the Posts and
+   * Bookmarks describe blocks below.
    */
   it("does not recognise en-old as a Locale", () => {
     expect(parseContentFilename("post.en-old.md")).toEqual({
@@ -135,13 +137,13 @@ describe("contentRowFor — Posts", () => {
       VOCABULARY,
     ) as SeededRow;
 
-    expect(row.statement).toContain("(slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, project_slug, section_order, container_order, updated_at)");
+    expect(row.statement).toContain("(slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, project_slug, container_order, updated_at)");
     expect(row.statement).not.toContain("external_url");
   });
 
   /**
    * The Container columns travel together or not at all, which is why nothing
-   * checks that they do: a loose Post is written with five NULLs rather than
+   * checks that they do: a loose Post is written with four NULLs rather than
    * with the columns omitted, so a Post that leaves a Series or a Project
    * cannot keep half of one.
    */
@@ -152,24 +154,26 @@ describe("contentRowFor — Posts", () => {
       VOCABULARY,
     ) as SeededRow;
 
-    expect(row.statement).toContain("'[]', NULL, NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'[]', NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP)");
   });
 
   /**
-   * The `.en-old.md` draft in `app/content` hits this branch: `en-old` is not a
-   * Locale the parser recognises, so a file declaring `type: post` arrives with
-   * no Locale and produces no row and no KV key. It is skipped with a warning
-   * nobody reads.
+   * `en-old` is not a Locale the parser recognises, so a file declaring
+   * `type: post` under `blog/` arrives with no Locale. It used to be absorbed
+   * into the Slug and skipped without a word (Part 1 of
+   * `evolution-plan/15-phase-3-spanish.md`) — now it fails the build, naming
+   * the file.
    */
-  it("skips a Post whose filename carries no recognised Locale", () => {
+  it("fails a Post whose filename carries no recognised Locale", () => {
     const result = contentRowFor(
       "blog/setup-project/setup-project.en-old.md",
       post(),
       VOCABULARY,
     );
 
-    expect(isSkipped(result)).toBe(true);
-    expect((result as { reason: string }).reason).toMatch(/must have a language/);
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toContain("blog/setup-project/setup-project.en-old.md");
+    expect((result as { error: string }).error).toMatch(/no recognised Locale/);
   });
 });
 
@@ -381,6 +385,42 @@ describe("contentRowFor — Bookmarks", () => {
     expect(row.statement).toContain("(slug, lang, type, title, external_url, source, published_at, updated_at)");
     expect(row.statement).toContain("'https://example.com/a', 'Example'");
   });
+
+  /**
+   * A Bookmark has no Locale to translate — it is a pointer, and the thing it
+   * points at is not this repository's to translate. Before this a filename
+   * ending `.en.md` would have seeded with `lang = 'en'` against the partial
+   * unique index that assumes a Bookmark has none, and nothing would say so.
+   */
+  it("fails a Bookmark whose filename carries a Locale suffix", () => {
+    const result = contentRowFor("bookmarks/how-i-would-do-auth.en.md", bookmark(), VOCABULARY);
+
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toContain("bookmarks/how-i-would-do-auth.en.md");
+    expect((result as { error: string }).error).toMatch(/Locale suffix/);
+  });
+
+  /**
+   * The two failures Part 1 introduces are told apart by their messages: a
+   * Locale-bearing tree missing one reads differently from a Bookmark
+   * carrying one it should not.
+   */
+  it("fails with a different message from a Post carrying no recognised Locale", () => {
+    const missingLocale = contentRowFor(
+      "blog/a/a.en-old.md",
+      post(),
+      VOCABULARY,
+    ) as { error: string };
+    const strayLocale = contentRowFor(
+      "bookmarks/a.en.md",
+      bookmark(),
+      VOCABULARY,
+    ) as { error: string };
+
+    expect(missingLocale.error).toMatch(/no recognised Locale/);
+    expect(strayLocale.error).toMatch(/carries a Locale suffix/);
+    expect(missingLocale.error).not.toBe(strayLocale.error);
+  });
 });
 
 /**
@@ -396,7 +436,7 @@ describe("contentRowFor — Parts of a Series", () => {
     const row = contentRowFor(partPath, post(), VOCABULARY, placement) as SeededRow;
 
     expect(row.key).toBe("project-setup:en");
-    expect(row.statement).toContain("'pragmatic-nodejs-api', 'fundamentals', NULL, 1, 1, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'pragmatic-nodejs-api', 'fundamentals', NULL, 1, CURRENT_TIMESTAMP)");
   });
 
   /** Zero is a position, and a falsy one. It must survive the round trip. */
@@ -406,23 +446,28 @@ describe("contentRowFor — Parts of a Series", () => {
       order: 0,
     }) as SeededRow;
 
-    expect(row.statement).toContain("'fundamentals', NULL, 0, 0, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'fundamentals', NULL, 0, CURRENT_TIMESTAMP)");
   });
 
   /**
-   * `container_order` is what every query reads now; `section_order` stays
-   * only for the previously deployed Worker, still asking for it by that name
-   * during this publication's migrate-then-deploy window. Both have to carry
-   * the same position, or that Worker and the one about to replace it would
-   * disagree about where a Part sits.
+   * What *writes both order columns with the same value* became. Its invariant
+   * went with the column: `section_order` was written beside `container_order`,
+   * unread, for the Worker still deployed during the rename's expand step, and
+   * `0007` dropped it once that publication was live.
+   *
+   * What is left worth pinning is that there is no second copy at all — the
+   * statement names one order column and carries one position. The
+   * `not.toContain` is the load-bearing half; the position is asserted beside
+   * it so the test cannot pass against a statement that writes nothing.
    */
-  it("writes both order columns with the same value", () => {
+  it("writes the position once, into the only order column left", () => {
     const row = contentRowFor(partPath, post(), VOCABULARY, {
       ...placement,
       order: 3,
     }) as SeededRow;
 
-    expect(row.statement).toContain("'fundamentals', NULL, 3, 3, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'fundamentals', NULL, 3, CURRENT_TIMESTAMP)");
+    expect(row.statement).not.toContain("section_order");
   });
 
   /**
@@ -437,19 +482,20 @@ describe("contentRowFor — Parts of a Series", () => {
   });
 
   /**
-   * The draft beside part one. It stays unpublished because `en-old` is not a
-   * Locale — which used to hold by accident, and is the one file that must be
-   * skipped rather than failed for being absent from the manifest.
+   * `en-old` is not a Locale, so this file fails on that before the manifest
+   * is ever consulted — it is never a candidate for "not listed", because it
+   * never earns a Locale to be listed under.
    */
-  it("skips a draft inside a Series instead of demanding the manifest list it", () => {
+  it("fails a Part with no recognised Locale rather than demanding the manifest list it", () => {
     const result = contentRowFor(
       "series/pragmatic-nodejs-api/project-setup/project-setup.en-old.md",
       post(),
       VOCABULARY,
     );
 
-    expect(isSkipped(result)).toBe(true);
-    expect((result as { reason: string }).reason).toMatch(/must have a language/);
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/no recognised Locale/);
+    expect((result as { error: string }).error).not.toMatch(/not listed in the/);
   });
 
   it("fails a Part declaring itself the Series it belongs to", () => {
@@ -488,17 +534,22 @@ describe("contentRowFor — Field Notes of a Project", () => {
     const row = contentRowFor(notePath, post(), VOCABULARY, placement) as SeededRow;
 
     expect(row.key).toBe("product-matching:en");
-    expect(row.statement).toContain("NULL, NULL, 'chekalo', 0, 0, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("NULL, NULL, 'chekalo', 0, CURRENT_TIMESTAMP)");
   });
 
-  /** Both order columns carry the same value, as a Part's do. */
-  it("writes both order columns with the same value", () => {
+  /**
+   * As a Part's is — and with a non-zero position, because the test above
+   * uses zero and a generator that wrote `0` whatever the manifest said would
+   * satisfy that one.
+   */
+  it("writes the position once, into the only order column left", () => {
     const row = contentRowFor(notePath, post(), VOCABULARY, {
       ...placement,
       order: 2,
     }) as SeededRow;
 
-    expect(row.statement).toContain("'chekalo', 2, 2, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'chekalo', 2, CURRENT_TIMESTAMP)");
+    expect(row.statement).not.toContain("section_order");
   });
 
   /**
@@ -653,19 +704,20 @@ describe("contentRowFor — Tags are drawn from the declared vocabulary", () => 
   });
 
   /**
-   * The one file no check can see. `project-setup.en-old.md` carries the
-   * pre-vocabulary spellings and is skipped for its filename before its Tags are
-   * ever read — so it stays invalid and unchecked, and becomes a build failure
-   * the moment anyone renames it.
+   * The Locale check leads the Post branch, ahead of the Tag check — a file
+   * with no recognised Locale fails on that even when its Tags would fail
+   * too, so the error names the mistake actually in front of the reader
+   * rather than a second one behind it.
    */
-  it("skips a draft carrying pre-vocabulary Tags rather than failing on them", () => {
+  it("fails a Post with no recognised Locale on that, even when its Tags are undeclared too", () => {
     const result = contentRowFor(
       "series/pragmatic-nodejs-api/project-setup/project-setup.en-old.md",
       post({ tags: ["Nodejs", "TypeScript"] }),
       VOCABULARY,
     );
 
-    expect(isSkipped(result)).toBe(true);
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/no recognised Locale/);
   });
 });
 

@@ -33,8 +33,15 @@ afterAll(async () => {
 async function destinationExists(db: D1Database, path: string): Promise<boolean> {
   const segments = path.split("?")[0].split("/").filter(Boolean);
 
+  // The Resume and its PDF are static routes, not rows — `app/routes.ts`
+  // mounts them unconditionally, so there is nothing in D1 to check them
+  // against and nothing that could make them absent.
+  if (path === "/cv" || path === "/cv.pdf") {
+    return true;
+  }
+
   if (segments[0] === "blog" && segments.length === 2) {
-    const post = await findPostBySlug(db, segments[1]);
+    const post = await findPostBySlug(db, segments[1], "en");
 
     // A Post with a Container does not answer at `/blog/<slug>` — it redirects
     // — so a map aimed there would be a chain, which is the other rule.
@@ -42,11 +49,11 @@ async function destinationExists(db: D1Database, path: string): Promise<boolean>
   }
 
   if (segments[0] === "series" && segments.length === 2) {
-    return (await findSeriesBySlug(db, segments[1])) !== null;
+    return (await findSeriesBySlug(db, segments[1], "en")) !== null;
   }
 
   if (segments[0] === "series" && segments.length === 3) {
-    const sections = await findSeriesArc(db, segments[1]);
+    const sections = await findSeriesArc(db, segments[1], "en");
 
     return sections.some((section) => section.parts.some((part) => part.slug === segments[2]));
   }
@@ -67,12 +74,20 @@ describe("every redirect destination", () => {
    * The inverse, and the reason the map exists at all: what it moves away from
    * has to be gone. A source still serving content means two addresses for one
    * document, and the redirect would be hiding the live one.
+   *
+   * Only a Post's own address is a claim the database can check this way — a
+   * static page like `/cv` was never a row to begin with, so `slug` at index 1
+   * would be `undefined` for it and D1 rejects an `undefined` bind parameter.
    */
   it("replaces an address the database no longer holds", async () => {
     for (const from of Object.keys(PERMANENT_REDIRECTS)) {
-      const slug = from.split("/").filter(Boolean)[1];
+      const segments = from.split("/").filter(Boolean);
 
-      expect(await findPostBySlug(platform.env.POSCHULER_BD, slug), from).toBeNull();
+      if (segments[0] !== "blog") {
+        continue;
+      }
+
+      expect(await findPostBySlug(platform.env.POSCHULER_BD, segments[1], "en"), from).toBeNull();
     }
   });
 });

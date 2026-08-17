@@ -1,15 +1,15 @@
 import { Link, useLoaderData } from "react-router";
 import { chip } from "~/components/chip";
-import { cloudflareContext } from "~/context";
-import { postHref } from "~/lib/hrefs";
+import { cloudflareContext, localeContext, useLocale } from "~/context";
+import { useStrings } from "~/lib/catalog";
+import { postHref, seriesHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
-import { breadcrumbList, creativeWorkSeries, HOME_CRUMB } from "~/lib/seo/structured-data";
+import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
+import { breadcrumbList, creativeWorkSeries, siteCrumb } from "~/lib/seo/structured-data";
 import { readingOrder, type ArcSection } from "~/lib/series-arc";
 import { cn } from "~/lib/utils";
 import { findSeriesArc, findSeriesBySlug } from "~/models/series.server";
 import type { Route } from "./+types/_$series-slug";
-
-const SITE = "https://poschuler.com";
 
 interface SeriesBodyPayload {
   html: string;
@@ -29,7 +29,8 @@ interface SeriesBodyPayload {
  */
 export async function loader({ params, context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
-  const series = await findSeriesBySlug(env.POSCHULER_BD, params.seriesSlug);
+  const locale = context.get(localeContext);
+  const series = await findSeriesBySlug(env.POSCHULER_BD, params.seriesSlug, locale);
 
   if (!series) {
     throw new Response("Not Found", { status: 404 });
@@ -58,6 +59,11 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     destination: series.destination,
     outOfScope: series.outOfScope,
     audience: series.audience,
+    locale: series.lang,
+    // Read off the same row, via the correlated subquery `findSeriesBySlug`
+    // now carries (Part 10 of `evolution-plan/15-phase-3-spanish.md`) — the
+    // canonical's alternates, without a second round trip.
+    existingLocales: series.locales,
     sections,
     html: body.html,
   };
@@ -66,26 +72,30 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  const { title, description, slug, sections } = loaderData;
+  const { title, description, slug, locale, existingLocales, sections } = loaderData;
   const pageTitle = `${title} | Paul Osorio Schuler`;
+  const addresses = documentAddresses({ kind: "series", slug }, locale, existingLocales);
+  const { canonical } = addresses;
 
   return [
     { title: pageTitle },
     { name: "description", content: description },
-    { tagName: "link", rel: "canonical", href: `${SITE}/series/${slug}` },
+    { tagName: "link", rel: "canonical", href: canonical },
+    ...alternateLinks(addresses),
     { property: "og:title", content: pageTitle },
     { property: "og:description", content: description },
-    { property: "og:image", content: `${SITE}/og.png` },
+    { property: "og:image", content: "https://poschuler.com/og.png" },
     { property: "og:image:width", content: "1200" },
     { property: "og:image:height", content: "630" },
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
-    { property: "og:url", content: `${SITE}/series/${slug}` },
+    { property: "og:url", content: canonical },
     {
       "script:ld+json": creativeWorkSeries({
         slug,
         title,
         description,
+        locale,
         // The arc flattened into reading order — which is the order that makes
         // a position mean anything. A planned Section contributes nothing,
         // because it holds nothing to contribute.
@@ -97,27 +107,28 @@ export function meta({ loaderData }: Route.MetaArgs) {
     },
     {
       "script:ld+json": breadcrumbList([
-        HOME_CRUMB,
-        { name: "Series", path: "/series" },
-        { name: title, path: `/series/${slug}` },
+        siteCrumb("home", locale),
+        siteCrumb("series", locale),
+        { name: title, path: seriesHref(slug, locale) },
       ]),
     },
   ];
 }
 
 /**
- * What a section's state is called, derived from what it holds.
+ * What a section's state is, derived from what it holds — a key into
+ * `strings.series.sectionState`, not the display word itself.
  *
  * Only *complete* is stored: a section with no Parts is planned and a section
  * with Parts is in progress, and declaring either would restore two sources of
  * truth free to disagree (ADR 0007).
  */
-function sectionState(section: ArcSection): "Complete" | "In progress" | "Planned" {
+function sectionState(section: ArcSection): "complete" | "inProgress" | "planned" {
   if (section.status === "complete") {
-    return "Complete";
+    return "complete";
   }
 
-  return section.parts.length > 0 ? "In progress" : "Planned";
+  return section.parts.length > 0 ? "inProgress" : "planned";
 }
 
 /**
@@ -127,12 +138,21 @@ function sectionState(section: ArcSection): "Complete" | "In progress" | "Planne
  * anything** — there is nothing to enumerate, which is the whole point: the arc
  * stays fully visible while the empty checkboxes never appear.
  */
-function Section({ seriesSlug, section }: { seriesSlug: string; section: ArcSection }) {
+function Section({
+  seriesSlug,
+  section,
+}: {
+  seriesSlug: string;
+  section: ArcSection;
+}) {
+  const locale = useLocale();
+  const strings = useStrings();
+
   return (
     <article className="my-6 border-default border-l-2 py-3 pl-4">
       <h3 className="flex flex-wrap items-baseline gap-x-3 font-semibold text-lg">
         {section.title}
-        <span className={chip}>{sectionState(section)}</span>
+        <span className={chip}>{strings.series.sectionState[sectionState(section)]}</span>
       </h3>
 
       <p className="mt-2 text-pretty text-low text-sm">{section.summary}</p>
@@ -142,7 +162,7 @@ function Section({ seriesSlug, section }: { seriesSlug: string; section: ArcSect
           {section.parts.map((part) => (
             <li key={part.slug} className="flex flex-wrap items-baseline gap-x-3">
               <Link
-                to={postHref({ slug: part.slug, seriesSlug })}
+                to={postHref({ slug: part.slug, seriesSlug }, locale)}
                 className="transition-colors duration-200 hover:text-low"
               >
                 {part.title}
@@ -170,6 +190,7 @@ export default function SeriesLanding() {
     sections,
     html,
   } = useLoaderData<typeof loader>();
+  const strings = useStrings();
 
   return (
     <main className="flex-1 gap-4 bg-ui p-4 font-mono md:gap-8 md:p-10">
@@ -177,7 +198,7 @@ export default function SeriesLanding() {
         <h1 className="mb-2">{title}</h1>
 
         <p className={cn(chip, "not-prose")}>
-          {status === "complete" ? "Complete" : "Ongoing"}
+          {status === "complete" ? strings.series.landingState.complete : strings.series.landingState.ongoing}
         </p>
 
         {/* The contract, before anything else on the page. Almost nobody states
@@ -187,17 +208,17 @@ export default function SeriesLanding() {
           * breaks the promise the reader signed up for. */}
         <dl className="not-prose my-8 space-y-5 border-default border-l-2 py-4 pl-4">
           <div>
-            <dt className="font-semibold text-sm">You start with</dt>
+            <dt className="font-semibold text-sm">{strings.series.startingPoint}</dt>
             <dd className="mt-1 text-pretty text-low">{startingPoint}</dd>
           </div>
 
           <div>
-            <dt className="font-semibold text-sm">You end up with</dt>
+            <dt className="font-semibold text-sm">{strings.series.destination}</dt>
             <dd className="mt-1 text-pretty text-low">{destination}</dd>
           </div>
 
           <div>
-            <dt className="font-semibold text-sm">Not covered</dt>
+            <dt className="font-semibold text-sm">{strings.series.outOfScope}</dt>
             <dd className="mt-1 text-low">
               <ul className="space-y-1">
                 {outOfScope.map((item) => (
@@ -208,7 +229,7 @@ export default function SeriesLanding() {
           </div>
 
           <div>
-            <dt className="font-semibold text-sm">Who it is for</dt>
+            <dt className="font-semibold text-sm">{strings.series.audience}</dt>
             <dd className="mt-1 text-pretty text-low">{audience}</dd>
           </div>
         </dl>
@@ -218,7 +239,7 @@ export default function SeriesLanding() {
       </article>
 
       <section className="mx-auto w-full max-w-measure pb-8">
-        <h2 className="font-semibold text-xl tracking-tight">The arc</h2>
+        <h2 className="font-semibold text-xl tracking-tight">{strings.series.arcHeading}</h2>
 
         {sections.map((section) => (
           <Section key={section.slug} seriesSlug={slug} section={section} />
@@ -227,9 +248,7 @@ export default function SeriesLanding() {
         {/* The promise, spelled out where the arc ends: what *complete* would
           * mean here is reaching the Destination above, not a part count. */}
         <p className="mt-6 text-low text-sm">
-          {status === "complete"
-            ? "This series is complete: it reaches the destination above."
-            : "This series is ongoing. It is finished when it reaches the destination above — however many parts that takes."}
+          {status === "complete" ? strings.series.completeSummary : strings.series.ongoingSummary}
         </p>
       </section>
     </main>

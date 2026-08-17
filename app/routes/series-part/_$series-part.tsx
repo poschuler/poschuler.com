@@ -1,15 +1,16 @@
 import { useLoaderData } from "react-router";
 import { PostArticle } from "~/components/post-article";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext } from "~/context";
+import { formatPostDate } from "~/lib/dates";
+import { postHref, seriesHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { validateRevisions } from "~/lib/revisions";
-import { blogPosting, breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
+import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
+import { blogPosting, breadcrumbList, siteCrumb } from "~/lib/seo/structured-data";
 import { orientationFor } from "~/lib/series-arc";
 import { findSeriesArc, findSeriesBySlug } from "~/models/series.server";
 import type { Route } from "./+types/_$series-part";
 import { PartNav, SectionIndex, SeriesBreadcrumb } from "./orientation";
-
-const SITE = "https://poschuler.com";
 
 interface PartAttributes {
   title: string;
@@ -42,7 +43,8 @@ interface PartPayload {
  */
 export async function loader({ params, context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
-  const series = await findSeriesBySlug(env.POSCHULER_BD, params.seriesSlug);
+  const locale = context.get(localeContext);
+  const series = await findSeriesBySlug(env.POSCHULER_BD, params.seriesSlug, locale);
 
   if (!series) {
     throw new Response("Not Found", { status: 404 });
@@ -81,10 +83,17 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     // Out of the payload above. This route reads the arc and never the content
     // row, so D1 would be a new query for what KV has just handed over.
     tags: attributes.tags ?? [],
-    publishedAt: new Date(attributes.publishedAt).toLocaleDateString(),
+    publishedAt: formatPostDate(attributes.publishedAt, series.lang),
     // The same date, unformatted. What a reader sees is written for their
     // locale; what a crawler is told has to stay `YYYY-MM-DD`.
     datePublished: attributes.publishedAt,
+    locale: series.lang,
+    // Read off `orientation.part`, via the correlated subquery `findSeriesArc`
+    // now folds into the arc it already reads (Part 10 of
+    // `evolution-plan/15-phase-3-spanish.md`) — the canonical's alternates,
+    // without a second round trip. `?? []` only for the type: every row this
+    // route reads is real, and carries one.
+    existingLocales: orientation.part.locales ?? [],
     repository: attributes.repository,
     html,
     // A malformed list is caught at build time; a page is better off without
@@ -97,32 +106,45 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  const { title, description, seriesSlug, seriesTitle, slug, datePublished, revisions } =
-    loaderData;
-  const path = `/series/${seriesSlug}/${slug}`;
-  const url = `${SITE}${path}`;
+  const {
+    title,
+    description,
+    seriesSlug,
+    seriesTitle,
+    slug,
+    locale,
+    existingLocales,
+    datePublished,
+    revisions,
+  } = loaderData;
+  const identity = { kind: "post" as const, slug, seriesSlug };
+  const addresses = documentAddresses(identity, locale, existingLocales);
+  const { canonical } = addresses;
+  const path = postHref(identity, locale);
 
   return [
     { title: `${title} | Paul Osorio Schuler` },
     { name: "description", content: description },
-    { tagName: "link", rel: "canonical", href: url },
+    { tagName: "link", rel: "canonical", href: canonical },
+    ...alternateLinks(addresses),
     { property: "og:title", content: title },
     { property: "og:description", content: description },
-    { property: "og:image", content: `${SITE}/og.png` },
+    { property: "og:image", content: "https://poschuler.com/og.png" },
     { property: "og:image:width", content: "1200" },
     { property: "og:image:height", content: "630" },
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "article" },
-    { property: "og:url", content: url },
+    { property: "og:url", content: canonical },
     {
       "script:ld+json": blogPosting({
-        path,
+        url: canonical,
         title,
         description,
         datePublished,
         // Newest first, guaranteed by `validateRevisions`.
         dateRevised: revisions[0]?.date,
         seriesSlug,
+        locale,
       }),
     },
     // Home › Series › the Series › this Part — and **no Section**. A
@@ -131,9 +153,9 @@ export function meta({ loaderData }: Route.MetaArgs) {
     // there it is context for a reader, not a claim about the site's structure.
     {
       "script:ld+json": breadcrumbList([
-        HOME_CRUMB,
-        { name: "Series", path: "/series" },
-        { name: seriesTitle, path: `/series/${seriesSlug}` },
+        siteCrumb("home", locale),
+        siteCrumb("series", locale),
+        { name: seriesTitle, path: seriesHref(seriesSlug, locale) },
         { name: title, path },
       ]),
     },

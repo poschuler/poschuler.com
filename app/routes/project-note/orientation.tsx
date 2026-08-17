@@ -1,4 +1,6 @@
 import { Link } from "react-router";
+import { useLocale } from "~/context";
+import { useStrings } from "~/lib/catalog";
 import { postHref, projectHref } from "~/lib/hrefs";
 import type { ProjectNoteRowType } from "~/models/project.server";
 
@@ -22,17 +24,20 @@ export function ProjectBreadcrumb({
   projectSlug: string;
   projectTitle: string;
 }) {
+  const locale = useLocale();
+  const strings = useStrings();
+
   return (
-    <nav aria-label="Breadcrumb" className="text-low text-sm">
+    <nav aria-label={strings.a11y.breadcrumb} className="text-low text-sm">
       <ol className="flex flex-wrap items-center gap-x-2">
         <li>
           <Link to="/projects" className={linkClassName}>
-            Projects
+            {strings.projects.heading}
           </Link>
         </li>
         <li aria-hidden="true">›</li>
         <li>
-          <Link to={projectHref(projectSlug)} className={linkClassName}>
+          <Link to={projectHref(projectSlug, locale)} className={linkClassName}>
             {projectTitle}
           </Link>
         </li>
@@ -67,6 +72,8 @@ export function NoteSiblings({
   notes: ProjectNoteRowType[];
   currentSlug: string;
 }) {
+  const locale = useLocale();
+  const strings = useStrings();
   const siblings = notes.filter((note) => note.slug !== currentSlug);
 
   if (siblings.length === 0) {
@@ -75,16 +82,16 @@ export function NoteSiblings({
 
   return (
     <nav
-      aria-label={`More Field Notes from ${projectTitle}`}
+      aria-label={strings.projectNote.moreFieldNotesFrom(projectTitle)}
       className="mx-auto mt-8 w-full max-w-measure space-y-4 border-default border-t pt-6 pb-8"
     >
-      <p className="font-semibold text-sm">More Field Notes from {projectTitle}</p>
+      <p className="font-semibold text-sm">{strings.projectNote.moreFieldNotesFrom(projectTitle)}</p>
 
       <ol className="space-y-1 text-sm">
         {siblings.map((note) => (
           <li key={note.slug}>
             <Link
-              to={postHref({ slug: note.slug, seriesSlug: null, projectSlug })}
+              to={postHref({ slug: note.slug, seriesSlug: null, projectSlug }, locale)}
               className={`text-low ${linkClassName}`}
             >
               {note.title}
@@ -93,8 +100,11 @@ export function NoteSiblings({
         ))}
       </ol>
 
-      <Link to={projectHref(projectSlug)} className={`block text-low text-sm ${linkClassName}`}>
-        → {projectTitle}, the project
+      <Link
+        to={projectHref(projectSlug, locale)}
+        className={`block text-low text-sm ${linkClassName}`}
+      >
+        → {strings.projectNote.theProject(projectTitle)}
       </Link>
     </nav>
   );

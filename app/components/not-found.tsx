@@ -1,5 +1,8 @@
 import { Unplug } from "lucide-react";
 import { Link } from "react-router";
+import { useLocale } from "~/context";
+import { navHref } from "~/lib/hrefs";
+import { useStrings } from "~/lib/catalog";
 
 /**
  * The site's 404 page, as a component rather than only as a route.
@@ -13,23 +16,39 @@ import { Link } from "react-router";
  * `Outlet` instead, and the header, the footer and the link below all stay.
  */
 export function NotFound() {
+  const strings = useStrings();
+  const locale = useLocale();
+
   return (
     <main className="flex w-full flex-1 flex-col items-center justify-center gap-5 bg-ui p-4 font-mono">
       <Unplug className="size-14" aria-hidden />
 
       <h1 className="font-semibold text-3xl tracking-tight lg:text-4xl">
-        404 — Not Found
+        {strings.notFound.title}
       </h1>
 
       {/* It read "Back to the timeline" until now, from when `/` *was* the
         * Timeline. It has been the landing page since Phase 0, and the Timeline
         * has had its own route ever since — one the header above this offers,
-        * along with everywhere else worth going. */}
+        * along with everywhere else worth going.
+        *
+        * Localised rather than a bare `"/"`: a lost visitor under `/es` who
+        * followed this link to the English root would be handed exactly the
+        * outcome this phase exists to prevent one click after the 404 that
+        * was supposed to prevent it (Part 6 of
+        * `evolution-plan/15-phase-3-spanish.md`).
+        *
+        * `navHref` and not `withLocale`, which is what this was: the English
+        * root is `""` there, and `<Link to="">` is the current location, so
+        * the only way out of an English 404 pointed at the address that had
+        * just 404ed. Measured, not deduced — the rendered `href` was
+        * `/the-address-that-404ed`. `navHref`'s own docblock carries the
+        * rule. */}
       <Link
-        to="/"
+        to={navHref("/", locale)}
         className="text-low transition-colors duration-200 hover:text-default"
       >
-        Back to the home page
+        {strings.notFound.backHome}
       </Link>
     </main>
   );

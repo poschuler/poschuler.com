@@ -1,13 +1,16 @@
-import { useLoaderData, type MetaFunction } from "react-router";
+import { useLoaderData } from "react-router";
 import { findLoosePosts, type PostRowType } from "~/models/content.server";
 import { findAllSeries, type SeriesListingRowType } from "~/models/series.server";
 import { findProjectsWithNotes, type ProjectListingRowType } from "~/models/project.server";
 import { ContentItem } from "~/components/content-item";
+import { EmptyIndex } from "~/components/empty-index";
 import { SeriesItem } from "~/components/series-item";
 import { ProjectItem } from "~/components/project-item";
 import type { Route } from "./+types/_blog";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext, LOCALES } from "~/context";
+import { useStrings } from "~/lib/catalog";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
+import { alternateLinks, documentAddresses, emptyIndexRobots } from "~/lib/seo/alternates";
 
 /** One row on this page: a loose Post, or a whole Container — Series or Project — as a single entry. */
 type BlogEntry =
@@ -39,10 +42,11 @@ type BlogEntry =
  */
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
+  const locale = context.get(localeContext);
   const [posts, series, projects] = await Promise.all([
-    findLoosePosts(env.POSCHULER_BD),
-    findAllSeries(env.POSCHULER_BD),
-    findProjectsWithNotes(env.POSCHULER_BD),
+    findLoosePosts(env.POSCHULER_BD, locale),
+    findAllSeries(env.POSCHULER_BD, locale),
+    findProjectsWithNotes(env.POSCHULER_BD, locale),
   ]);
 
   const entries: BlogEntry[] = [
@@ -61,16 +65,20 @@ export async function loader({ context }: Route.LoaderArgs) {
 
   entries.sort((left, right) => dateOf(right).localeCompare(dateOf(left)));
 
-  return { entries };
+  return { entries, locale };
 }
 
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
-export const meta: MetaFunction = () => {
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+  const addresses = documentAddresses({ kind: "index", path: "/blog" }, loaderData.locale, LOCALES);
+  const { canonical } = addresses;
+
   return [
     { title: "Blog | Paul Osorio Schuler" },
     { name: "description", content: "Long-form articles by Paul Osorio Schuler on building backend systems with Node.js and TypeScript: API structure, domain-driven design and software architecture." },
-    { tagName: "link", rel: "canonical", href: "https://poschuler.com/blog" },
+    { tagName: "link", rel: "canonical", href: canonical },
+    ...alternateLinks(addresses),
     { property: "og:title", content: "Blog | Paul Osorio Schuler" },
     { property: "og:description", content: "Long-form articles by Paul Osorio Schuler on building backend systems with Node.js and TypeScript: API structure, domain-driven design and software architecture." },
     { property: "og:image", content: "https://poschuler.com/og.png" },
@@ -78,12 +86,14 @@ export const meta: MetaFunction = () => {
     { property: "og:image:height", content: "630" },
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
-    { property: "og:url", content: "https://poschuler.com/blog" },
+    { property: "og:url", content: canonical },
+    ...emptyIndexRobots(loaderData.entries.length === 0),
   ];
 };
 
 export default function Blog() {
   const { entries } = useLoaderData<typeof loader>();
+  const strings = useStrings();
 
   return (
     <main className="flex flex-col flex-1 gap-4 p-4 md:gap-8 md:p-10 font-mono bg-ui">
@@ -91,36 +101,40 @@ export default function Blog() {
 
         <div className="text-center">
           <h1 className="scroll-m-20 text-3xl font-semibold tracking-tight lg:text-4xl mt-8">
-            Articles
+            {strings.blog.heading}
           </h1>
         </div>
 
         <div className="max-w-[450px] mx-auto">
           <blockquote className="text-center mt-2 italic text-low text-lg">
-            My articles on topics I care about
+            {strings.blog.subtitle}
           </blockquote>
         </div>
       </section>
 
-      {/* `showKind` on the Series rows, and `ProjectItem` always says its own:
-        * this list interleaves three units, so a row that is a whole
-        * Container has to say so before the reader clicks it expecting one
-        * article. */}
-      <section className="mx-auto w-full max-w-measure">
-        {entries.map((entry) => {
-          if (entry.kind === "post") {
-            return <ContentItem key={`post:${entry.post.idContent}`} item={entry.post} />;
-          }
+      {entries.length === 0 ? (
+        <EmptyIndex englishHref="/blog" />
+      ) : (
+        /* `showKind` on the Series rows, and `ProjectItem` always says its own:
+         * this list interleaves three units, so a row that is a whole
+         * Container has to say so before the reader clicks it expecting one
+         * article. */
+        <section className="mx-auto w-full max-w-measure">
+          {entries.map((entry) => {
+            if (entry.kind === "post") {
+              return <ContentItem key={`post:${entry.post.idContent}`} item={entry.post} />;
+            }
 
-          if (entry.kind === "series") {
-            return (
-              <SeriesItem key={`series:${entry.series.idSeries}`} series={entry.series} showKind />
-            );
-          }
+            if (entry.kind === "series") {
+              return (
+                <SeriesItem key={`series:${entry.series.idSeries}`} series={entry.series} showKind />
+              );
+            }
 
-          return <ProjectItem key={`project:${entry.project.idProject}`} project={entry.project} />;
-        })}
-      </section>
+            return <ProjectItem key={`project:${entry.project.idProject}`} project={entry.project} />;
+          })}
+        </section>
+      )}
     </main>
   );
 }

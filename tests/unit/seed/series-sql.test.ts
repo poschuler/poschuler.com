@@ -313,9 +313,8 @@ describe("seriesRowsFor — the path decides what the file is", () => {
   });
 
   /**
-   * A landing has no `.en-old.md` convention to hide behind, as a Post does:
-   * it is one page, revised in place, so a missing Locale is a mistake.
-   * `draft: true` is the only way one goes unpublished — see below.
+   * A landing is one page, revised in place, so a missing Locale is a
+   * mistake. `draft: true` is the only way one goes unpublished — see below.
    */
   it("fails a manifest with no Locale in its filename", () => {
     const result = seriesRowsFor("series/api/api.md", manifest(), BODY, FILES);

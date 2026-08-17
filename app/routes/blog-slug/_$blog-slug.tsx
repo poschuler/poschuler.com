@@ -1,9 +1,11 @@
 import { redirect, useLoaderData } from "react-router";
 import type { Route } from "./+types/_$blog-slug";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext } from "~/context";
 import { PostArticle } from "~/components/post-article";
+import { formatPostDate } from "~/lib/dates";
 import { postHref } from "~/lib/hrefs";
-import { blogPosting, breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
+import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
+import { blogPosting, breadcrumbList, siteCrumb } from "~/lib/seo/structured-data";
 import { validateRevisions } from "~/lib/revisions";
 import { findPostBySlug } from "~/models/content.server";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
@@ -40,6 +42,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     const blogSlug = params.blogSlug;
 
     const { env } = context.get(cloudflareContext);
+    const locale = context.get(localeContext);
 
     /**
      * The row before the body, for one reason: a Part or a Field Note is
@@ -53,7 +56,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
      * exist and belong in `app/lib/redirects.ts`, consulted in the Worker. This
      * is derived from the row itself.
      */
-    const post = await findPostBySlug(env.POSCHULER_BD, blogSlug);
+    const post = await findPostBySlug(env.POSCHULER_BD, blogSlug, locale);
 
     if (!post) {
         throw new Response("Not Found", { status: 404 });
@@ -64,11 +67,15 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
         // states for the hop before this one: it is what tells the author the
         // redirect is being used at all. The two land on the same page, so
         // they cannot behave differently.
-        throw redirect(postHref(post) + new URL(request.url).search, 301);
+        throw redirect(postHref(post, post.lang) + new URL(request.url).search, 301);
     }
 
     const BLOG_KV = env.BLOG_KV;
-    const kv_key = `blog:${blogSlug}:en`;
+    // Keyed off the resolved row's own Locale, the way every sibling route
+    // already reads its body (`/projects/:project`, `/series/:seriesSlug`,
+    // `/series/:seriesSlug/:partSlug`) — not off the request's, which a Post
+    // with no Translation in that Locale would never have found a row for.
+    const kv_key = `blog:${blogSlug}:${post.lang}`;
     const contentPayload = await BLOG_KV.get<BlogContentPayload>(kv_key, {
         type: "json",
         // A Post body only changes when the seed pipeline runs, so let the colo
@@ -95,12 +102,17 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
         title: attributes.title,
         description: attributes.description,
         tags: attributes.tags ?? [],
-        publishedAt: new Date(attributes.publishedAt).toLocaleDateString(),
+        publishedAt: formatPostDate(attributes.publishedAt, post.lang),
         // The same date, unformatted. What a reader sees is written for their
         // locale; what a crawler is told has to stay `YYYY-MM-DD`.
         datePublished: attributes.publishedAt,
         html,
         slug: blogSlug,
+        locale: post.lang,
+        // Read off the same row, via the correlated subquery `findPostBySlug`
+        // now carries (Part 10 of `evolution-plan/15-phase-3-spanish.md`) — the
+        // canonical's alternates, without a second round trip.
+        existingLocales: post.locales,
         repository: attributes.repository,
         // A malformed list is caught at build time; a page is better off
         // without its revision line than not rendering at all.
@@ -112,13 +124,20 @@ export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export function meta({ loaderData }: Route.MetaArgs) {
 
-    const { title, description, slug, datePublished, revisions } = loaderData;
-    const path = `/blog/${slug}`;
+    const { title, description, slug, locale, existingLocales, datePublished, revisions } = loaderData;
+    const addresses = documentAddresses(
+        { kind: "post", slug, seriesSlug: null },
+        locale,
+        existingLocales,
+    );
+    const { canonical } = addresses;
+    const path = postHref({ slug, seriesSlug: null }, locale);
 
     return [
         { title: `${title} | Paul Osorio Schuler` },
         { name: "description", content: `${description}` },
-        { tagName: "link", rel: "canonical", href: `https://poschuler.com/blog/${slug}` },
+        { tagName: "link", rel: "canonical", href: canonical },
+        ...alternateLinks(addresses),
         { property: "og:title", content: `${title}` },
         { property: "og:description", content: `${description}` },
         { property: "og:image", content: "https://poschuler.com/og.png" },
@@ -126,10 +145,10 @@ export function meta({ loaderData }: Route.MetaArgs) {
         { property: "og:image:height", content: "630" },
         { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
         { property: "og:type", content: "article" },
-        { property: "og:url", content: `https://poschuler.com/blog/${slug}` },
+        { property: "og:url", content: canonical },
         {
             "script:ld+json": blogPosting({
-                path,
+                url: canonical,
                 title,
                 description,
                 datePublished,
@@ -138,12 +157,13 @@ export function meta({ loaderData }: Route.MetaArgs) {
                 // A standalone Post has no Container, and saying otherwise
                 // would invent a continuity that does not exist.
                 seriesSlug: null,
+                locale,
             }),
         },
         {
             "script:ld+json": breadcrumbList([
-                HOME_CRUMB,
-                { name: "Blog", path: "/blog" },
+                siteCrumb("home", locale),
+                siteCrumb("blog", locale),
                 { name: title, path },
             ]),
         },

@@ -25,7 +25,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("/resume.pdf", () => {
+describe("/cv.pdf", () => {
   it("serves the PDF as a download rather than inline", async () => {
     stubUpstream(new Response("%PDF-1.7", { status: 200 }));
 
@@ -39,9 +39,9 @@ describe("/resume.pdf", () => {
   });
 
   /**
-   * The PDF is for a visitor who is already on `/resume`; it has nothing to
+   * The PDF is for a visitor who is already on `/cv`; it has nothing to
    * gain from ranking on its own, and every reason not to — a PDF result
-   * competes with `/resume` for the same queries and lands the reader on a
+   * competes with `/cv` for the same queries and lands the reader on a
    * document with no navigation out of it.
    *
    * `noindex` rather than a `Disallow` in `robots.txt`: a disallowed URL is

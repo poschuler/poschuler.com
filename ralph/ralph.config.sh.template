@@ -37,46 +37,75 @@ RALPH_REQUIRE_LABEL="ready-for-agent"
 RALPH_OPEN_PR=1
 
 # After each issue's implement session, run a SECOND isolated claude session
-# (fresh context) that code-reviews the implementation commit, checks the
-# acceptance criteria, fixes any errors it finds, and commits the fixes. Set to
-# 0 to skip it.
+# (fresh context) that code-reviews the implementation commit against this
+# repo's standards and against the issue, and posts its report as a comment on
+# the issue. It changes no code, and it ends its report with a verdict line
+# counting what is objectively fixable. Set to 0 to skip it.
 RALPH_REVIEW=1
 
+# When that verdict counts anything FIXABLE, run a THIRD isolated session that
+# applies those findings — a missing or wrong requirement, a broken documented
+# rule — and commits them. It never touches what the review marked advisory
+# (smells, scope creep): those are yours to scope. Set to 0 to review without
+# fixing. Needs RALPH_REVIEW=1; with no review there is nothing to apply.
+RALPH_FIX=1
+
 # ── How each headless claude session runs ───────────────────────────────────
-# Model per step: the implementer and the reviewer can differ (e.g. implement
-# with sonnet, review with opus). RALPH_REVIEW_MODEL defaults to RALPH_MODEL.
+# Model per step; each defaults to RALPH_MODEL, so they can differ when you want
+# the reviewer or the fixer on something heavier than the implementer.
 RALPH_MODEL="claude-sonnet-5"          # step 1: implement
-RALPH_REVIEW_MODEL="claude-opus-4-8"   # step 2: code-review
+RALPH_REVIEW_MODEL="claude-sonnet-5"   # step 2: code-review
+RALPH_FIX_MODEL="claude-sonnet-5"      # step 3: apply the review
 RALPH_PERMISSION_MODE="auto"
 
-# Where the skills come from. "plugin" reads them from an installed Claude Code
-# plugin, which is enabled per user and so resolves from inside a worktree with
-# no setup; RALPH_SKILL_PLUGIN names it and the slash command becomes
-# /<plugin>:<skill>. "directory" is the original behaviour: skills in this repo's
-# gitignored .claude/skills, which ralph symlinks into the worktree, invoked as
-# /<skill>. Ralph resolves both skills before spending a session either way.
-RALPH_SKILL_SOURCE="plugin"              # plugin | directory
-RALPH_SKILL_PLUGIN="mattpocock-skills"   # ignored when SOURCE=directory
-RALPH_SKILL="implement"                  # step 1
-RALPH_REVIEW_SKILL="code-review"         # step 2
+# Tools no session may use, space-separated. ScheduleWakeup is banned because
+# waiting for a notification nobody delivers is how a headless session strands
+# itself. Set to "" to lift the ban.
+RALPH_DISALLOWED_TOOLS="ScheduleWakeup"
 
-# What each session is actually told. Placeholders: {{SKILL}} is replaced by the
-# slash command (namespaced or bare, per RALPH_SKILL_SOURCE), {{N}} by the issue
-# number, {{BASE}} by the ref the reviewer diffs against. The implement prompt is
-# deliberately short and trusts the skill — see ralph/RALPH.md.
-RALPH_PROMPT="$(cat <<'PROMPT'
-/{{SKILL}} issue #{{N}}. When the implementation is done, verify every acceptance
-criterion is met; if so, close the issue and leave a comment summarizing the work
-and the criteria that were met. If this is the last open issue of its PRD, close
-the PRD too with a summary comment.
-PROMPT
-)"
+# Enforce "run no code review in this session" with a PreToolUse hook
+# (ralph/hooks/no-code-review.sh) instead of trusting the prompt to hold. It
+# refuses the reviewing skills by name, the same names typed as slash commands,
+# and a sub-agent handed a reviewer's brief — while leaving sub-agents free for
+# finding things, and free to review in step 2, where reviewing is the job. Every
+# refusal is logged to the run's hooks.log. Needs jq. Set to 0 to run on the
+# prompts' word alone.
+RALPH_BLOCK_CODE_REVIEW=1
 
-RALPH_REVIEW_PROMPT="$(cat <<'PROMPT'
-/{{SKILL}} {{BASE}}. Make sure every acceptance criterion of the issue is met, and
-if you find any errors you must fix them. Commit your fixes when you are done.
-PROMPT
-)"
+# Run this repo's own pre-commit checklist after every commit a session makes,
+# instead of taking its word that it ran green. It is the only thing in the
+# whole pipeline that executes anything, and it costs about a minute. A red one
+# stops the batch at the issue that broke it — which matters most in a batch,
+# where every later issue is implemented on top of the bad commit. Set to 0 to
+# trust the sessions — but note that ralph/prompts/2-review.md tells the review
+# session the checklist is the runner's job, which stops being true if you do.
+RALPH_VERIFY=1
+
+# What that checklist is: one command per entry, run in this order, each retried
+# once before it counts as red (two of these rebuild the local D1 and can col-
+# lide with a session that was just using it). Defaults to the five commands
+# AGENTS.md names; override to run a shorter one.
+RALPH_CHECKLIST=(
+  "pnpm typecheck"
+  "pnpm test"
+  "pnpm run verify:schema:local"
+  "pnpm run check:fixtures"
+  "pnpm run smoke"
+)
+
+# ── What each session is told ───────────────────────────────────────────────
+# The prompts live in ralph/prompts/*.md, versioned with the repo and reviewable
+# in a PR — not in this file, and not in a skill. A skill is installed per user
+# and moves with its plugin; a prompt in git is pinned to the commit that ran it,
+# which is what makes a run reproducible. Inside a prompt, {{N}} is the issue
+# number, {{BASE}} the commit the review diffs against, and {{INCLUDE:parts/x.md}}
+# splices in a shared part.
+#
+# Uncomment only to point a step somewhere else; a relative path is read from the
+# repo root.
+# RALPH_PROMPT_FILE="ralph/prompts/1-implement.md"
+# RALPH_REVIEW_PROMPT_FILE="ralph/prompts/2-review.md"
+# RALPH_FIX_PROMPT_FILE="ralph/prompts/3-fix.md"
 
 # Max issues to actually run per invocation (empty = unlimited). Skipped issues
 # (already closed / missing label) do NOT count. --max-iterations overrides this.

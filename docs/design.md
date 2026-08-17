@@ -6,7 +6,7 @@ The conventions this codebase follows: how the interface is put together, how mo
 
 The site is a developer's notebook, not a marketing page. That reads through in every choice: monospace type on content pages, dark mode as a first-class state, and almost no imagery — one portrait and one Open Graph card, both local. Content is the only thing on screen that competes for attention.
 
-**Each page is one column, centred, `max-w-measure` wide** — home, blog, projects, bookmarks, timeline, resume and the article bodies alike. An index and an article are the same column; only what is stacked in it differs. Nothing is multi-column; nothing is above the fold in a way that pushes content down. A Content Item in a list is a title, a date, and — for a Bookmark — its source. There are no cards, no excerpts, no thumbnails, no read-time estimates.
+**Each page is one column, centred, `max-w-measure` wide** — home, blog, projects, series, tags, bookmarks, timeline, resume and the article bodies alike. An index and an article are the same column; only what is stacked in it differs. Nothing is multi-column; nothing is above the fold in a way that pushes content down. A Content Item in a list is a title, a date, and — for a Bookmark — its source. There are no cards, no excerpts, no thumbnails, no read-time estimates.
 
 **The height lives in the layout, not in the routes.** `routes/layouts/_layout.tsx` is `min-h-screen flex flex-col` and a route's `<main>` is `flex-1`, so the page fills the viewport whatever the header and footer measure. Nine routes used to subtract the header's height from `100vh` themselves — the same arithmetic written out nine times, hard-coding a number belonging to a component none of them render, and all nine wrong the moment a footer existed. They did it through Tailwind's `theme()`, which v4 keeps for compatibility and which no new code should reach for.
 
@@ -102,17 +102,36 @@ The same three classes also carry `color-scheme` in `@layer base`: `light`, `dar
 
 - **Inter Variable** for the interface, **Intel One Mono Variable** for everything monospaced. Both are self-hosted from `@fontsource-variable/*`, with the `@font-face` rules written out at the top of `app/app.css` rather than imported from the packages — see the comment there for which subsets ship and why. `root.tsx` preloads the two latin faces; without it the browser cannot discover a font until the stylesheet has parsed.
 - **`font-mono`** for content pages (`/`, `/blog`, `/bookmarks`, `/projects`, `/timeline`, and the Post and Project bodies) and for the Resume's secondary text. **The Resume states it as the page being mono and its headings opting out** with `font-sans`, rather than by applying mono to each element — which is how two dates ended up sans by omission and one heading mono by hand, neither on purpose. This is deliberate character, not an oversight — and it makes the monospace family the site's dominant typeface, which is why it is named rather than left to Tailwind's default stack. On that default it resolved to whatever the visitor's OS shipped, so the site read differently on every machine.
-- Page headings are `text-3xl lg:text-4xl font-semibold tracking-tight`, followed by an italic `blockquote` subtitle in `text-low`. Blog, bookmarks, projects and timeline all share this header shape — match it. The home page does not; see "The home page is the exception".
+- Page headings are `text-3xl lg:text-4xl font-semibold tracking-tight`, followed by an italic `blockquote` subtitle in `text-low`. **Every index shares this header shape** — blog, bookmarks, projects, timeline, series, tags and a Tag's own page — so match it. The home page does not; see "The home page is the exception".
 - **Every item in an index list is a real heading**, and the title leads. These are pages whose whole job is to be indexed; a list of titles rendered as plain links gives a crawler an `<h1>` and then nothing, which is what `/blog`, `/bookmarks` and `/timeline` each did. `ContentItem` takes `headingLevel` because the same item sits at two depths — the page's second level on an index, the third on the home page under "Recent writing".
 - **The date follows the title, quieter.** It read the other way round on both pages: the date at `text-base font-medium` in the default colour, the title a size smaller in `text-low`, which made the loudest thing in the list the one word that tells a reader nothing.
 
 ## Component layers
 
-**`ContentItem` renders every list on the site** — `/blog`, `/bookmarks`, `/timeline` and the home page. It is one component because `ContentRowType` is already the union of exactly the two shapes a list can hold, so narrowing on `type` covers all four. It was three: a `PostItem`, a `Bookmark` inside the bookmarks route and a `ContentItem` inside the timeline route, each rendering the same bordered block with the same date and the same link, and each carrying the same two defects — no heading, and the date louder than the title. Fixing three copies is how a fourth gets written.
+**`ListingRow` is the row every list on the site renders**, and four components decide what goes in one. The block itself — the border, the heading that leads, the quiet metadata line under it, the optional extra line below that — is written once; where the row links and what its metadata says belongs to whichever component is listing:
 
-The one thing that genuinely differs is `showKind`: the Timeline is the only list that interleaves Posts and Bookmarks, so a row there says which it is. Blog and Bookmarks have said it in their page heading already.
+| Component | Lists | Decides |
+| --------- | ----- | ------- |
+| `ContentItem` | `/blog`, `/bookmarks`, `/timeline`, the home page | a Post links through `postHref`, a Bookmark out to its Source |
+| `SeriesItem` | `/series`, and `/blog` where a whole Series is one entry | links to the landing, and ends its line in a **size** — `3 parts` |
+| `ProjectItem` | `/blog`, where a Project with Field Notes is one entry | links to the landing, dated by its newest note |
+| `ProjectNoteItem` | a Project's own index, at the foot of the case study | adds the note's summary on the extra line |
 
-Two layers, both canonical since the inherited component sets were deleted:
+`ContentItem` is itself one component rather than two because `ContentRowType` is already the union of exactly the two shapes a Content Item can be, so narrowing on `type` covers every list it appears in. It was three: a `PostItem`, a `Bookmark` inside the bookmarks route and a `ContentItem` inside the timeline route, each rendering the same bordered block with the same date and the same link, and each carrying the same two defects — no heading, and the date louder than the title. Fixing three copies is how a fourth gets written, which is exactly what `SeriesItem` would have been.
+
+**A Series is not a Content Item** (`CONTEXT.md` is careful about it), so it could not become a third branch of `ContentItem` — sharing the row was the alternative to copying it. That is the general shape: what two lists share is markup, and what separates them is a domain difference that belongs in a component of its own.
+
+Two flags rather than two components, in the rows that carry them. `showKind` — the Timeline is the only list interleaving Posts and Bookmarks, and `/blog` the only one interleaving loose Posts with Series, so a row there says which it is; Blog and Bookmarks have said it in their page heading already. And `showDestination`, only on `/series`, whose question is *where does this take me*; on `/blog` the row sits among sober Posts and stays as sober as they are.
+
+**`LiveLink` is the same argument one size down.** A link to something actually running renders as its bare host, scheme stripped — and the three places that show one, the projects index, a project page and the home page, had each stripped it with their own copy of the same expression.
+
+Three more earn `app/components/` the same way, by having more than one route behind them:
+
+- **`PostArticle`** is the article itself — title, dates, Tags, repository link, body — shared by the three routes that serve a Post: a loose one, a Part and a Field Note. A Post is one kind of document wherever it is served from, so it renders through one component; what differs between those routes is the orientation *around* the article, which is route-local.
+- **`Revisions`** is two components for two questions. `RevisionLine` sits under the title and answers *what changed since I last read this*, from the most recent Revision only. `RevisionHistory` goes at the foot and answers *is this maintained*, and renders only from the second Revision onward — with one, it would repeat the line above. A Project page uses both without a Published At, because it is revised in place and has never been published the way a Post has.
+- **`NotFound`** is the 404 as a component and not only as a route, and the reason is worth knowing before you throw a `Response` from a loader. It goes to the nearest `ErrorBoundary` above, and the root's sits *outside* the layout — so a bare 404 renders with no header and no way out. A route that matches and then finds nothing behind the address renders `NotFound` from its own boundary instead, which lands inside the layout's `Outlet` and keeps the navigation. `routes/$.tsx` and `tag/_$tag.tsx` are the two that do it.
+
+Three layers, all canonical since the inherited component sets were deleted, and the first is the default:
 
 | Layer                  | Use it for                                                     |
 | ---------------------- | -------------------------------------------------------------- |
@@ -149,6 +168,22 @@ Two Base UI conventions matter when extending them:
 - **Compose with `render`, not by nesting.** `<Button render={<Link to="/blog" />}>blog</Button>` — Base UI merges the props of both, so event handlers from each side run. That is what lets a `SheetClose` wrap a `Link` in `header.tsx` and both dismiss the sheet and navigate.
 - **Enter and exit key off `data-starting-style` and `data-ending-style`**, not the `data-state` shadcn/ui uses. The base class list carries the resting state; those two variants carry the state outside it. Copying a shadcn class list wholesale will silently animate nothing.
 
+## Two Locales
+
+The site is served in English at the root and Spanish under `/es`, over the same route modules (ADR 0010). For the runtime shape of that — where the Locale is derived, what an address is composed from — see [`architecture.md`](./architecture.md). What follows is what it means for a component you are about to write.
+
+**Every string the interface says comes from `useStrings()`, never from the JSX.** `app/lib/catalog.ts` holds `STRINGS`, typed `Record<Locale, Chrome>`, and `useStrings()` is `STRINGS[useLocale()]`. A key missing from one Locale is a compile error, which is the whole argument for a typed catalogue over an i18n library that falls back to English and keeps serving (ADR 0011). Navigation, headings, empty states, the 404, a listing's metadata words and every `aria-label` live there.
+
+**What deliberately does not.** A document's own words — a Post's title, a Project's summary, the home page's biography — are content, written once in the language they were written in, the same way a body is. Neither does anything in a route's `meta()`: cataloguing `og:` copy would mean this module inventing Spanish prose no author reviewed. That is a decision, not an omission, and it is recorded in the catalogue's own docblock so the next reader does not close the gap by accident.
+
+**Every internal link goes through `app/lib/hrefs.ts`.** `withLocale` for a literal path, `postHref` / `projectHref` / `seriesHref` / `tagHref` for a document — never a template string. Two rules ride in there that a call site would get wrong: which prefix marks the Spanish branch, and that a Post is not always served under `/blog`, because a Part lives under its Series and a Field Note under its Project. `ContentItem` hardcoded `` `/blog/${item.slug}` `` once, and that single line is what those columns exist to feed.
+
+**A date is formatted in the loader, not in the component.** `formatPostDate(iso, locale)` in `app/lib/dates.ts`. `toLocaleDateString` with no argument reads the *runtime's* locale, which is not the reader's and is not the same on the server as in the browser — the second half of that is a hydration warning. Calling it once in the loader means the formatted string travels already serialised, with no second call to disagree with the first. `RevisionLine` is the deliberate exception and renders the stored `YYYY-MM-DD` as it is: it is a record of when something changed, not a date presented to be read.
+
+**An index whose list is empty renders `EmptyIndex`, and its `meta` composes `emptyIndexRobots`.** An index is skeleton rather than leaf — it is in the navigation, and a navigation of dead links is worse than an empty page — so it stays at its address, answers 200, says what is happening and links back to English. A *document* with no Translation is a 404 instead. Nothing anywhere falls back to English content at a Spanish address.
+
+**The language switcher ships hidden.** `LANGUAGE_SWITCHER_REVEALED` in `app/components/language-switcher.tsx` is a single `false`; the control is built, tested and wired into both places `ModeToggle` occupies. `header.tsx` reads that constant too, to gate the mobile panel's label alongside the control — a label with nothing beside it is its own visible artifact.
+
 ## Motion
 
 Almost none, on purpose. `transition-colors` on hover states, and nothing else. No skeleton shimmer, no scroll-triggered reveal, no entrance on a page. A site whose whole argument is that its author is careful should feel still.
@@ -180,6 +215,16 @@ Two footnotes worth keeping. In Tailwind v4 `translate-x-full` sets the `transla
 - Types come from the generated `./+types/<name>` module — `Route.LoaderArgs`, `Route.ComponentProps`, `Route.MetaFunction`. Never hand-write loader argument types.
 - Server-only modules end in `.server.ts` so the bundler keeps them out of the client.
 
+**A page is declared once and mounted twice.** `contentRoutes(suffix)` returns the whole list, and `routes.ts` calls it bare and again through `prefix("es", …)`, so a new page reaches both Locales by being added in one place. Two things follow. Every route needs an explicit `id` — the default id is the file path, and a module cannot be mounted twice without one, which is what the suffix is for. And the apparent duplication at the bottom of that file is not one: what would be real duplication is a page added to one branch and forgotten in the other, which is why `tests/unit/app/routes.test.ts` asserts the two branches have the same shape.
+
+Resource routes sit outside that function and exist once — the theme cookie, `robots.txt`, the sitemap and `/cv.pdf` are facts about the whole site rather than about a Locale.
+
+**Orientation around a document is route-local, and no two are alike.** `routes/series-part/orientation.tsx` and `routes/project-note/orientation.tsx` are siblings of the routes that render them, because a Series and a Project orient a reader differently: a Part gets its Section's neighbours and a previous/next, a Field Note gets a flat list of its siblings and no reading order at all, because a Project promises none. **Neither shows a number.** *Part 3 of 5* needs a denominator nobody has — the manifest lists Parts that exist, so nothing knows how many are coming — and *Part 3 of 3* is available and worse than nothing, because in a section still being written it tells the reader they have reached the end.
+
+**A trail's upper steps come from `siteCrumb(section, locale)`, never from a literal.** Home, and the index the document sits under, named with the heading that page already renders and addressed on the page's own branch — the steps below it are the document's own and the route builds those from `postHref` / `seriesHref` / `projectHref`. Writing `{ name: "Series", path: "/series" }` by hand is what made every Spanish trail the English one.
+
+The visual breadcrumb and the `BreadcrumbList` in the structured data are allowed to differ, and do: the visible one may name a Series Section, the JSON-LD may not. A `BreadcrumbList` describes URLs a visitor can reach and a Section has no page, so naming it there would declare a level of hierarchy that cannot be visited. Above the article it is context for a human, not a claim about the shape of the site.
+
 ## Data access
 
 Three layers, each with one job:
@@ -204,6 +249,7 @@ Rules that hold across `content.server.ts`:
 - **Queries alias snake_case columns to camelCase in SQL**, not in JavaScript. `id_content as "idContent"` — the mapping lives in one place, next to the query.
 - **The projection is written once.** `CONTENT_COLUMNS` plus a private `findContent(db, filter)` back all three finders; they differ only in their `where` clause. A new column is one edit, not three.
 - **Every model function takes `db: D1Database` as its first parameter.** Bindings are request-scoped in Workers; a module-level connection is not an option.
+- **And a `locale: Locale` as a required, typed argument** — never a default parameter. Adding it broke every call site on purpose, which is what turns *a query forgot the Locale* from a defect a reader finds into one the compiler does. `findAllBookmarks` is the single exception and takes none, because a Bookmark carries no Locale and an equality filter would have nothing to match and would drop every row; the Timeline is not a query at all but `mergeTimeline`, pure, composing two finders that have each already narrowed.
 - **Model functions are named for the domain question they answer** — `findAllPosts`, `findAllBookmarks`, `findAll` — not for their SQL.
 - **Values are bound, never interpolated.** `dbQuery(db, sql, values)` goes through `.bind()`. The only strings interpolated into SQL are fixed fragments this module owns — `CONTENT_COLUMNS` and the `where` clauses — never anything reaching it from a request.
 
@@ -213,7 +259,20 @@ Rules that hold across `content.server.ts`:
 
 ## SEO
 
-Every user-facing route exports its own `meta`, and each one supplies the full set: `title`, `description`, canonical link, `og:title`, `og:description`, `og:image`, `og:type`, `og:url`. There is deliberately no shared helper and no `meta` on the root, so a page that forgets its own renders with none rather than silently inheriting the home page's. Copy the block from a neighbouring route.
+Every user-facing route exports its own `meta`, and each one supplies the full set: `title`, `description`, canonical link, `og:title`, `og:description`, `og:image`, `og:type`, `og:url`. **No helper assembles that block and there is no `meta` on the root**, so a page that forgets its own renders with none rather than silently inheriting the home page's. Copy the block from a neighbouring route.
+
+What *is* shared is every fact a route would otherwise have to reconstruct, and each of those is one call inside the block you copied:
+
+| Call | Supplies |
+| ---- | -------- |
+| `documentAddresses(identity, locale, existingLocales)` | the canonical, from `app/lib/seo/alternates.ts` — never a URL typed out by hand |
+| `alternateLinks(addresses)` | the reciprocal `hreflang` links and the `x-default`, spread into the array |
+| `emptyIndexRobots(isEmpty)` | `noindex, follow` while an index has nothing on it, and nothing when it does |
+| `breadcrumbList`, `blogPosting`, `creativeWorkSeries` | the JSON-LD, from `app/lib/seo/structured-data.ts` |
+| `siteCrumb(section, locale)` | a trail's fixed upper steps — the home page, and the index a document sits under — named and addressed in the page's own Locale |
+| `PERSON_CORE`, `AUTHOR`, `SITE` | the one identity every page points at, from `app/lib/seo/person.ts` — a route spreads it and adds what only that page knows |
+
+The distinction is worth keeping straight: a *fact about an address* is derived, because two routes deriving it separately is how a canonical and a `hreflang` end up disagreeing. A page's *own words* are written out, because that is the one thing no helper can know.
 
 **Open Graph descriptors use `property`, never `name`.** That is what the OG protocol specifies, and scrapers that follow it strictly — LinkedIn among them — ignore a `name`. Only `description` stays a `name`, because that one is an HTML meta tag rather than an OG one.
 
@@ -223,13 +282,13 @@ Every user-facing route exports its own `meta`, and each one supplies the full s
 
 **Two routes emit `Person` JSON-LD**, both through the same `meta` export, using React Router's `script:ld+json` descriptor. Each derives its fields from what that page already renders rather than restating them — the home from its contact links, the Resume from `resume.json` — so the structured data cannot drift from the page carrying it.
 
-They describe the same person and do not have to be identical: `/resume` adds `alumniOf`, `hasCredential` and `knowsLanguage`, because that is where the credentials are, and sets `mainEntityOfPage` to itself while leaving `url` pointing at the site. A crawler reading both takes the union, which is the intended result. Neither carries `worksFor`.
+They describe the same person and do not have to be identical: `/cv` adds `alumniOf`, `hasCredential` and `knowsLanguage`, because that is where the credentials are, and sets `mainEntityOfPage` to itself while leaving `url` pointing at the site. A crawler reading both takes the union, which is the intended result. Neither carries `worksFor`.
 
 **Write metadata the way the rest of the site is written.** Titles name the page — `Blog | Paul Osorio Schuler`, not `Paul Osorio Schuler's Blog | Software Architecture, Node.js & Azure`. Descriptions say what is on the page, in plain words, and only claim what the page actually contains: the blog once advertised Azure while no Post mentioned it. No "advanced", no "insights", no "essential reading". This is a notebook, and the metadata is part of its voice.
 
 ## Navigation
 
-Internal links are `<Link>`. Not `<a href>`, and not `reloadDocument` — both throw away the client-side router the site already ships. `reloadDocument` is for resource routes that are not React at all, like the `/resume.pdf` download in `routes/resume/hero.tsx`.
+Internal links are `<Link>`. Not `<a href>`, and not `reloadDocument` — both throw away the client-side router the site already ships. `reloadDocument` is for resource routes that are not React at all, like the `/cv.pdf` download in `routes/resume/hero.tsx`.
 
 One consequence to remember inside the mobile sheet: client-side navigation leaves the panel mounted, so a link in there has to dismiss it as well. `<SheetClose render={<Link to="…" />}>` does both.
 
@@ -254,7 +313,3 @@ Touch targets in the header are `size-11` (44px) below `md` and `size-9` above i
 
 - **Never bind a chord the browser owns.** The profile shortcuts require `Shift` on top of `⌘`/`Ctrl` precisely because ⌘X is cut, ⌘L is the address bar and ⌘G is find-next. A resume page that breaks copy-paste is a worse offence than one without shortcuts.
 - **Ignore keystrokes aimed at text fields** — inputs, textareas, selects and `contenteditable`, which includes the command palette's own search box.
-
-## Known inconsistencies
-
-- **Spanish strings in `mode.toggle.tsx`.** The button's `title` and screen-reader label read "Tema claro — cambiar a oscuro" while the document is `lang="en"`. Per `AGENTS.md`, shipped strings are English.

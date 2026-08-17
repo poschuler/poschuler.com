@@ -1,12 +1,15 @@
-import { Link, useLoaderData, type MetaFunction } from "react-router";
+import { Link, useLoaderData } from "react-router";
 import { findAllPosts } from "~/models/content.server";
 import { findAllProjects } from "~/models/project.server";
 import { LiveLink } from "~/components/live-link";
 import { ContentItem } from "~/components/content-item";
 import type { Route } from "./+types/_home";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext, LOCALES } from "~/context";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { CONTACT_LINKS, LOCATION } from "~/lib/contact";
+import { useStrings } from "~/lib/catalog";
+import { projectHref, withLocale } from "~/lib/hrefs";
+import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
 import { PERSON_CORE } from "~/lib/seo/person";
 
 /**
@@ -17,10 +20,11 @@ const RECENT_POST_COUNT = 3;
 
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
+  const locale = context.get(localeContext);
   // Newest first, straight from the query's `order by published_at desc`.
   const [posts, projects] = await Promise.all([
-    findAllPosts(env.POSCHULER_BD),
-    findAllProjects(env.POSCHULER_BD),
+    findAllPosts(env.POSCHULER_BD, locale),
+    findAllProjects(env.POSCHULER_BD, locale),
   ]);
 
   // Only the flagship. Three blocks would invite the visitor to compare a
@@ -36,6 +40,7 @@ export async function loader({ context }: Route.LoaderArgs) {
       summary: flagship.summary,
       liveUrl: flagship.liveUrl,
     },
+    locale,
   };
 }
 
@@ -68,11 +73,15 @@ const HOME_TITLE = "Paul Osorio Schuler | Senior Backend Engineer | TypeScript �
 const HOME_DESCRIPTION =
   "Senior backend engineer in Lima, Peru, with fifteen years in banking systems. I build and operate Chekalo.pe, a price intelligence platform in TypeScript and Node.js.";
 
-export const meta: MetaFunction = () => {
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+  const addresses = documentAddresses({ kind: "index", path: "/" }, loaderData.locale, LOCALES);
+  const { canonical } = addresses;
+
   return [
     { title: HOME_TITLE },
     { name: "description", content: HOME_DESCRIPTION },
-    { tagName: "link", rel: "canonical", href: "https://poschuler.com" },
+    { tagName: "link", rel: "canonical", href: canonical },
+    ...alternateLinks(addresses),
     { property: "og:title", content: HOME_TITLE },
     { property: "og:description", content: HOME_DESCRIPTION },
     { property: "og:image", content: "https://poschuler.com/og.png" },
@@ -80,13 +89,14 @@ export const meta: MetaFunction = () => {
     { property: "og:image:height", content: "630" },
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
-    { property: "og:url", content: "https://poschuler.com" },
+    { property: "og:url", content: canonical },
     { "script:ld+json": PERSON },
   ];
 };
 
 export default function Home() {
-  const { recentPosts, flagship } = useLoaderData<typeof loader>();
+  const { recentPosts, flagship, locale } = useLoaderData<typeof loader>();
+  const strings = useStrings();
 
   return (
     <main className="flex flex-col flex-1 gap-4 p-4 md:gap-8 md:p-10 font-mono bg-ui">
@@ -161,11 +171,15 @@ export default function Home() {
         * check. Directly below it, for that reason. */}
       {flagship && (
         <section className="mx-auto w-full max-w-measure">
-          <h2 className="text-lg font-semibold tracking-tight">What I build</h2>
+          <h2 className="text-lg font-semibold tracking-tight">{strings.home.whatIBuild}</h2>
 
           <article className="my-4 border-default border-l-2 py-4 px-4">
             <h3 className="flex flex-wrap items-baseline gap-x-3 text-base font-semibold">
-              <Link to={`/projects/${flagship.slug}`} className="hover:text-default">
+              {/* `locale`, not `flagship.lang`: the flagship above is already
+                * this Locale's own row (`findAllProjects` is Locale-filtered),
+                * and the loader trims the fields it sends to exactly what this
+                * block renders — a `lang` this Link would otherwise need. */}
+              <Link to={projectHref(flagship.slug, locale)} className="hover:text-default">
                 {flagship.title}
               </Link>
 
@@ -179,9 +193,9 @@ export default function Home() {
 
           <Link
             className="text-sm text-low transition-colors duration-200 hover:text-default"
-            to="/projects"
+            to={withLocale("/projects", locale)}
           >
-            All projects →
+            {strings.home.allProjects}
           </Link>
         </section>
       )}
@@ -189,7 +203,7 @@ export default function Home() {
       {/* The same column as the hero, so the page reads as one narrow strip
         * rather than a landing page with a wider index bolted underneath. */}
       <section className="mx-auto w-full max-w-measure">
-        <h2 className="text-lg font-semibold tracking-tight">Recent writing</h2>
+        <h2 className="text-lg font-semibold tracking-tight">{strings.home.recentWriting}</h2>
 
         {recentPosts.map((post) => (
           <ContentItem key={post.idContent} item={post} headingLevel="h3" />
@@ -197,9 +211,9 @@ export default function Home() {
 
         <Link
           className="text-sm text-low transition-colors duration-200 hover:text-default"
-          to="/blog"
+          to={withLocale("/blog", locale)}
         >
-          All articles →
+          {strings.home.allArticles}
         </Link>
       </section>
     </main>

@@ -1,9 +1,16 @@
 # Copy to `.dev.vars` and fill in. Only what a dev machine needs:
 #
 #   - SESSION_THEME_SECRET is a real secret, so it is never in git. In
-#     production it is set with `wrangler secret put`.
-#   - DEPLOYMENT_ENV overrides the "production" value in wrangler.jsonc, which
-#     is what keeps the theme cookie off `Secure` and `.poschuler.com` locally.
+#     production it is set with `wrangler secret put`. Nothing reads it at
+#     startup: without it every page still serves in the default theme, and
+#     only the toggle itself fails.
+#   - DEPLOYMENT_ENV and DB_DEBUG_FLAG are declared and unread. The first used
+#     to decide whether the theme cookie got `Secure` and `Domain=poschuler.com`;
+#     that cookie is `__Host-` prefixed now, which forbids `Domain` outright,
+#     so the var lost its last reader. See `app/color-scheme-cookie.ts` and
+#     `docs/architecture.md` for the frozen-theme incident that produced the
+#     prefix. Both stay here so a local override exists the day one gains a
+#     reader again.
 #
 # PUBLIC_HOST is not listed: it lives in wrangler.jsonc, and robots.txt falls
 # back to the origin the request arrived on anyway.

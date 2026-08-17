@@ -1,10 +1,15 @@
 import { chip } from "~/components/chip";
+import { useLocale } from "~/context";
+import { useStrings } from "~/lib/catalog";
 import { Section } from "./section";
 import { work } from "./resume.json";
 
 export function Experience() {
+  let locale = useLocale();
+  let strings = useStrings();
+
   return (
-    <Section title="Work Experience">
+    <Section title={strings.resume.headings.experience}>
       {work.map((item) => (
         /* The same left border every list on the site uses, rather than a
          * filled card. The fill was `bg-subtle` on a `bg-ui` page — a step
@@ -38,15 +43,15 @@ export function Experience() {
             )}
           </div>
 
-          {item.summary && (
+          {item.summary[locale] && (
             <p className="mt-2 text-pretty text-low text-xs leading-5">
-              {item.summary}
+              {item.summary[locale]}
             </p>
           )}
 
-          {item.highlights && item.highlights.length > 0 && (
+          {item.highlights[locale].length > 0 && (
             <ul className="mt-3 list-disc space-y-2 pl-4 text-low text-xs">
-              {item.highlights.map((highlight) => (
+              {item.highlights[locale].map((highlight) => (
                 <li key={highlight} className="text-pretty">
                   {highlight}
                 </li>

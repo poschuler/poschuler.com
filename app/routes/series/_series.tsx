@@ -1,12 +1,13 @@
-import { useLoaderData, type MetaFunction } from "react-router";
+import { useLoaderData } from "react-router";
+import { EmptyIndex } from "~/components/empty-index";
 import { SeriesItem } from "~/components/series-item";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext, LOCALES } from "~/context";
+import { useStrings } from "~/lib/catalog";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
-import { breadcrumbList, HOME_CRUMB } from "~/lib/seo/structured-data";
+import { alternateLinks, documentAddresses, emptyIndexRobots } from "~/lib/seo/alternates";
+import { breadcrumbList, siteCrumb } from "~/lib/seo/structured-data";
 import { findAllSeries } from "~/models/series.server";
 import type { Route } from "./+types/_series";
-
-const SITE = "https://poschuler.com";
 
 const SERIES_TITLE = "Series | Paul Osorio Schuler";
 const SERIES_DESCRIPTION =
@@ -27,61 +28,79 @@ const SERIES_DESCRIPTION =
  */
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
-  const series = await findAllSeries(env.POSCHULER_BD);
+  const locale = context.get(localeContext);
+  const series = await findAllSeries(env.POSCHULER_BD, locale);
 
-  return { series };
+  return { series, locale };
 }
 
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
-export const meta: MetaFunction = () => {
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+  const addresses = documentAddresses(
+    { kind: "index", path: "/series" },
+    loaderData.locale,
+    LOCALES,
+  );
+  const { canonical } = addresses;
+
   return [
     { title: SERIES_TITLE },
     { name: "description", content: SERIES_DESCRIPTION },
-    { tagName: "link", rel: "canonical", href: `${SITE}/series` },
+    { tagName: "link", rel: "canonical", href: canonical },
+    ...alternateLinks(addresses),
     { property: "og:title", content: SERIES_TITLE },
     { property: "og:description", content: SERIES_DESCRIPTION },
-    { property: "og:image", content: `${SITE}/og.png` },
+    { property: "og:image", content: "https://poschuler.com/og.png" },
     { property: "og:image:width", content: "1200" },
     { property: "og:image:height", content: "630" },
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
-    { property: "og:url", content: `${SITE}/series` },
+    { property: "og:url", content: canonical },
     // An index, so a trail and nothing more. Emitting an `ItemList` of the
     // series here would be a second description of documents that each already
     // describe themselves one click away.
     {
-      "script:ld+json": breadcrumbList([HOME_CRUMB, { name: "Series", path: "/series" }]),
+      "script:ld+json": breadcrumbList([
+        siteCrumb("home", loaderData.locale),
+        siteCrumb("series", loaderData.locale),
+      ]),
     },
+    ...emptyIndexRobots(loaderData.series.length === 0),
   ];
 };
 
 export default function Series() {
   const { series } = useLoaderData<typeof loader>();
+  const strings = useStrings();
 
   return (
     <main className="flex flex-1 flex-col gap-4 bg-ui p-4 font-mono md:gap-8 md:p-10">
       <section className="w-full">
         <div className="text-center">
           <h1 className="mt-8 scroll-m-20 font-semibold text-3xl tracking-tight lg:text-4xl">
-            Series
+            {strings.series.heading}
           </h1>
         </div>
 
         <div className="mx-auto max-w-[450px]">
           <blockquote className="mt-2 text-center text-lg text-low italic">
-            Subjects worked through in order, rather than one article at a time
+            {strings.series.subtitle}
           </blockquote>
         </div>
       </section>
 
-      {/* The Destination only here: this page's question is *where does this
-        * take me*, and it is the one line that answers it before a click. */}
-      <section className="mx-auto w-full max-w-measure">
-        {series.map((one) => (
-          <SeriesItem key={one.idSeries} series={one} showDestination />
-        ))}
-      </section>
+      {series.length === 0 ? (
+        <EmptyIndex englishHref="/series" />
+      ) : (
+        /* The Destination only here: this page's question is *where does this
+         * take me*, and it is the one line that answers it before a click. */
+        <section className="mx-auto w-full max-w-measure">
+          {series.map((one) => (
+            <SeriesItem key={one.idSeries} series={one} showDestination />
+          ))}
+        </section>
+      )}
     </main>
   );
 }

@@ -50,15 +50,30 @@ describe("the Tag page's meta", () => {
  * line copied between two files that look alike.
  */
 describe("the Tag index's meta", () => {
+  // A non-empty list: the empty case — which does add a robots directive,
+  // `empty-index.test.ts` covers — is deliberately not this one.
+  const args = { loaderData: { locale: "en" as const, tags: [{ tag: "nodejs", posts: 3 }] } } as never;
+
   it("carries no robots directive at all", () => {
-    expect(tagsMeta({} as never)).not.toContainEqual(expect.objectContaining({ name: "robots" }));
+    expect(tagsMeta(args)).not.toContainEqual(expect.objectContaining({ name: "robots" }));
   });
 
   it("declares itself canonical at the bare path", () => {
-    expect(tagsMeta({} as never)).toContainEqual({
+    expect(tagsMeta(args)).toContainEqual({
       tagName: "link",
       rel: "canonical",
       href: "https://poschuler.com/tags",
+    });
+  });
+
+  /** The index is index-constant: both, always (Part 6), regardless of what a query would return. */
+  it("declares itself canonical under /es for the Spanish branch", () => {
+    expect(
+      tagsMeta({ loaderData: { locale: "es", tags: [{ tag: "nodejs", posts: 3 }] } } as never),
+    ).toContainEqual({
+      tagName: "link",
+      rel: "canonical",
+      href: "https://poschuler.com/es/tags",
     });
   });
 });

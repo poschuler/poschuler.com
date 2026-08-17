@@ -16,7 +16,7 @@
  */
 
 import { validateRevisions } from "../../app/lib/revisions.ts";
-import { basenameOf, treeOf } from "./content-tree.ts";
+import { basenameOf, localeMatchesTree, treeOf } from "./content-tree.ts";
 import { containerContradictionError, reconcileManifest } from "./manifest.ts";
 import {
   draftError,
@@ -144,7 +144,9 @@ export function projectRowFor(
   attributes: ProjectFrontMatter,
   noteFiles: ProjectNoteFile[],
 ): ProjectResult {
-  if (treeOf(relativePath) !== "projects") {
+  const tree = treeOf(relativePath);
+
+  if (tree !== "projects") {
     return { error: `${relativePath} is not in the projects tree` };
   }
 
@@ -156,11 +158,15 @@ export function projectRowFor(
 
   const { slug, lang } = parsed;
 
-  // A Project has no `.en-old.md` convention to hide behind — it is one page,
-  // revised in place, and a filename with no Locale is a mistake rather than
-  // an intention. `draft: true` is the only way one goes unpublished, checked
-  // below, after every other rule has run.
-  if (!lang) {
+  // A Project is one page, revised in place, so a filename with no Locale is
+  // a mistake rather than an intention. `draft: true` is the only way one
+  // goes unpublished, checked below, after every other rule has run. Read
+  // from `CONTENT_TREES` via `localeMatchesTree` rather than a local `!lang`
+  // — the rule this checks against is declared once, in `content-tree.ts`,
+  // and a second copy of it here is a second chance for the two to drift.
+  // `lang === null` leads the condition so TypeScript narrows `lang` to
+  // `string` below; `localeMatchesTree` alone is a plain boolean and cannot.
+  if (lang === null || !localeMatchesTree(tree, lang)) {
     return { error: `${relativePath} must have a language in its filename` };
   }
 

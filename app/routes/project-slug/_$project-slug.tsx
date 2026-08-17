@@ -4,13 +4,13 @@ import { LiveLink } from "~/components/live-link";
 import { ProjectNoteItem } from "~/components/project-note-item";
 import { GitHubIcon } from "~/components/ui/brand-icons";
 import { RevisionHistory, RevisionLine } from "~/components/revisions";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext } from "~/context";
+import { useStrings } from "~/lib/catalog";
+import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { cn } from "~/lib/utils";
 import { findProjectBySlug, findProjectNotes } from "~/models/project.server";
 import type { Route } from "./+types/_$project-slug";
-
-const SITE = "https://poschuler.com";
 
 interface ProjectBodyPayload {
   html: string;
@@ -24,7 +24,8 @@ interface ProjectBodyPayload {
  */
 export async function loader({ params, context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
-  const project = await findProjectBySlug(env.POSCHULER_BD, params.projectSlug);
+  const locale = context.get(localeContext);
+  const project = await findProjectBySlug(env.POSCHULER_BD, params.projectSlug, locale);
 
   if (!project) {
     throw new Response("Not Found", { status: 404 });
@@ -56,6 +57,11 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     liveUrl: project.liveUrl,
     repoUrl: project.repoUrl,
     revisions: project.revisions,
+    locale: project.lang,
+    // Read off the same row, via the correlated subquery `findProjectBySlug`
+    // now carries (Part 10 of `evolution-plan/15-phase-3-spanish.md`) — the
+    // canonical's alternates, without a second round trip.
+    existingLocales: project.locales,
     html: body.html,
     notes,
   };
@@ -64,27 +70,31 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  const { title, description, slug } = loaderData;
+  const { title, description, slug, locale, existingLocales } = loaderData;
   const pageTitle = `${title} | Paul Osorio Schuler`;
+  const addresses = documentAddresses({ kind: "project", slug }, locale, existingLocales);
+  const { canonical } = addresses;
 
   return [
     { title: pageTitle },
     { name: "description", content: description },
-    { tagName: "link", rel: "canonical", href: `${SITE}/projects/${slug}` },
+    { tagName: "link", rel: "canonical", href: canonical },
+    ...alternateLinks(addresses),
     { property: "og:title", content: pageTitle },
     { property: "og:description", content: description },
-    { property: "og:image", content: `${SITE}/og.png` },
+    { property: "og:image", content: "https://poschuler.com/og.png" },
     { property: "og:image:width", content: "1200" },
     { property: "og:image:height", content: "630" },
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
-    { property: "og:url", content: `${SITE}/projects/${slug}` },
+    { property: "og:url", content: canonical },
   ];
 }
 
 export default function Project() {
   const { slug, title, summary, status, liveUrl, repoUrl, revisions, html, notes } =
     useLoaderData<typeof loader>();
+  const strings = useStrings();
 
   return (
     <main className="flex-1 gap-4 bg-ui p-4 font-mono md:gap-8 md:p-10">
@@ -96,7 +106,7 @@ export default function Project() {
           * costs. */}
         {status === "archived" && (
           <p className={cn(chip, "not-prose mb-4")}>
-            Archived — no longer maintained
+            {strings.projects.archivedNotice}
           </p>
         )}
 
@@ -115,7 +125,7 @@ export default function Project() {
               className="inline-flex items-center gap-2 text-low no-underline transition-colors duration-200 hover:text-default"
             >
               <GitHubIcon className="size-5" />
-              Repository
+              {strings.projects.repository}
             </a>
           )}
         </div>
@@ -138,7 +148,7 @@ export default function Project() {
         * published yet (Part 11 of `evolution-plan/14-phase-1b-field-notes.md`). */}
       {notes.length > 0 && (
         <section className="mx-auto w-full max-w-measure pb-8">
-          <h2 className="font-semibold text-xl tracking-tight">Field notes</h2>
+          <h2 className="font-semibold text-xl tracking-tight">{strings.projects.fieldNotesHeading}</h2>
 
           {notes.map((note) => (
             <ProjectNoteItem key={note.slug} note={note} projectSlug={slug} />
