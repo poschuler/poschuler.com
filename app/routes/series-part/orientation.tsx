@@ -3,6 +3,7 @@ import { useLocale } from "~/context";
 import { useStrings } from "~/lib/catalog";
 import { postHref, seriesHref } from "~/lib/hrefs";
 import type { ArcSection, Orientation, PartLink } from "~/lib/series-arc";
+import { indexHref } from "~/lib/trail";
 
 /**
  * What surrounds a Part: where it sits, what came before, what comes after.
@@ -23,8 +24,10 @@ import type { ArcSection, Orientation, PartLink } from "~/lib/series-arc";
 const linkClassName = "transition-colors duration-200 hover:text-default";
 
 /**
- * `/series` is reached from here rather than from the nav. A seventh nav entry
- * pointing at a subset of the one beside it is not worth the width.
+ * `/series` also lives in the header nav now — reachability is not why this
+ * link is here. A reader arriving at a Part from a search engine has seen
+ * neither the nav nor the series it belongs to; they need to know before
+ * reading, not after, and the nav does not tell them.
  */
 export function SeriesBreadcrumb({
   seriesSlug,
@@ -42,7 +45,7 @@ export function SeriesBreadcrumb({
     <nav aria-label={strings.a11y.breadcrumb} className="text-low text-sm">
       <ol className="flex flex-wrap items-center gap-x-2">
         <li>
-          <Link to="/series" className={linkClassName}>
+          <Link to={indexHref("series", locale)} className={linkClassName}>
             {strings.series.heading}
           </Link>
         </li>

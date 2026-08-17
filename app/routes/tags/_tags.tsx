@@ -7,7 +7,8 @@ import { useStrings } from "~/lib/catalog";
 import { tagHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { alternateLinks, documentAddresses, emptyIndexRobots } from "~/lib/seo/alternates";
-import { breadcrumbList, siteCrumb } from "~/lib/seo/structured-data";
+import { breadcrumbList } from "~/lib/seo/structured-data";
+import { indexCrumb } from "~/lib/trail";
 import { findTagsWithPostCounts, type TagCountRowType } from "~/models/tag.server";
 import type { Route } from "./+types/_tags";
 
@@ -87,8 +88,8 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
     { property: "og:url", content: canonical },
     {
       "script:ld+json": breadcrumbList([
-        siteCrumb("home", loaderData.locale),
-        siteCrumb("tags", loaderData.locale),
+        indexCrumb("home", loaderData.locale),
+        indexCrumb("tags", loaderData.locale),
       ]),
     },
     ...emptyIndexRobots(loaderData.tags.length === 0),

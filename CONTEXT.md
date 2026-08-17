@@ -94,6 +94,16 @@ _Avoid_: version, variant, localization
 Everything the interface says *around* a document, as against the document's own words: navigation, page headings, empty states, the 404, the word a listing row uses for a date or a kind, every accessible label. It is not authored and it is not published — it ships with the code rather than through the content pipeline, and unlike a Translation it is never missing in a Locale, because it lives in a catalogue typed so that a missing string fails the build rather than falling back to English. The line between the two decides where a string is written, and it is not always obvious which side something is on: the word *Bookmarks* above a list is the site speaking, while a Post's title, a Project's summary and a page's `og:` copy are the document speaking and stay in the language they were written in.
 _Avoid_: copy, labels, strings, UI text, i18n
 
+### Navigation
+
+**Trail**:
+The sequence of steps that leads to a page, emitted twice — once visibly above a document, once as structured data for a crawler — and deliberately not identically: the two may differ in which steps they include, but never in how a step they both carry is named or addressed.
+_Avoid_: breadcrumb, path, navigation trail
+
+**Index**:
+The page that lists everything of one kind — Posts, Bookmarks, Series, Tags. Not *Section*: that term already names a stage of a Series, a different thing with no page of its own.
+_Avoid_: section, listing, archive
+
 ### Professional profile
 
 **Project**:

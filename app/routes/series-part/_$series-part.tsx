@@ -6,8 +6,9 @@ import { postHref, seriesHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
 import { validateRevisions } from "~/lib/revisions";
 import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
-import { blogPosting, breadcrumbList, siteCrumb } from "~/lib/seo/structured-data";
+import { blogPosting, breadcrumbList } from "~/lib/seo/structured-data";
 import { orientationFor } from "~/lib/series-arc";
+import { indexCrumb } from "~/lib/trail";
 import { findSeriesArc, findSeriesBySlug } from "~/models/series.server";
 import type { Route } from "./+types/_$series-part";
 import { PartNav, SectionIndex, SeriesBreadcrumb } from "./orientation";
@@ -153,8 +154,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
     // there it is context for a reader, not a claim about the site's structure.
     {
       "script:ld+json": breadcrumbList([
-        siteCrumb("home", locale),
-        siteCrumb("series", locale),
+        indexCrumb("home", locale),
+        indexCrumb("series", locale),
         { name: seriesTitle, path: seriesHref(seriesSlug, locale) },
         { name: title, path },
       ]),

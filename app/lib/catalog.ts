@@ -18,11 +18,11 @@ import { type Locale, useLocale } from "~/context";
  * this catalogue for its copy**, on any route; that is deliberate, not an
  * oversight.
  *
- * The one thing inside `meta()` that does read it is `siteCrumb`
- * (`app/lib/seo/structured-data.ts`), and it is the exception that shows where
- * the line runs: a `BreadcrumbList` names *sections of this site*, not the
- * document — so its steps are the same chrome the header renders, and they were
- * left in English for a while precisely because they sat in `meta()`, where
+ * The one thing inside `meta()` that does read it is `indexCrumb`
+ * (`app/lib/trail.ts`), and it is the exception that shows where the line
+ * runs: a `BreadcrumbList` names *sections of this site*, not the document —
+ * so its steps are the same chrome the header renders, and they were left in
+ * English for a while precisely because they sat in `meta()`, where
  * `useStrings()` cannot be called. Reading `STRINGS[locale]` directly is what
  * the hook does anyway.
  *
