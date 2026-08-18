@@ -1,3 +1,4 @@
+import { useLocale } from "~/context";
 import { CONTACT_LINKS, LOCATION } from "~/lib/contact";
 
 /**
@@ -11,6 +12,8 @@ import { CONTACT_LINKS, LOCATION } from "~/lib/contact";
  * name the site rather than serving the reader.
  */
 export function Footer() {
+  const locale = useLocale();
+
   return (
     <footer className="border-default border-t bg-subtle px-4 py-6 font-mono text-low text-sm md:px-6">
       <div className="mx-auto flex w-full max-w-measure flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -31,7 +34,7 @@ export function Footer() {
           ))}
         </ul>
 
-        <p>{LOCATION}</p>
+        <p>{LOCATION[locale]}</p>
       </div>
     </footer>
   );

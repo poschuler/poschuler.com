@@ -12,11 +12,19 @@ import { type Locale, useLocale } from "~/context";
  *
  * **What is deliberately not here.** A document's own data — a Post's title,
  * a Project's summary, the home page's biography, `<meta>`/`og:` copy — is
- * content, not chrome: it is written once, in the language it is written in,
- * the same way a Post's body is. Cataloguing it here would mean this module
- * inventing Spanish marketing prose no author reviewed. **No `meta()` reads
- * this catalogue for its copy**, on any route; that is deliberate, not an
- * oversight.
+ * content, not chrome: it belongs to the document, and it is written by its
+ * author in each language he publishes it in. Cataloguing it here would mean
+ * this module inventing Spanish marketing prose no author reviewed. **No
+ * `meta()` reads this catalogue for its copy**, on any route; that is
+ * deliberate, not an oversight.
+ *
+ * Content being bilingual does not move it here. The home page's biography is
+ * the case that shows it: it is written in both Locales, and it lives in
+ * `app/routes/home/bio.tsx` — beside the page it belongs to, typed
+ * `Record<Locale, …>` the same way this file is, so the compiler enforces the
+ * pair without this module ever holding the words. A document's second
+ * language is still the document's, the way `resume.json` carries its own
+ * `summary.en` and `summary.es`.
  *
  * The one thing inside `meta()` that does read it is `indexCrumb`
  * (`app/lib/trail.ts`), and it is the exception that shows where the line
@@ -371,7 +379,7 @@ export const STRINGS: Record<Locale, Chrome> = {
       series: "series",
       bookmarks: "marcadores",
       timeline: "cronología",
-      resume: "resume",
+      resume: "curriculum",
       openMenu: "Abrir navegación",
       mainLabel: "Principal",
       panelTitle: "Navegación",
