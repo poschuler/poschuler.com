@@ -6,18 +6,29 @@ import { switcherDestinationForRoute } from "~/lib/seo/switcher";
 import { cn } from "~/lib/utils";
 
 /**
- * Shipped hidden for the whole of Phase 3 (`evolution-plan/15-phase-3-spanish.md`
- * Part 9) — the switcher is built, tested and wired into both places
- * `ModeToggle` occupies (`routes/layouts/header.tsx`), but nothing links to it
- * yet: no Spanish document exists to send a reader to, which is what lets
- * this phase be built and deployed without a word of Spanish being written.
+ * Whether the switcher renders at all.
+ *
+ * It shipped `false` for the whole of Phase 3
+ * (`evolution-plan/15-phase-3-spanish.md` Part 9): the control was built,
+ * tested and wired into both places `ModeToggle` occupies
+ * (`routes/layouts/header.tsx`), but nothing linked to it, which is what let
+ * the phase be built and deployed without a word of Spanish being written.
+ *
+ * It is `true` now, and the Spanish branch is still empty. That is a
+ * deliberate order, not an oversight: Part 6 gave every index a Locale of its
+ * own unconditionally and an empty state to render — *"Todavía no se ha
+ * publicado nada aquí"* over a link back to the English one — under
+ * `noindex, follow`. A reader who takes the switcher today reaches that
+ * answer rather than a 404, and every Spanish document written from here
+ * appears behind a control that already exists. What is not yet translated is
+ * the home page's own prose, which is content rather than chrome and stays in
+ * English by the rule `app/lib/catalog.ts` states.
  *
  * Exported because `header.tsx` reads it too, to gate the mobile panel's
  * label alongside the control — a label with nothing beside it would be its
- * own visible artifact. Flipping this one line is what a later ticket (#50)
- * does to reveal both.
+ * own visible artifact.
  */
-export const LANGUAGE_SWITCHER_REVEALED = false;
+export const LANGUAGE_SWITCHER_REVEALED = true;
 
 /**
  * A single link to the other Locale — *Español* on an English page, *English*
