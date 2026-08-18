@@ -4,7 +4,6 @@ import { Education } from "~/routes/resume/education";
 import { Experience } from "~/routes/resume/experience";
 import { Hero } from "~/routes/resume/hero";
 import { Skills } from "~/routes/resume/skills";
-import { KeyboardManager } from "~/routes/resume/keyboard-manager";
 import type { MetaFunction } from "react-router";
 import { LOCALES, type Locale } from "~/context";
 import { alternateLinks, documentAddresses } from "~/lib/seo/alternates";
@@ -136,7 +135,6 @@ export default function resume() {
         <Education />
         <Certificates />
       </section>
-      <KeyboardManager />
     </main>
   );
 }
