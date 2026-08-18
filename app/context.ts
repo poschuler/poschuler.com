@@ -58,6 +58,14 @@ export type Locale = "en" | "es";
 export const ES_PREFIX = "/es";
 
 /**
+ * What React Router appends to a path when the client asks for that route's
+ * loader data instead of its document. A navigation to `/es` fetches
+ * `/es.data`, and that suffix belongs to the transport, not to the address —
+ * `deriveLocale` strips it before reading the path.
+ */
+const DATA_SUFFIX = ".data";
+
+/**
  * The Locale a request's path names.
  *
  * There is no `/en/` namespace to check for: the absence of `ES_PREFIX` is
@@ -65,9 +73,23 @@ export const ES_PREFIX = "/es";
  * pathname to decide. Called once, in `workers/app.ts`, and by the test
  * platform helper that builds a loader's context the same way — everywhere
  * else reads the result off `localeContext` instead of re-deriving it.
+ *
+ * **The `.data` suffix is stripped first, and that is not a detail.** A
+ * client-side navigation never requests the document — it requests the route's
+ * data at `<path>.data`. `/es/blog` survived that untouched, because
+ * `/es/blog.data` still starts with `/es/`; `/es` did not, because `/es.data`
+ * is neither equal to `/es` nor prefixed by `/es/`. The Spanish home page
+ * therefore matched its own route and ran its loaders under the English
+ * Locale, so following a link to it changed the address and nothing else.
+ * Only the branch's own root was affected, which is exactly the address the
+ * language switcher and the header's wordmark both point at.
  */
 export function deriveLocale(url: URL): Locale {
-  return url.pathname === ES_PREFIX || url.pathname.startsWith(`${ES_PREFIX}/`) ? "es" : "en";
+  const pathname = url.pathname.endsWith(DATA_SUFFIX)
+    ? url.pathname.slice(0, -DATA_SUFFIX.length)
+    : url.pathname;
+
+  return pathname === ES_PREFIX || pathname.startsWith(`${ES_PREFIX}/`) ? "es" : "en";
 }
 
 /**
