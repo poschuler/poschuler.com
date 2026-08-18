@@ -176,30 +176,37 @@ describe("alternateLinks", () => {
   const addresses = documentAddresses({ kind: "index", path: "/blog" }, "en", ["en", "es"]);
 
   /**
-   * The key is spelled `hreflang`, not React's `hrefLang`. React passes either
-   * through to the served attribute verbatim, and HTML lowers attribute names
-   * as it parses, so both reach a crawler intact — but only the lower-case one
-   * is the name the specification uses and the one the sitemap already writes,
-   * and having the two halves of a pair spelled differently is how the next
-   * reader concludes they come from different rules.
+   * The key is spelled `hrefLang`, React's name, not the specification's
+   * `hreflang` the rest of this module uses. React passes either through to
+   * the served attribute verbatim and an HTML parser lowers attribute names as
+   * it reads, so both reach a crawler as `hreflang` — what separates them is
+   * that React knows only its own spelling and warns about the other on every
+   * render and every client navigation. Asserted here so the spelling is a
+   * decision with a test behind it rather than something a tidying pass
+   * "corrects" back into a console full of warnings.
    */
   it("renders the set as link descriptors React will emit", () => {
     expect(alternateLinks(addresses)).toEqual([
-      { tagName: "link", rel: "alternate", hreflang: "en", href: "https://poschuler.com/blog" },
-      { tagName: "link", rel: "alternate", hreflang: "es", href: "https://poschuler.com/es/blog" },
+      { tagName: "link", rel: "alternate", hrefLang: "en", href: "https://poschuler.com/blog" },
+      { tagName: "link", rel: "alternate", hrefLang: "es", href: "https://poschuler.com/es/blog" },
       {
         tagName: "link",
         rel: "alternate",
-        hreflang: "x-default",
+        hrefLang: "x-default",
         href: "https://poschuler.com/blog",
       },
     ]);
   });
 
+  /**
+   * The two spellings name the same pair. This is what stops them drifting:
+   * the head and the sitemap have to declare the same Locales at the same
+   * addresses, whatever each one has to call the key.
+   */
   it("carries exactly what the sitemap declares for the same document", () => {
-    expect(alternateLinks(addresses).map(({ hreflang, href }) => ({ hreflang, href }))).toEqual(
-      hreflangEntries(addresses),
-    );
+    expect(
+      alternateLinks(addresses).map(({ hrefLang, href }) => ({ hreflang: hrefLang, href })),
+    ).toEqual(hreflangEntries(addresses));
   });
 });
 

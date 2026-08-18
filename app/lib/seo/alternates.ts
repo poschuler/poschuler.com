@@ -86,12 +86,20 @@ export function hreflangEntries(addresses: DocumentAddresses): HreflangEntry[] {
  * array — `...alternateLinks(addresses)`, the way `emptyIndexRobots` composes.
  * Thirteen routes emit these, and none of them writes the rule out.
  *
- * **The key is `hreflang`, lower-case, and that was checked in a built page
- * rather than assumed.** A descriptor carrying `tagName` is handed to React as
- * props, which invites the React spelling `hrefLang` — and React passes that
- * through verbatim, so the served attribute reads `hrefLang` too. HTML lowers
- * attribute names when it parses, so both work; only one of them is the name
- * the specification uses and the one the sitemap already writes.
+ * **The key is `hrefLang`, React's spelling, and it is the one place in this
+ * module that is not the specification's.** A descriptor carrying `tagName` is
+ * handed to React as props, and React knows `hrefLang`: given the
+ * specification's own `hreflang` it treats the prop as unknown and warns on
+ * every render and every client navigation, across all thirteen routes. The
+ * warning is the whole reason for the spelling, because nothing else
+ * distinguishes them — React passes either through verbatim, and an HTML
+ * parser lowers attribute names as it reads, so what lands in the DOM, and
+ * what a crawler or the W3C validator sees, is `hreflang` either way. Only the
+ * served source text differs, and no consumer reads that.
+ *
+ * `hreflangEntries` above keeps the lower-case name, and so does the sitemap
+ * (`app/lib/seo/sitemap.ts`) — that one is hand-written XML, where the case is
+ * load-bearing rather than cosmetic.
  *
  * A document that exists in one Locale still declares that Locale and an
  * `x-default` naming the same address. That is not noise: it is the page
@@ -100,11 +108,11 @@ export function hreflangEntries(addresses: DocumentAddresses): HreflangEntry[] {
  */
 export function alternateLinks(
   addresses: DocumentAddresses,
-): { tagName: "link"; rel: "alternate"; hreflang: string; href: string }[] {
+): { tagName: "link"; rel: "alternate"; hrefLang: string; href: string }[] {
   return hreflangEntries(addresses).map(({ hreflang, href }) => ({
     tagName: "link",
     rel: "alternate",
-    hreflang,
+    hrefLang: hreflang,
     href,
   }));
 }
