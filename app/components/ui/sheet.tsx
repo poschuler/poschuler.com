@@ -9,7 +9,6 @@ import { cn } from "~/lib/utils";
 
 const Sheet = BaseDialog.Root;
 const SheetTrigger = BaseDialog.Trigger;
-const SheetClose = BaseDialog.Close;
 
 type StyledProps<Props> = Omit<Props, "className"> & { className?: string };
 
@@ -117,4 +116,4 @@ function SheetContent({
   );
 }
 
-export { Sheet, SheetTrigger, SheetClose, SheetContent };
+export { Sheet, SheetTrigger, SheetContent };

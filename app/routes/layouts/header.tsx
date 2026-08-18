@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import {
   BookMarked,
@@ -15,7 +16,6 @@ import { ModeToggle } from "~/components/mode.toggle";
 import { Button } from "~/components/ui/button";
 import {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetTrigger,
 } from "~/components/ui/sheet";
@@ -114,15 +114,15 @@ function Wordmark({ className }: { className?: string }) {
  * wordmark, six labels and the theme toggle, with their five internal gaps
  * and the header's own three.
  *
- * The switcher costs a second `icon` button: 36px and one 24px gap, landing
- * the row at roughly 730px inside the 1024px it has to fit in. That is a
- * fixed cost — it renders a Locale subtag, `en` or `es`, so no string it
- * could be handed makes it wider. It was not always: while it rendered its
- * label as words, the binding case was its fallback sentence *"Proyectos en
- * español"* at roughly 165px, and the row came to roughly 860px. Both fit;
- * only one of them stays true whatever the catalogue says next. There is no
- * headless browser in this environment to render and measure directly; this
- * is the estimate that check leaves behind.
+ * The switcher costs a second `icon` button inside that cluster: 36px and the
+ * cluster's own 4px gap, landing the row at roughly 710px inside the 1024px it
+ * has to fit in. That is a fixed cost — it renders a Locale subtag, `en` or
+ * `es`, so no string it could be handed makes it wider. It was not always:
+ * while it rendered its label as words, the binding case was its fallback
+ * sentence *"Proyectos en español"* at roughly 165px, and the row came to
+ * roughly 860px. Both fit; only one of them stays true whatever the catalogue
+ * says next. There is no headless browser in this environment to render and
+ * measure directly; this is the estimate that check leaves behind.
  *
  * Trading *home* for *series* left that estimate standing: the count of
  * labels did not change, and the widest of the two swaps is two characters
@@ -142,6 +142,26 @@ function Wordmark({ className }: { className?: string }) {
 export function Header() {
   const strings = useStrings();
   const locale = useLocale();
+  /**
+   * The panel is controlled so its links can be plain links.
+   *
+   * Every link inside used to be a `SheetClose` wrapping one, which is how
+   * Base UI dismisses a dialog — but `Close` is a button, and handing it a
+   * `<Link>` through `render` makes it stamp `type="button"` onto an `<a>`,
+   * where `type` names the linked resource's MIME type. Told not to
+   * (`nativeButton={false}`) it stamps `role="button"` instead, which costs
+   * every one of the panel's seven links its destination announcement. The
+   * same trap `~/components/ui/button`'s docblock records.
+   *
+   * Closing is not the dialog's to own here anyway: a client-side navigation
+   * leaves the panel mounted over the page it just left, so what has to happen
+   * is that following a link closes it. `onClick` says exactly that, and it
+   * fires for a link back to the page you are already on — which a
+   * location-watching effect would miss, leaving the panel open over an
+   * unchanged address.
+   */
+  const [navOpen, setNavOpen] = useState(false);
+  const closeNav = () => setNavOpen(false);
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-default border-b bg-subtle px-4 lg:gap-6 lg:px-6">
@@ -164,20 +184,35 @@ export function Header() {
         ))}
       </nav>
 
-      {/* Above `lg` the toggle sits in the row; below it, inside the panel.
-        * It is a preference, and a preference does not belong shoulder to
-        * shoulder with the one control that opens the navigation — on a phone
-        * that is two adjacent targets where only one of them matters. */}
-      <ModeToggle className="hidden shrink-0 lg:block" />
+      {/* One cluster, not two more items in the row.
+        *
+        * Both controls used to sit here as direct children of the header,
+        * which means they inherited its `lg:gap-6` — the same 24px that
+        * separates `blog` from `series`. Two things spaced like the nav *are*
+        * the nav, so the pair read as two stray labels rather than as the
+        * preferences they are, and whichever came last looked stranded
+        * against the edge. `gap-1` inside, the header's own gap outside: near
+        * each other, apart from the row.
+        *
+        * Language first, theme last. The switcher is a link — it navigates,
+        * it changes the address, and it decides *what you read*; it belongs
+        * on the side nearer the navigation it behaves like. The theme is a
+        * POST that changes one class and nothing you read, so it takes the
+        * outer edge. The mobile panel lists them in the same order for the
+        * same reason.
+        *
+        * Above `lg` the pair sits in the row; below it, inside the panel. A
+        * preference does not belong shoulder to shoulder with the one control
+        * that opens the navigation — on a phone that is two adjacent targets
+        * where only one of them matters. Gated as a pair, so the switcher
+        * being hidden (`~/components/language-switcher`) leaves the theme
+        * toggle exactly where it was. */}
+      <div className="hidden shrink-0 items-center gap-1 lg:flex">
+        <LanguageSwitcher />
+        <ModeToggle />
+      </div>
 
-      {/* Gated by `LANGUAGE_SWITCHER_REVEALED` (`~/components/language-switcher`'s
-        * own docblock). `ModeToggle`'s own pattern, one control to its right —
-        * but `lg:inline-flex`, not `lg:block`: this class lands on the button
-        * itself rather than on a wrapper, and `block` would undo the
-        * `inline-flex` that centres the subtag inside its square. */}
-      <LanguageSwitcher className="hidden shrink-0 lg:inline-flex" />
-
-      <Sheet>
+      <Sheet open={navOpen} onOpenChange={setNavOpen}>
         <SheetTrigger
           render={
             <Button
@@ -197,53 +232,53 @@ export function Header() {
         <SheetContent
           title={strings.nav.panelTitle}
           heading={
-            <SheetClose
-              render={<Link to={navHref("/", locale)} className="-m-2 rounded-md p-2" />}
-            >
+            <Link to={navHref("/", locale)} onClick={closeNav} className="-m-2 rounded-md p-2">
               <Wordmark />
-            </SheetClose>
+            </Link>
           }
         >
-          {/* Every link is a `SheetClose`: client-side navigation leaves the
-            * sheet mounted, so the panel has to dismiss itself on the way out. */}
+          {/* Every link closes the panel on the way out — see `navOpen` above
+            * for why that is an `onClick` and not a `SheetClose`. */}
           <nav aria-label={strings.nav.mainLabel} className="grid gap-1 text-lg">
             {NAV_ITEMS.map(({ to, key, Icon }) => (
-              <SheetClose
+              <Link
                 key={to}
-                render={
-                  <Link
-                    to={navHref(to, locale)}
-                    className="flex items-center gap-3 rounded-md px-2 py-3 text-low transition-colors hover:bg-hover hover:text-default"
-                  />
-                }
+                to={navHref(to, locale)}
+                onClick={closeNav}
+                className="flex items-center gap-3 rounded-md px-2 py-3 text-low transition-colors hover:bg-hover hover:text-default"
               >
                 <Icon className="size-5" />
                 {strings.nav[key]}
-              </SheetClose>
+              </Link>
             ))}
           </nav>
 
-          {/* Bled back out to the panel's edge, so this divider lines up with
+          {/* The preferences, in the row's own order: language, then theme.
+            *
+            * Bled back out to the panel's edge, so this divider lines up with
             * the one under the panel's own header rather than floating inset
-            * from it. */}
-          <div className="-mx-4 mt-auto flex items-center justify-between border-default border-t px-4 pt-4">
-            <span className="text-low text-sm">{strings.nav.themeRowLabel}</span>
-            <ModeToggle />
-          </div>
+            * from it. The border and the `mt-auto` that pins the block to the
+            * bottom live on the wrapper rather than on whichever row happens
+            * to come first, so hiding the switcher
+            * (`~/components/language-switcher`) leaves the panel's shape
+            * untouched.
+            *
+            * A row each, not one shared row. Both controls are the same
+            * square now and neither says what it is: `es` and `☾` each need
+            * the word beside them, and one row cannot carry two words. */}
+          <div className="-mx-4 mt-auto space-y-4 border-default border-t px-4 pt-4">
+            {LANGUAGE_SWITCHER_REVEALED && (
+              <div className="flex items-center justify-between">
+                <span className="text-low text-sm">{strings.nav.languageRowLabel}</span>
+                <LanguageSwitcher onClick={closeNav} />
+              </div>
+            )}
 
-          {/* Its own row rather than folded into the one above. Both controls
-            * are now the same square, and neither says what it is: `☾` and
-            * `es` each need the word beside them, and one row cannot carry two
-            * words. Gated on the same flag the row above reads from
-            * `~/components/language-switcher`: a bare label with no control
-            * beside it, were this rendered while the switcher itself returns
-            * nothing, would be its own visible artifact. */}
-          {LANGUAGE_SWITCHER_REVEALED && (
-            <div className="-mx-4 flex items-center justify-between px-4 pt-4">
-              <span className="text-low text-sm">{strings.nav.languageRowLabel}</span>
-              <LanguageSwitcher />
+            <div className="flex items-center justify-between">
+              <span className="text-low text-sm">{strings.nav.themeRowLabel}</span>
+              <ModeToggle />
             </div>
-          )}
+          </div>
         </SheetContent>
       </Sheet>
     </header>

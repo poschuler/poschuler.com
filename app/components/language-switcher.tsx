@@ -73,7 +73,19 @@ export const LANGUAGE_SWITCHER_REVEALED = true;
  * the linked resource's MIME type, or `role="button"`, which costs the link
  * its destination announcement (see `~/components/ui/button`).
  */
-export function LanguageSwitcher({ className }: { className?: string }) {
+export function LanguageSwitcher({
+  className,
+  onClick,
+}: {
+  className?: string;
+  /**
+   * Run when the link is followed. The header's row has no use for it; the
+   * mobile panel passes the same `closeNav` its own links take, because this
+   * navigates like they do and would otherwise leave the panel open over the
+   * page it just moved to.
+   */
+  onClick?: () => void;
+}) {
   const matches = useMatches();
   const locale = useLocale();
 
@@ -102,6 +114,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
       hrefLang={destination.locale}
       aria-label={announced}
       title={announced}
+      onClick={onClick}
       className={cn(button({ variant: "ghost", size: "icon" }), className)}
     >
       {strings.languageSwitcher.code}
