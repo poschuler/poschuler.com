@@ -22,7 +22,7 @@ import { cn } from "~/lib/utils";
  *  - `ghost`   — nothing at rest, a border on hover. The theme toggle, which
  *    sits inside a row of links and should not outweigh them.
  */
-const button = cva(
+export const button = cva(
   "inline-flex items-center justify-center whitespace-nowrap rounded-md border font-medium text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-default disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
@@ -60,9 +60,20 @@ export type ButtonProps = Omit<BaseButton.Props, "className"> &
   };
 
 /**
- * To compose the button with another element — a link, a dialog trigger — pass
- * that element through `render` instead of nesting it:
- * `<Button render={<Link to="/blog" />}>blog</Button>`.
+ * To compose the button with another element that is *still a button* — a
+ * dialog trigger, a menu trigger — pass that element through `render` instead
+ * of nesting it: `<Button render={<SheetTrigger />}>…</Button>`.
+ *
+ * **For something that only wants to look like one, use `button()` above
+ * instead.** Base UI's `useButton` decides between two attribute sets and
+ * neither suits a link: with `nativeButton` left at its default it stamps
+ * `type="button"`, which on an `<a>` is a hint about the linked resource's
+ * MIME type and warns in development; set it to `false` and it stamps
+ * `role="button"`, which tells a screen reader the element is a button and
+ * costs the link its destination announcement and its place in the links list.
+ * A link that wears the button's clothes wants the class, not the behaviour:
+ * `<Link className={cn(button({ variant, size }), className)} …>`, which is
+ * what `~/components/language-switcher` does.
  */
 export function Button({ className, variant, size, ...props }: ButtonProps) {
   return (

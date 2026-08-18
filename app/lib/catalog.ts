@@ -83,6 +83,15 @@ type Chrome = {
    * page and vice versa.
    */
   languageSwitcher: {
+    /**
+     * What the control *shows* — this Locale's own subtag, `en` / `es`.
+     *
+     * The name below is what it *says*: two characters read as a control, where
+     * a whole word sitting beside six lower-case nav labels reads as a seventh
+     * destination. The word is not lost — it moves to `aria-label`, where it is
+     * announced under the link's own `lang` and never competes for width.
+     */
+    code: string;
     /** This Locale's own name, in its own language — "English" / "Español". */
     language: string;
     /** A section's name in this Locale, keyed the way `SwitcherSection` is (`app/lib/seo/alternates.ts`). */
@@ -249,6 +258,7 @@ export const STRINGS: Record<Locale, Chrome> = {
       srAnnouncement: (current, next) => `Theme: ${current}. Switch to ${next}`,
     },
     languageSwitcher: {
+      code: "en",
       language: "English",
       section: { blog: "Blog", series: "Series", projects: "Projects" },
       inThisLanguage: (section) => `${section} in English`,
@@ -374,6 +384,7 @@ export const STRINGS: Record<Locale, Chrome> = {
       srAnnouncement: (current, next) => `Tema: ${current}. Cambiar a ${next}`,
     },
     languageSwitcher: {
+      code: "es",
       language: "Español",
       section: { blog: "Blog", series: "Series", projects: "Proyectos" },
       inThisLanguage: (section) => `${section} en español`,

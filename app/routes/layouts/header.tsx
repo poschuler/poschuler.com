@@ -112,12 +112,17 @@ function Wordmark({ className }: { className?: string }) {
  * after `pnpm build`). Summing those against Inter Semibold's own advance
  * width (about 0.56em per character) puts the row at roughly 670px today —
  * wordmark, six labels and the theme toggle, with their five internal gaps
- * and the header's own three. The switcher's longest realistic label is not
- * *Español* but its own fallback sentence, *"Proyectos en español"* (Part 9),
- * at roughly 165px including its gap — landing the row at roughly 860px,
- * still over 160px inside the 1024px it has to fit in. There is no headless
- * browser in this environment to render and measure directly; this is the
- * estimate that check leaves behind.
+ * and the header's own three.
+ *
+ * The switcher costs a second `icon` button: 36px and one 24px gap, landing
+ * the row at roughly 730px inside the 1024px it has to fit in. That is a
+ * fixed cost — it renders a Locale subtag, `en` or `es`, so no string it
+ * could be handed makes it wider. It was not always: while it rendered its
+ * label as words, the binding case was its fallback sentence *"Proyectos en
+ * español"* at roughly 165px, and the row came to roughly 860px. Both fit;
+ * only one of them stays true whatever the catalogue says next. There is no
+ * headless browser in this environment to render and measure directly; this
+ * is the estimate that check leaves behind.
  *
  * Trading *home* for *series* left that estimate standing: the count of
  * labels did not change, and the widest of the two swaps is two characters
@@ -165,12 +170,12 @@ export function Header() {
         * that is two adjacent targets where only one of them matters. */}
       <ModeToggle className="hidden shrink-0 lg:block" />
 
-      {/* Shipped hidden (`~/components/language-switcher`'s own docblock) —
-        * `LANGUAGE_SWITCHER_REVEALED` is `false` for the whole of Phase 3, so
-        * this renders nothing today. The classes are the ones it takes the
-        * day that flips: `ModeToggle`'s own pattern, one control to its
-        * right. */}
-      <LanguageSwitcher className="hidden shrink-0 lg:block" />
+      {/* Gated by `LANGUAGE_SWITCHER_REVEALED` (`~/components/language-switcher`'s
+        * own docblock). `ModeToggle`'s own pattern, one control to its right —
+        * but `lg:inline-flex`, not `lg:block`: this class lands on the button
+        * itself rather than on a wrapper, and `block` would undo the
+        * `inline-flex` that centres the subtag inside its square. */}
+      <LanguageSwitcher className="hidden shrink-0 lg:inline-flex" />
 
       <Sheet>
         <SheetTrigger
@@ -226,13 +231,13 @@ export function Header() {
             <ModeToggle />
           </div>
 
-          {/* Its own row rather than folded into the one above: `ModeToggle`
-            * carries a label but `LanguageSwitcher` reads as its own label —
-            * "Español" — so pairing them under one word would leave one
-            * control unlabelled. Gated on the same flag the row above reads
-            * from `~/components/language-switcher`: a bare label with no
-            * control beside it, were this rendered while the switcher itself
-            * returns nothing, would be its own visible artifact. */}
+          {/* Its own row rather than folded into the one above. Both controls
+            * are now the same square, and neither says what it is: `☾` and
+            * `es` each need the word beside them, and one row cannot carry two
+            * words. Gated on the same flag the row above reads from
+            * `~/components/language-switcher`: a bare label with no control
+            * beside it, were this rendered while the switcher itself returns
+            * nothing, would be its own visible artifact. */}
           {LANGUAGE_SWITCHER_REVEALED && (
             <div className="-mx-4 flex items-center justify-between px-4 pt-4">
               <span className="text-low text-sm">{strings.nav.languageRowLabel}</span>
