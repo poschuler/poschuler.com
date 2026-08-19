@@ -80,12 +80,11 @@ export const HOME_BIO = {
       "Ingeniero backend senior en Lima, Perú, con quince años en sistemas bancarios. Construyo y opero Chekalo.pe, una plataforma de inteligencia de precios en TypeScript y Node.js.",
     paragraphs: [
       <>
-        Construyo y opero <ProseLink href="https://chekalo.pe">Chekalo.pe</ProseLink>, una
-        plataforma de inteligencia de precios que ingesta diariamente a los principales retailers de
-        Perú, resuelve el mismo producto entre tiendas en una identidad canónica única, y sirve
-        búsqueda y comparación desde OpenSearch. TypeScript y Node.js de principio a fin,
-        estructurado como un monolito modular sobre PostgreSQL y colas de trabajo respaldadas por
-        Redis.
+        Desarrollo y opero <ProseLink href="https://chekalo.pe">Chekalo.pe</ProseLink>, una
+        plataforma de inteligencia de precios con ingesta diaria de los principales retailers del Perú, 
+        que identifica un mismo producto entre tiendas bajo una identidad canónica, 
+        y usa OpenSearch como motor de búsqueda y comparación. TypeScript y Node.js en todo el stack,
+        con arquitectura de monolito modular sobre PostgreSQL y colas de trabajo en Redis.
       </>,
       <>
         Quince años en sistemas bancarios: arquitectura de soluciones para plataformas empresariales
