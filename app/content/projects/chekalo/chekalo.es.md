@@ -2,7 +2,7 @@
 type: 'project'
 title: 'Chekalo'
 summary: 'Plataforma de inteligencia de precios para el retail peruano: ingesta diaria de nueve retailers, identifica un mismo producto entre todos ellos bajo una identidad canónica y usa OpenSearch como motor de búsqueda y comparación.'
-description: 'Chekalo procesa a diario los catálogos de nueve retailers peruanos y los resuelve en un único catálogo canónico. Cómo está construido, y la decisión de matching que terminó revertida'
+description: 'Chekalo procesa a diario los catálogos de nueve retailers peruanos y los resuelve en un único catálogo canónico — un problema de normalización, no de similitud.'
 tier: 'flagship'
 status: 'active'
 stack: ['TypeScript', 'Node.js', 'PostgreSQL', 'OpenSearch', 'Redis', 'BullMQ', 'React Router']
@@ -13,11 +13,11 @@ updates:
     note: 'First published.'
 ---
 
-Retailers do not agree on what a product is called.
+Cuando buscas un producto entre los diferentes catálogos web de los retailers, te encuentras con que una misma lavadora es `Samsung WA13CG5745BV` en el primero, una *Lavadora Samsung 13kg Carga Superior Negro* en el segundo, y el tercero utiliza un nombre distinto. Los productos rara vez comparten un identificador que permita emparejarlos, y tampoco existe un lugar donde consultarlos de forma consolidada. Si quieres saber que las tres fichas pertenecen al mismo producto, alguien tiene que emparejarlas manualmente.
 
-The same washing machine is a `Samsung WA13CG5745BV` in one catalogue, a *Lavadora Samsung 13kg Carga Superior Negro* in another, and something else again in a third. None of them share an identifier. There is no registry to look it up in. And a price comparison is worthless unless you are certain the two prices belong to the same thing — showing a customer two different products side by side is not a small error, it is the whole product being wrong.
+Una herramienta de comparación de precios depende de un correcto emparejamiento de productos. Si esto falla, el usuario no ve una oferta: ve el precio de dos productos distintos. No es un error de precio, es un error de producto. Este es el problema que Chekalo resuelve. Todos los días recoge los catálogos de los principales retailers del país y consolida sus fichas en una identidad canónica, para que el usuario pueda ver el precio de cada tienda en una misma página.
 
-That problem is what Chekalo is. Everything else is logistics.
+Los retailers suelen subir el precio de un producto para bajarlo al día siguiente y presentarlo como oferta, pero con el número de un solo día el usuario no tiene cómo identificar una oferta real. Chekalo sabe algo que los retailers no dicen. Conoce el precio a través del tiempo y presenta el historial en cada producto: lo que costó cada día que fue observado, cuánto se movió la última vez y cuándo. Con eso el usuario puede decidir si es o no un buen momento para comprar.
 
 ## The shape of it
 
