@@ -23,7 +23,7 @@ Los retailers suelen subir el precio de un producto para bajarlo al día siguien
 
 Un monolito modular con tres módulos claramente definidos. Cada módulo persiste su información en esquemas de datos propios, manteniendo los límites entre ellos.
 
-**Retail Ingestion** recoge todos los días el catálogo de cada tienda y guarda lo leido, sin interpretarlo. Cada retailer es una integración distinta, con su propio adaptador y su propio rate limit gestionado por BullMQ.
+**Retail Ingestion** recoge todos los días el catálogo de cada tienda y guarda lo leído, sin interpretarlo. Cada retailer es una integración distinta, con su propio adaptador y su propio rate limit gestionado por BullMQ.
 
 **Catalog** es donde se concentra la parte difícil. Toma las fichas y decide qué significan: qué productos son el mismo, qué ofrece cada tienda por él y cómo se movió el precio.
 
@@ -39,7 +39,7 @@ Después de probar distintos enfoques terminé usando una base de datos vectoria
 
 **No era reproducible.** El mismo catálogo, procesado dos veces contra los mismos modelos, podía producir emparejamientos distintos: salían otros candidatos, y el juez que decide entre ellos no da siempre el mismo veredicto. Para un sistema cuyo valor entero es la premisa *estos dos precios son del mismo producto*, "casi siempre" no alcanza.
 
-**Y no se podía mejorar.** El incremento diario era manejable. Pero cambiar el modelo de embeddings, o el modelo que toma la decisión, significa que cada emparejamiento que ya está en el catálogo fue decidido por una versión que ya no existe, así que hay que reprocesar el catálogo entero desde cero. Esto no calza en la ventana que tengo para poner un precio delante del usuario mientras la oferta sigue siendo real.
+**Los emparejamientos caducaban con el modelo.** El incremento diario era manejable. Pero cambiar el modelo de embeddings, o el modelo que toma la decisión, significa que cada emparejamiento que ya está en el catálogo fue decidido por una versión que ya no existe, así que hay que reprocesar el catálogo entero desde cero. Esto no calza en la ventana que tengo para poner un precio delante del usuario mientras la oferta sigue siendo real.
 
 **No se podía auditar.** Cuando emparejaba dos productos que no eran el mismo, la respuesta a *por qué* era un número. No había nada que arreglar, solo un umbral que mover, y moverlo para rescatar un par rompía otro en alguna otra parte del catálogo.
 
