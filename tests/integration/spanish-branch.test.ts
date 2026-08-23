@@ -22,39 +22,94 @@ import { loader as timelineLoader } from "~/routes/timeline/_timeline";
 import { openTestPlatform, routeArgs, type TestPlatform } from "../setup/platform";
 
 /**
- * What `/es` answers today, with no Spanish content seeded anywhere — the
- * state Part 6 of `evolution-plan/15-phase-3-spanish.md` exists to make safe:
- * every document below is English-only, so every one of these is the
- * no-Translation and empty-index case, exercised for real rather than assumed.
+ * What `/es` answers, held against the two rules Part 6 of
+ * `evolution-plan/15-phase-3-spanish.md` exists to make safe: a document with
+ * no Translation is a 404, and an index with nothing behind it answers 200 and
+ * keeps itself out of the search index.
  *
- * `en` fixtures throughout — this file adds no `.es.md`, because the floor
- * that reveals `/es` (Part 13) is content, not code, and is deliberately not
- * this ticket's job.
+ * **Nothing here names a document or counts a corpus.** The stores are filled
+ * from the real content fixtures, so what is seeded moves every time a `.md` is
+ * written. Each case finds its own subject at run time — a Project with no
+ * Spanish row, a Tag no Spanish Post carries — and asserts the rule against it.
+ * The first version of this file asserted the census instead (`projects` is
+ * `[]`, `flagship` is null) and went red the day the first `.es.md` was
+ * written: a fact about the writing, not about the code.
  */
 
 let platform: TestPlatform;
-/** A Post that belongs to no Series or Project — English-only in the fixtures. */
+/** A Post that belongs to no Series or Project, and has no Spanish Translation. */
 let postSlug: string;
-/** A Part, and the Series it belongs to — both English-only in the fixtures. */
+/** A Part, and the Series it belongs to — a Series with no Spanish row. */
 let partSlug: string;
 let seriesSlug: string;
+/** A Project with no Spanish row, and a Tag no Spanish Post carries. */
+let projectSlug: string;
+let tagName: string;
 
 type ArgsOf<Loader> = Loader extends (args: infer A) => unknown ? A : never;
 
 const get = (path: string) => new Request(`https://poschuler.com${path}`);
 
+/**
+ * What the store holds in Spanish, keyed by the column each case needs to check
+ * a subject against. Written as whole statements rather than an interpolated
+ * table name: the queries are constants here, and none of them takes a value.
+ */
+const SPANISH = {
+  documents: `select slug as "key" from content where lang = 'es'`,
+  projects: `select slug as "key" from project where lang = 'es'`,
+  series: `select slug as "key" from series where lang = 'es'`,
+  tags: `select distinct content_tag.tag as "key" from content_tag where lang = 'es'`,
+} as const;
+
+/** The keys one of those queries returns, as a set to test membership against. */
+async function spanishKeys(sql: string): Promise<Set<string>> {
+  const { results } = await platform.env.POSCHULER_BD.prepare(sql).all<{ key: string }>();
+
+  return new Set(results.map((row) => row.key));
+}
+
+/**
+ * Picks the subjects out of what is actually seeded.
+ *
+ * Each `find` is the case's own precondition written as code: the 404 rules are
+ * about documents with no Translation, so a subject that has one would make the
+ * case assert nothing. The `!` is deliberate — if the day comes when every
+ * Project is translated, this throws here and names the file to move the case
+ * out of, which beats a green test that stopped meaning anything.
+ */
 beforeAll(async () => {
   platform = await openTestPlatform();
 
-  const { contentItems } = await timelineLoader(
-    routeArgs<ArgsOf<typeof timelineLoader>>(platform, get("/timeline")),
-  );
+  const [translatedDocuments, translatedProjects, translatedSeries, translatedTags] =
+    await Promise.all([
+      spanishKeys(SPANISH.documents),
+      spanishKeys(SPANISH.projects),
+      spanishKeys(SPANISH.series),
+      spanishKeys(SPANISH.tags),
+    ]);
 
-  postSlug = contentItems.find((item) => item.type === "post" && item.seriesSlug === null)!.slug;
+  const [{ contentItems }, { projects }, { tags }] = await Promise.all([
+    timelineLoader(routeArgs<ArgsOf<typeof timelineLoader>>(platform, get("/timeline"))),
+    projectsLoader(routeArgs<ArgsOf<typeof projectsLoader>>(platform, get("/projects"))),
+    tagsLoader(routeArgs<ArgsOf<typeof tagsLoader>>(platform, get("/tags"))),
+  ]);
 
-  const part = contentItems.find((item) => item.type === "post" && item.seriesSlug !== null)!;
+  postSlug = contentItems.find(
+    (item) =>
+      item.type === "post" && item.seriesSlug === null && !translatedDocuments.has(item.slug),
+  )!.slug;
+
+  const part = contentItems.find(
+    (item) =>
+      item.type === "post" && item.seriesSlug !== null && !translatedSeries.has(item.seriesSlug),
+  )!;
+
   partSlug = part.slug;
   seriesSlug = part.seriesSlug!;
+
+  projectSlug = projects.find((project) => !translatedProjects.has(project.slug))!.slug;
+  tagName = tags.find((one) => !translatedTags.has(one.tag))!.tag;
 });
 
 afterAll(async () => {
@@ -80,8 +135,8 @@ describe("a document with no Spanish Translation", () => {
   it("404s a Project at its Spanish address", async () => {
     await expect(
       projectLoader(
-        routeArgs<ArgsOf<typeof projectLoader>>(platform, get("/es/projects/chekalo"), {
-          projectSlug: "chekalo",
+        routeArgs<ArgsOf<typeof projectLoader>>(platform, get(`/es/projects/${projectSlug}`), {
+          projectSlug,
         }),
       ),
     ).rejects.toMatchObject({ status: 404 });
@@ -110,14 +165,19 @@ describe("a document with no Spanish Translation", () => {
     ).rejects.toMatchObject({ status: 404 });
   });
 
-  /** Same reason: the Project itself has no Spanish row, so the note never gets read. */
+  /**
+   * Same reason: the Project itself has no Spanish row, so the note never gets
+   * read. Which is why the subject is the untranslated Project and not any
+   * Project — against one that *is* translated this would still pass, on the
+   * unrelated ground that no note is called `anything`.
+   */
   it("404s a Field Note at its Spanish address", async () => {
     await expect(
       projectNoteLoader(
         routeArgs<ArgsOf<typeof projectNoteLoader>>(
           platform,
-          get("/es/projects/chekalo/anything"),
-          { projectSlug: "chekalo", noteSlug: "anything" },
+          get(`/es/projects/${projectSlug}/anything`),
+          { projectSlug, noteSlug: "anything" },
         ),
       ),
     ).rejects.toMatchObject({ status: 404 });
@@ -126,52 +186,83 @@ describe("a document with no Spanish Translation", () => {
   /** The precedent Part 6 generalises from, checked at the Locale that has nothing behind it. */
   it("404s a Tag some Post carries in English but not in Spanish", async () => {
     await expect(
-      tagLoader(routeArgs<ArgsOf<typeof tagLoader>>(platform, get("/es/tags/nodejs"), { tag: "nodejs" })),
+      tagLoader(
+        routeArgs<ArgsOf<typeof tagLoader>>(platform, get(`/es/tags/${tagName}`), { tag: tagName }),
+      ),
     ).rejects.toMatchObject({ status: 404 });
   });
 });
 
 /**
- * An index whose list is empty still exists — the skeleton half of Part 6's
- * split. It answers 200 with an empty list rather than a 404, and its own
- * `meta` is what keeps it out of the index while it has nothing to show.
+ * An index exists at both Locales whether or not it has anything to list — the
+ * skeleton half of Part 6's split. It answers 200 with a list rather than a
+ * 404, it shows nothing that belongs to the other branch, and its own `meta` is
+ * what keeps it out of the search index while it has nothing to show.
  */
-describe("an index with nothing behind it in Spanish", () => {
-  it("/es/blog answers 200 with an empty list", async () => {
-    const { entries } = await blogLoader(routeArgs<ArgsOf<typeof blogLoader>>(platform, get("/es/blog")));
+describe("a Spanish index, with or without anything behind it", () => {
+  it("answers 200 with a list on every Spanish index, empty or not", async () => {
+    const [{ entries }, { projects }, { series }, { tags }] = await Promise.all([
+      blogLoader(routeArgs<ArgsOf<typeof blogLoader>>(platform, get("/es/blog"))),
+      projectsLoader(routeArgs<ArgsOf<typeof projectsLoader>>(platform, get("/es/projects"))),
+      seriesLoader(routeArgs<ArgsOf<typeof seriesLoader>>(platform, get("/es/series"))),
+      tagsLoader(routeArgs<ArgsOf<typeof tagsLoader>>(platform, get("/es/tags"))),
+    ]);
 
-    expect(entries).toEqual([]);
-  });
-
-  it("/es/projects answers 200 with an empty list", async () => {
-    const { projects } = await projectsLoader(
-      routeArgs<ArgsOf<typeof projectsLoader>>(platform, get("/es/projects")),
-    );
-
-    expect(projects).toEqual([]);
-  });
-
-  it("/es/series answers 200 with an empty list", async () => {
-    const { series } = await seriesLoader(
-      routeArgs<ArgsOf<typeof seriesLoader>>(platform, get("/es/series")),
-    );
-
-    expect(series).toEqual([]);
-  });
-
-  it("/es/tags answers 200 with an empty list", async () => {
-    const { tags } = await tagsLoader(routeArgs<ArgsOf<typeof tagsLoader>>(platform, get("/es/tags")));
-
-    expect(tags).toEqual([]);
+    for (const list of [entries, projects, series, tags]) {
+      expect(Array.isArray(list)).toBe(true);
+    }
   });
 
   /**
-   * Every empty index declares `noindex, follow` rather than entering the
-   * index thin — checked against the real loader output, not a synthetic
-   * stand-in, so a query that stops returning an empty array here would also
-   * be caught by the assertions above before this one could go stale.
+   * What the emptiness assertions used to catch by accident, stated on purpose.
+   * While `/es` had nothing, `toEqual([])` failed the moment a Locale filter
+   * broke and let an English row through — and stopped being able to say that
+   * the moment Spanish content arrived. Membership in the store's own `es` rows
+   * is the same guarantee, and it survives everything written from here on.
    */
-  it("declares noindex, follow on every index the queries above found empty", async () => {
+  it("lists only Spanish rows — no English document reaches a Spanish index", async () => {
+    const [documents, projectSlugs, seriesSlugs, tagKeys] = await Promise.all([
+      spanishKeys(SPANISH.documents),
+      spanishKeys(SPANISH.projects),
+      spanishKeys(SPANISH.series),
+      spanishKeys(SPANISH.tags),
+    ]);
+
+    const [{ entries }, { projects }, { series }, { tags }] = await Promise.all([
+      blogLoader(routeArgs<ArgsOf<typeof blogLoader>>(platform, get("/es/blog"))),
+      projectsLoader(routeArgs<ArgsOf<typeof projectsLoader>>(platform, get("/es/projects"))),
+      seriesLoader(routeArgs<ArgsOf<typeof seriesLoader>>(platform, get("/es/series"))),
+      tagsLoader(routeArgs<ArgsOf<typeof tagsLoader>>(platform, get("/es/tags"))),
+    ]);
+
+    for (const entry of entries) {
+      if (entry.kind === "post") expect(documents).toContain(entry.post.slug);
+      if (entry.kind === "series") expect(seriesSlugs).toContain(entry.series.slug);
+      if (entry.kind === "project") expect(projectSlugs).toContain(entry.project.slug);
+    }
+
+    for (const project of projects) {
+      expect(project.lang).toBe("es");
+      expect(projectSlugs).toContain(project.slug);
+    }
+
+    for (const one of series) {
+      expect(seriesSlugs).toContain(one.slug);
+    }
+
+    for (const one of tags) {
+      expect(tagKeys).toContain(one.tag);
+    }
+  });
+
+  /**
+   * An index declares `noindex, follow` exactly when its own list came back
+   * empty, and drops it the moment it has something to show — both directions,
+   * off the same payload the head was built from. Asserted as the rule rather
+   * than as a list of empty indexes, because which ones are empty is a fact
+   * about what has been written and changes without any code changing.
+   */
+  it("declares noindex, follow on exactly the indexes that came back empty", async () => {
     const [blogData, projectsData, seriesData, tagsData] = await Promise.all([
       blogLoader(routeArgs<ArgsOf<typeof blogLoader>>(platform, get("/es/blog"))),
       projectsLoader(routeArgs<ArgsOf<typeof projectsLoader>>(platform, get("/es/projects"))),
@@ -181,10 +272,28 @@ describe("an index with nothing behind it in Spanish", () => {
 
     const robots = { name: "robots", content: "noindex, follow" };
 
-    expect(blogMeta({ loaderData: blogData } as never)).toContainEqual(robots);
-    expect(projectsMeta({ loaderData: projectsData } as never)).toContainEqual(robots);
-    expect(seriesMeta({ loaderData: seriesData } as never)).toContainEqual(robots);
-    expect(tagsMeta({ loaderData: tagsData } as never)).toContainEqual(robots);
+    const indexes = [
+      { at: "/es/blog", list: blogData.entries, head: blogMeta({ loaderData: blogData } as never) },
+      {
+        at: "/es/projects",
+        list: projectsData.projects,
+        head: projectsMeta({ loaderData: projectsData } as never),
+      },
+      {
+        at: "/es/series",
+        list: seriesData.series,
+        head: seriesMeta({ loaderData: seriesData } as never),
+      },
+      { at: "/es/tags", list: tagsData.tags, head: tagsMeta({ loaderData: tagsData } as never) },
+    ];
+
+    for (const index of indexes) {
+      if (index.list.length === 0) {
+        expect(index.head, index.at).toContainEqual(robots);
+      } else {
+        expect(index.head, index.at).not.toContainEqual(robots);
+      }
+    }
   });
 
   /**
@@ -273,12 +382,46 @@ describe("findAllProjects, now Locale-filtered", () => {
     expect(projects.length).toBeGreaterThan(0);
   });
 
-  it("carries no English Project onto the Spanish home page's flagship block", async () => {
-    const { flagship, recentPosts } = await homeLoader(
+  /**
+   * The flagship block, which is where the missing filter showed the same
+   * Project at both addresses. Read out of the store rather than out of a
+   * second `findAllProjects` call: both blocks go through that one function, so
+   * comparing them to each other would agree with itself while the filter was
+   * broken. The row is the independent side of the comparison.
+   *
+   * The summary is asserted alongside the slug because the prose is the half a
+   * slug cannot prove — an English row rendered at a Spanish address carries
+   * the right slug and the wrong summary. When nothing is translated yet, both
+   * sides are null, which is the assertion the first version of this made.
+   */
+  it("takes the Spanish home page's flagship from the Spanish Project rows, prose and all", async () => {
+    const { flagship } = await homeLoader(
       routeArgs<ArgsOf<typeof homeLoader>>(platform, get("/es")),
     );
 
-    expect(flagship).toBeNull();
-    expect(recentPosts).toEqual([]);
+    const { results } = await platform.env.POSCHULER_BD.prepare(
+      `select slug, summary
+        from project
+        where lang = 'es' and tier = 'flagship'
+        order by sort_order asc, slug asc`,
+    ).all<{ slug: string; summary: string }>();
+
+    const spanish = results[0] ?? null;
+
+    expect(flagship?.slug ?? null).toBe(spanish?.slug ?? null);
+    expect(flagship?.summary ?? null).toBe(spanish?.summary ?? null);
+  });
+
+  /** The other block on the same page, held to the same rule. */
+  it("shows only Spanish Posts in the Spanish home page's recent block", async () => {
+    const { recentPosts } = await homeLoader(
+      routeArgs<ArgsOf<typeof homeLoader>>(platform, get("/es")),
+    );
+
+    const documents = await spanishKeys(SPANISH.documents);
+
+    for (const post of recentPosts) {
+      expect(documents).toContain(post.slug);
+    }
   });
 });
