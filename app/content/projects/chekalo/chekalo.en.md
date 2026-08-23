@@ -2,7 +2,7 @@
 type: 'project'
 title: 'Chekalo'
 summary: 'A price intelligence platform for Peruvian retail: it ingests nine major retailers daily, resolves the same product across all of them into one canonical identity, and serves search and comparison from OpenSearch.'
-description: 'Chekalo ingests nine Peruvian retailers daily and resolves their listings into a single canonical catalog. How it is built, and the matching decision that was reversed.'
+description: 'Chekalo ingests nine Peruvian retailers daily and resolves their listings into one canonical catalog — a normalization problem, not a similarity one.'
 tier: 'flagship'
 status: 'active'
 stack: ['TypeScript', 'Node.js', 'PostgreSQL', 'OpenSearch', 'Redis', 'BullMQ', 'React Router']
@@ -13,44 +13,48 @@ updates:
     note: 'First published.'
 ---
 
-Retailers do not agree on what a product is called.
+When you go looking for a product across retailers' online catalogs, the same washing machine is a `Samsung WA13CG5745BV` in one, a *Lavadora Samsung 13kg Carga Superior Negro* in another, and a different name again in a third. Listings rarely share an identifier you could match them on, and there is nowhere to see them side by side. If you want to know whether those three listings are the same product, someone has to match them by hand.
 
-The same washing machine is a `Samsung WA13CG5745BV` in one catalogue, a *Lavadora Samsung 13kg Carga Superior Negro* in another, and something else again in a third. None of them share an identifier. There is no registry to look it up in. And a price comparison is worthless unless you are certain the two prices belong to the same thing — showing a customer two different products side by side is not a small error, it is the whole product being wrong.
+A price comparison tool is only as good as its matching. When the matching is wrong, you are not looking at a deal; you are looking at the prices of two different products. The price is not wrong. The product is. That is the problem Chekalo solves. Every day it collects the catalogs of Peru's major retailers and resolves their listings down to one canonical identity per product, so you can see every store's price on a single page.
 
-That problem is what Chekalo is. Everything else is logistics.
+Retailers will raise a price so they can drop it the next day and call it a sale. With a single day's number, there is no way to tell a real discount from a staged one. Chekalo knows something the retailers will not tell you. It knows what the price has done over time, and it shows that history on every product page: what it cost on each day it was observed, when it last moved, and by how much. With that, you can decide whether this is a good time to buy.
 
-## The shape of it
+## Inside Chekalo
 
-Three modules, each owning its own durable state behind a hard boundary, in one deployable:
+A modular monolith with three clearly defined modules. Each one persists its data in schemas of its own, and that separation is what holds the boundaries in place.
 
-**Ingestion** pulls each retailer daily. Every retailer is its own integration — a different shape of response, a different idea of what a price is, a different set of things that can go wrong — so each one gets its own adapter and its own rate limit, and none of them can take another one down. Payloads are validated at the boundary, in production, on the way in: a retailer that quietly changes a field fails loudly here rather than three stages later, where the damage is a corrupted catalogue instead of a rejected batch. Unchanged payloads are recognised and dropped, which halves what gets stored.
+**Retail Ingestion** collects each store's catalog daily and stores what it reads, without interpreting it. Every retailer is a separate integration, with its own adapter and a rate limit managed through BullMQ.
 
-**Catalog** is where the hard part lives. It takes those per-retailer listings and resolves them into canonical products, each with the offers behind it and the price history for each one.
+**Catalog** is where the hard part lives. It takes the listings and decides what they mean: which ones are the same product, what each store is asking for it, and how the price has moved.
 
-**Search projection** pushes the catalogue into OpenSearch — only the canonical products that actually changed — and reindexes behind atomic alias swaps, so search keeps answering through every schema change instead of going dark for the duration.
+**Search Projection** carries the resolved catalog into a search index, projecting only what changed, and rebuilds it without ever taking search offline.
 
-The consumer site is a pure read model. No query API, no database of its own: it reads the projected index directly and renders on the server. There is nothing between a visitor and the index worth putting there.
+The site reads the OpenSearch index directly: it has no database of its own and no API behind it.
 
-## The decision I reversed
+## Product identity is not a similarity problem
 
-The first version of the matching resolved products with embeddings. Listings went into a vector store, similarity was cosine distance, and an LLM adjudicated the ambiguous pairs. It demoed well. It was the obvious thing to reach for, and I reached for it.
+Chekalo matches products in consumer tech, electronics, and major appliances. The first version was more ambitious than this one: it tried to match every category, groceries included, where the same five kilos of rice are *Arroz Extra 5Kg* in one catalog and *Arroz Superior Bolsa 5 Kilos* in the next, and where half the aisle is the retailer's store brand, so the brands do not line up either. And past the packaged aisles, there is everything sold by weight. A kilo of *palta*, an avocado, has no brand, no model, and no barcode: one retailer lists it as *Palta Fuerte*, another as *Palta*, and nothing more. If that second one is, say, a *Hass*, the gap between those two prices is not a deal I am showing a shopper. It is a different fruit. If identity is already ambiguous in tech and appliances, in groceries there is often nothing to identify at all.
 
-It was the wrong tool, for three reasons that took months to become undeniable:
+After trying different approaches, I landed on a vector database. Identity was not reliable, so similarity was the only handle left: listings became embeddings, candidate pairs came out of cosine distance, and an LLM settled the ones sitting near the threshold. It was not perfect, but it worked, and when I reviewed the pairs, I agreed with most of them. Accuracy was never the problem. Everything around it was, and over time this approach got harder to justify:
 
-**It could not be argued with.** When it matched two products that were not the same, the answer to *why* was a number. There was nothing to fix, only a threshold to nudge — and nudging it to fix one pair broke another.
+**It was not reproducible.** The same catalog, run twice against the same models, could produce different matches: a different set of candidates surfaced, and the judge deciding between them does not return the same verdict every time. For a system whose entire value is the claim *these two prices are for the same product*, *almost always* is not enough.
 
-**It was not reproducible.** The same catalogue run twice could produce different matches. For a system whose entire value is the claim *these two prices are for the same product*, "usually" is not a grade of correct.
+**Matches expired with the model.** Keeping up day to day was manageable. But changing the embedding model, or the model making the decision, means every match already in the catalog was decided by a version that no longer exists, so the whole catalog has to be reprocessed from scratch. That does not fit in the window I have for putting a price in front of a shopper while the deal is still live.
 
-**It cost real money per run**, every day, forever, to answer a question that mostly is not fuzzy at all.
+**It could not be audited.** When it matched two products that were not the same, the answer to *why* was a number. There was nothing to fix, only a threshold to nudge, and nudging it to rescue one pair broke another somewhere else in the catalog.
 
-What replaced it is deterministic identity resolution: brand, model, and a normalised variant signature — capacity, colour, dimensions, whatever distinguishes that product line — corroborated by barcode where the retailer publishes one. Rules I wrote, that I can read, that a colleague can disagree with, and that produce the same answer on Tuesday as on Monday. It is a fraction of the cost, and when it is wrong, it is wrong in a way I can find and fix.
+**It cost money every time it ran.** Every new product, every change in the catalog, and every change of model turned into new embeddings to generate and new prompts to pay for, one at a time or in bulk. A recurring cost that grew with the catalog and that the project could not sustain.
 
-I do not think the first approach was stupid. I think it answered a different question than the one I had. Product identity in retail is not a similarity problem; it is a normalisation problem wearing a similarity problem's clothes, and the resemblance is close enough to cost you a couple of months.
+All of it added up to a system that was neither auditable nor sustainable, which defeated the point. But the real problem was not the matching method but the categories where identity is illegible or simply absent. A similarity score matches *Palta* to *Palta Hass* with high confidence, because as far as similarity goes they are nearly the same thing, and there is no threshold that solves that. So I narrowed Chekalo's scope to the categories where there is an identity to read.
 
-## What it is not
+What replaced probabilistic matching is deterministic identity resolution: brand, model, and a normalized variant signature (capacity, color, dimensions, whatever distinguishes that product line) corroborated by a barcode where the retailer publishes one. They are rules I wrote, that I can read, that someone else can disagree with, and that give the same answer on Tuesday as on Monday. Resolution runs in a fraction of the time, no decision costs money, and when it is wrong, it is wrong in a way I can find and fix.
 
-It is not microservices. Three modules with enforced boundaries inside one deployable have given me every property I actually wanted from separation — independent state, independent failure, code that cannot reach where it should not — and none of the operational cost I would have paid for the version with network calls between them. If one of those modules ever needs to scale on its own, the boundary is already there to cut along.
+I do not think the first approach was bad, and it did not fail. It did answer the question I asked it, which was whether two listings were similar. But the question the product needed was a different one: whether they were actually the same product. Identity in retail is not a similarity problem. It is a normalization problem dressed up as one.
 
-It is not a machine learning system, any more. See above.
+## What Chekalo is not
 
-And it is not finished. Price history is stored but barely used; the interesting things you can say to a shopper once you know what a product cost for the last six months are almost all still ahead.
+It is not microservices. The boundaries are in the code, not in deployment units.
+
+It is not a store. Chekalo sells nothing: every price is a reference taken from the retailers' own catalogs, and every offer links out to the retailer that published it.
+
+It is not real-time. Prices refresh once a day, so there is always a chance that one has moved, that the product has sold out, or that the retailer has stopped carrying it.

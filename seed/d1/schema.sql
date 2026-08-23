@@ -42,20 +42,19 @@ CREATE TABLE content (
 
     -- The Container's position in its list: a Part's position within its
     -- section, or a Field Note's position within its Project's `notes:`. Every
-    -- query orders by this column now.
+    -- query orders by this column.
+    --
+    -- Until 0006 this fact was carried by a column named `section_order` —
+    -- a name `series_section` below also uses, for something else: a section's
+    -- position within the arc, not a Part's position within its section. One
+    -- name meaning two things is what the rename closed, and renaming in place
+    -- was not available: this job applies migrations before it deploys the
+    -- Worker, so the previously deployed one would have been left asking for a
+    -- column that no longer existed. So 0006 added this column beside the old
+    -- one, which stayed written with the same value and read by nothing, and
+    -- 0007 dropped that one a publication later (ADR 0006's amendment).
+    -- `section_order` now means one thing in this schema.
     container_order INTEGER,
-
-    -- The same fact, under the name this column used to carry alone —
-    -- `section_order`, which also names a column on `series_section` below
-    -- with a different meaning: that table's is a section's position within
-    -- the arc, not a Part's position within its section. Migration 0006 could
-    -- not rename it in place: this job applies migrations before it deploys
-    -- the Worker, and the previously deployed Worker is still asking for
-    -- `c.section_order` while that migration runs. So it stays, written by the
-    -- generator with the same value as `container_order` and read by nothing
-    -- here, until migration 0007 drops it — safe once this publication is
-    -- live, per ADR 0006's amendment.
-    section_order INTEGER,
 
     -- What the author says changed, newest first, as a JSON array of
     -- { date, note }. Distinct from `updated_at` below, which is when the

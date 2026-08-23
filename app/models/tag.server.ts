@@ -1,3 +1,4 @@
+import type { Locale } from "~/context";
 import { dbQuery } from "~/db.server";
 import { CONTENT_COLUMNS, type PostRowType } from "~/models/content.server";
 
@@ -61,7 +62,7 @@ export type TagCountRowType = {
  * the order of two equal Tags is whatever SQLite happened to scan, and CI
  * compares the generated payloads byte for byte.
  */
-export function findTagsWithPostCounts(db: D1Database, lang = "en") {
+export function findTagsWithPostCounts(db: D1Database, locale: Locale) {
   return dbQuery<TagCountRowType>(
     db,
     `select content_tag.tag as tag, count(*) as posts
@@ -74,7 +75,7 @@ export function findTagsWithPostCounts(db: D1Database, lang = "en") {
       group by content_tag.tag
       order by posts desc, content_tag.tag asc
     `,
-    [lang],
+    [locale],
   );
 }
 
@@ -100,7 +101,7 @@ export function findTagsWithPostCounts(db: D1Database, lang = "en") {
  * the order two Posts published the same day come back in would otherwise be
  * whatever SQLite happened to scan.
  */
-export function findPostsByTag(db: D1Database, tag: string, lang = "en") {
+export function findPostsByTag(db: D1Database, tag: string, locale: Locale) {
   return dbQuery<PostRowType>(
     db,
     `select ${CONTENT_COLUMNS}
@@ -116,6 +117,6 @@ export function findPostsByTag(db: D1Database, tag: string, lang = "en") {
         )
       order by published_at desc, slug asc
     `,
-    [lang, tag],
+    [locale, tag],
   );
 }

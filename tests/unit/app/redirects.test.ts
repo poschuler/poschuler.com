@@ -22,6 +22,17 @@ describe("resolveRedirect", () => {
     expect(at("/")).toBeNull();
   });
 
+  /**
+   * `/en/…` is not a namespace this site claims (ADR 0010): nothing was ever
+   * published there, so there is no link to protect and no entry to invent —
+   * it falls straight through to the router's own 404.
+   */
+  it("does not redirect an unpublished Locale prefix", () => {
+    expect(at("/en")).toBeNull();
+    expect(at("/en/blog")).toBeNull();
+    expect(at("/en/blog/implementing-value-objects-in-nodejs")).toBeNull();
+  });
+
   it("sends every published address to its replacement", () => {
     for (const [from, to] of Object.entries(PERMANENT_REDIRECTS)) {
       expect(at(from)).toBe(to);

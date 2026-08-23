@@ -68,7 +68,7 @@ describe("the headers that apply everywhere", () => {
   /**
    * A response proxied from `fetch` — the Resume PDF — carries immutable
    * headers, and `.set` on those throws. Returning a new Response is what keeps
-   * `/resume.pdf` from 500ing.
+   * `/cv.pdf` from 500ing.
    */
   it("returns a new Response instead of mutating the one it was given", () => {
     const original = html();

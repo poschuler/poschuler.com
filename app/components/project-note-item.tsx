@@ -1,5 +1,6 @@
 import { PenLine } from "lucide-react";
 import { ListingRow } from "~/components/listing-row";
+import { useLocale } from "~/context";
 import { postHref } from "~/lib/hrefs";
 import type { ProjectNoteRowType } from "~/models/project.server";
 
@@ -19,10 +20,12 @@ export function ProjectNoteItem({
   note: ProjectNoteRowType;
   projectSlug: string;
 }) {
+  const locale = useLocale();
+
   return (
     <ListingRow
       title={note.title}
-      href={postHref({ slug: note.slug, seriesSlug: null, projectSlug })}
+      href={postHref({ slug: note.slug, seriesSlug: null, projectSlug }, locale)}
       icon={PenLine}
       meta={<time dateTime={note.publishedStringDate}>{note.publishedStringDate}</time>}
     >

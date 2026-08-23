@@ -41,8 +41,8 @@ afterAll(async () => {
 describe("findPostsByTag", () => {
   it("returns the Posts carrying the Tag, and only Posts the table holds", async () => {
     const [tagged, posts] = await Promise.all([
-      findPostsByTag(platform.env.POSCHULER_BD, POST_TAG),
-      findAllPosts(platform.env.POSCHULER_BD),
+      findPostsByTag(platform.env.POSCHULER_BD, POST_TAG, "en"),
+      findAllPosts(platform.env.POSCHULER_BD, "en"),
     ]);
 
     expect(tagged.length).toBeGreaterThan(1);
@@ -56,7 +56,7 @@ describe("findPostsByTag", () => {
   });
 
   it("orders them newest first, the way every list on this site does", async () => {
-    const tagged = await findPostsByTag(platform.env.POSCHULER_BD, POST_TAG);
+    const tagged = await findPostsByTag(platform.env.POSCHULER_BD, POST_TAG, "en");
     const dates = tagged.map((post) => post.publishedAt);
 
     expect(dates.length).toBeGreaterThan(1);
@@ -69,11 +69,11 @@ describe("findPostsByTag", () => {
    * twenty-two declared Tags are in this state today.
    */
   it("returns nothing for a Tag no Post carries", async () => {
-    expect(await findPostsByTag(platform.env.POSCHULER_BD, BOOKMARK_ONLY_TAG)).toEqual([]);
+    expect(await findPostsByTag(platform.env.POSCHULER_BD, BOOKMARK_ONLY_TAG, "en")).toEqual([]);
   });
 
   it("returns nothing for a Tag that was never declared", async () => {
-    expect(await findPostsByTag(platform.env.POSCHULER_BD, "no-such-tag")).toEqual([]);
+    expect(await findPostsByTag(platform.env.POSCHULER_BD, "no-such-tag", "en")).toEqual([]);
   });
 
   /**
@@ -84,7 +84,7 @@ describe("findPostsByTag", () => {
    */
   it("keeps the Bookmarks carrying the same Tag out of the results", async () => {
     const [tagged, bookmarks, crossing] = await Promise.all([
-      findPostsByTag(platform.env.POSCHULER_BD, CROSSING_TAG),
+      findPostsByTag(platform.env.POSCHULER_BD, CROSSING_TAG, "en"),
       findAllBookmarks(platform.env.POSCHULER_BD),
       // The precondition, read from the table rather than assumed: without it
       // every assertion below still holds the day nothing crosses any more, and
@@ -114,7 +114,7 @@ describe("findPostsByTag", () => {
  */
 describe("findTagsWithPostCounts", () => {
   it("lists every Tag some Post carries, and nothing a Post does not", async () => {
-    const counts = await findTagsWithPostCounts(platform.env.POSCHULER_BD);
+    const counts = await findTagsWithPostCounts(platform.env.POSCHULER_BD, "en");
 
     expect(counts.length).toBeGreaterThan(0);
     expect(counts.map((row) => row.tag)).not.toContain(BOOKMARK_ONLY_TAG);
@@ -130,13 +130,13 @@ describe("findTagsWithPostCounts", () => {
    * anything.
    */
   it("counts the Posts the Tag's own page lists", async () => {
-    const counts = await findTagsWithPostCounts(platform.env.POSCHULER_BD);
+    const counts = await findTagsWithPostCounts(platform.env.POSCHULER_BD, "en");
 
     const listed = await Promise.all(
       counts.map(async ({ tag, posts }) => ({
         tag,
         posts,
-        onThePage: (await findPostsByTag(platform.env.POSCHULER_BD, tag)).length,
+        onThePage: (await findPostsByTag(platform.env.POSCHULER_BD, tag, "en")).length,
       })),
     );
 
@@ -146,7 +146,7 @@ describe("findTagsWithPostCounts", () => {
   });
 
   it("orders them by Post count, heaviest first", async () => {
-    const counts = await findTagsWithPostCounts(platform.env.POSCHULER_BD);
+    const counts = await findTagsWithPostCounts(platform.env.POSCHULER_BD, "en");
     const numbers = counts.map((row) => row.posts);
 
     expect(numbers.length).toBeGreaterThan(1);
@@ -164,7 +164,7 @@ describe("findTagsWithPostCounts", () => {
    * so this cannot go on passing while covering nothing.
    */
   it("breaks a tie alphabetically", async () => {
-    const counts = await findTagsWithPostCounts(platform.env.POSCHULER_BD);
+    const counts = await findTagsWithPostCounts(platform.env.POSCHULER_BD, "en");
 
     const ties = counts.filter((row, index) => index > 0 && counts[index - 1].posts === row.posts);
 

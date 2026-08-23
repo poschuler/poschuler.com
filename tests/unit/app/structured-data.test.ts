@@ -5,10 +5,10 @@ import {
   blogPosting,
   breadcrumbList,
   creativeWorkSeries,
-  HOME_CRUMB,
   projectId,
   seriesId,
 } from "~/lib/seo/structured-data";
+import { indexCrumb } from "~/lib/trail";
 
 /**
  * What a crawler is told, which nothing on the rendered page reveals.
@@ -19,19 +19,21 @@ import {
  */
 
 const PART = {
-  path: "/series/pragmatic-nodejs-api/project-setup",
+  url: "https://poschuler.com/series/pragmatic-nodejs-api/project-setup",
   title: "Project setup",
   description: "Where a Node.js project's structure comes from.",
   datePublished: "2025-12-25",
   seriesSlug: "pragmatic-nodejs-api",
+  locale: "en" as const,
 };
 
 const NOTE = {
-  path: "/projects/chekalo/product-matching",
+  url: "https://poschuler.com/projects/chekalo/product-matching",
   title: "Matching products across retailers without a shared id",
   description: "The problem, and the shape of the solution.",
   datePublished: "2026-08-15",
   projectSlug: "chekalo",
+  locale: "en" as const,
 };
 
 describe("blogPosting", () => {
@@ -77,7 +79,7 @@ describe("blogPosting", () => {
   it("attaches a Part to its Series by the identifier the landing declares", () => {
     const article = blogPosting(PART);
 
-    expect(article.isPartOf).toEqual({ "@id": seriesId("pragmatic-nodejs-api") });
+    expect(article.isPartOf).toEqual({ "@id": seriesId("pragmatic-nodejs-api", "en") });
   });
 
   /**
@@ -94,35 +96,41 @@ describe("blogPosting", () => {
   it("attaches a Field Note to its Project by the identifier the landing declares", () => {
     const article = blogPosting(NOTE);
 
-    expect(article.isPartOf).toEqual({ "@id": projectId("chekalo") });
+    expect(article.isPartOf).toEqual({ "@id": projectId("chekalo", "en") });
   });
 
   it("says nothing about containment for a Field Note with no projectSlug given", () => {
     expect(blogPosting({ ...NOTE, projectSlug: null })).not.toHaveProperty("isPartOf");
     expect(blogPosting({ ...NOTE, projectSlug: undefined })).not.toHaveProperty("isPartOf");
   });
+
+  /** Part 10 of `evolution-plan/15-phase-3-spanish.md`: the claim follows the article, not the default. */
+  it("states its own Locale rather than always English", () => {
+    expect(blogPosting(PART).inLanguage).toBe("en");
+    expect(blogPosting({ ...PART, locale: "es" }).inLanguage).toBe("es");
+  });
 });
 
 describe("breadcrumbList", () => {
   it("numbers the trail from one, in the order given", () => {
     const list = breadcrumbList([
-      HOME_CRUMB,
-      { name: "Series", path: "/series" },
+      indexCrumb("home", "en"),
+      indexCrumb("series", "en"),
       { name: "Pragmatic Node.js API", path: "/series/pragmatic-nodejs-api" },
     ]) as { itemListElement: Array<{ position: number; name: string; item: string }> };
 
     expect(list.itemListElement.map((entry) => entry.position)).toEqual([1, 2, 3]);
-    expect(list.itemListElement[0].item).toBe("https://poschuler.com/");
+    expect(list.itemListElement[0].item).toBe("https://poschuler.com");
     expect(list.itemListElement[2].name).toBe("Pragmatic Node.js API");
   });
 
   it("gives every step an absolute URL, because a step is a page", () => {
-    const list = breadcrumbList([HOME_CRUMB, { name: "Series", path: "/series" }]) as {
+    const list = breadcrumbList([indexCrumb("home", "en"), indexCrumb("series", "en")]) as {
       itemListElement: Array<{ item: string }>;
     };
 
     for (const entry of list.itemListElement) {
-      expect(entry.item.startsWith("https://poschuler.com/")).toBe(true);
+      expect(entry.item.startsWith("https://poschuler.com")).toBe(true);
     }
   });
 });
@@ -132,6 +140,7 @@ describe("creativeWorkSeries", () => {
     slug: "pragmatic-nodejs-api",
     title: "Pragmatic Node.js API",
     description: "A monolithic API you can defend.",
+    locale: "en" as const,
     parts: [
       { slug: "project-setup", title: "Project setup" },
       { slug: "schema-validation", title: "Schema validation" },
@@ -139,7 +148,7 @@ describe("creativeWorkSeries", () => {
   };
 
   it("declares the identifier its Parts point back at", () => {
-    expect(creativeWorkSeries(SERIES)["@id"]).toBe(seriesId("pragmatic-nodejs-api"));
+    expect(creativeWorkSeries(SERIES)["@id"]).toBe(seriesId("pragmatic-nodejs-api", "en"));
   });
 
   it("lists its Parts in reading order", () => {
@@ -164,11 +173,25 @@ describe("creativeWorkSeries", () => {
     expect(series.hasPart).toEqual([]);
   });
 
+  /** Part 10 of `evolution-plan/15-phase-3-spanish.md`: the claim follows the landing, not the default. */
+  it("states its own Locale rather than always English", () => {
+    expect(creativeWorkSeries(SERIES).inLanguage).toBe("en");
+    expect(creativeWorkSeries({ ...SERIES, locale: "es" }).inLanguage).toBe("es");
+  });
+
   it("matches the identifier a Part uses for its Container", () => {
     const series = creativeWorkSeries(SERIES);
     const part = blogPosting(PART);
 
     expect(part.isPartOf).toEqual({ "@id": series["@id"] });
+  });
+
+  /** This module builds no URL of its own: the Locale changes the address via `~/lib/hrefs`, nothing here. */
+  it("addresses a Spanish landing under /es, at the same Slug", () => {
+    const series = creativeWorkSeries({ ...SERIES, locale: "es" });
+
+    expect(series.url).toBe("https://poschuler.com/es/series/pragmatic-nodejs-api");
+    expect(series["@id"]).toBe("https://poschuler.com/es/series/pragmatic-nodejs-api#series");
   });
 });
 

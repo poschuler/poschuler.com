@@ -54,6 +54,7 @@ export default defineConfig({
         "app/db.server.ts",
         "app/lib/revalidation.ts",
         "app/lib/seo/**",
+        "app/lib/trail.ts",
         "app/models/**",
         "app/routes/$.tsx",
         "app/routes/resume-pdf/**",

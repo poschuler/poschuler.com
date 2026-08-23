@@ -35,6 +35,10 @@ let postSlug: string;
 /** A Post with a Container, and the Series it belongs to. */
 let partSlug: string;
 let seriesSlug: string;
+/** Some Project — the two-store shape is the same whichever one it is. */
+let projectSlug: string;
+/** The Project the home page is supposed to single out, read from the store. */
+let flagshipSlug: string;
 
 type ArgsOf<Loader> = Loader extends (args: infer A) => unknown ? A : never;
 
@@ -52,6 +56,22 @@ beforeAll(async () => {
   const part = contentItems.find((item) => item.type === "post" && item.seriesSlug !== null)!;
   partSlug = part.slug;
   seriesSlug = part.seriesSlug!;
+
+  const { projects } = await projectsLoader(
+    routeArgs<ArgsOf<typeof projectsLoader>>(platform, get("/projects")),
+  );
+
+  projectSlug = projects[0]!.slug;
+
+  // From the store, not from the index above: the home page picking the
+  // flagship out of that same list is the thing the block's test asserts, and
+  // a comparison between two callers of `findAllProjects` would agree with
+  // itself whatever the query returned.
+  const { results } = await platform.env.POSCHULER_BD.prepare(
+    `select slug from project where lang = 'en' and tier = 'flagship' order by slug asc`,
+  ).all<{ slug: string }>();
+
+  flagshipSlug = results[0]!.slug;
 });
 
 afterAll(async () => {
@@ -212,11 +232,12 @@ describe("/blog/:blogSlug", () => {
   });
 
   /**
-   * The route hardcodes `:en`. The KV key layout is Locale-aware even though no
-   * URL carries one, so this pins the known limitation: whoever serves a second
-   * Translation has to change this test on purpose.
+   * The KV read is keyed off the resolved row's own Locale, not the request's
+   * — the same rule every sibling Post route already follows. `postSlug` is
+   * English-only in the fixtures, so the key still reads `:en` here; a Spanish
+   * fixture would read `:es` without this test changing at all.
    */
-  it("reads the en Translation, because no URL carries a Locale yet", async () => {
+  it("reads the KV body at the resolved row's own Locale", async () => {
     const keys: string[] = [];
     const spy = platformWith(platform, {
       BLOG_KV: {
@@ -247,8 +268,10 @@ describe("/projects — the index", () => {
     expect(projects.length).toBeGreaterThan(0);
     expect(projects.filter((project) => project.tier === "flagship")).toHaveLength(1);
 
-    const order = projects.map((project) => project.slug);
-    expect(order[0]).toBe("chekalo");
+    // Heaviest first is the claim, so the tier is what to assert — naming the
+    // Project would pin which one is flagship today rather than the ordering,
+    // and the ordering is what a supporting Project sorted above it would break.
+    expect(projects[0].tier).toBe("flagship");
   });
 
   /** Every tier the schema accepts must be one the index knows how to render. */
@@ -268,7 +291,7 @@ describe("/projects/:project", () => {
     routeArgs<ArgsOf<typeof projectLoader>>(on, get(`/projects/${slug}`), { projectSlug: slug });
 
   it("returns the row and the body together", async () => {
-    const payload = await projectLoader(args("chekalo"));
+    const payload = await projectLoader(args(projectSlug));
 
     expect(payload.title).toBeTruthy();
     expect(payload.summary).toBeTruthy();
@@ -284,7 +307,7 @@ describe("/projects/:project", () => {
    * it has, and the sitemap depends on there being one.
    */
   it("carries at least one revision, parsed out of the column", async () => {
-    const payload = await projectLoader(args("chekalo"));
+    const payload = await projectLoader(args(projectSlug));
 
     expect(payload.revisions.length).toBeGreaterThan(0);
     expect(payload.revisions[0].date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
@@ -302,9 +325,9 @@ describe("/projects/:project", () => {
       },
     });
 
-    await projectLoader(args("chekalo", spy));
+    await projectLoader(args(projectSlug, spy));
 
-    expect(keys).toEqual(["project:chekalo:en"]);
+    expect(keys).toEqual([`project:${projectSlug}:en`]);
   });
 });
 
@@ -587,7 +610,7 @@ describe("/ — the flagship block", () => {
   it("carries the flagship Project and nothing else from the index", async () => {
     const { flagship } = await homeLoader(routeArgs<ArgsOf<typeof homeLoader>>(platform, get("/")));
 
-    expect(flagship?.slug).toBe("chekalo");
+    expect(flagship?.slug).toBe(flagshipSlug);
   });
 
   /**

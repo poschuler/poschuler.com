@@ -5,6 +5,15 @@ import fm from "front-matter";
 
 import { KV_PREFIXES, kvKeyFor } from "./kv/kv-keys.ts";
 import { listPayloadFiles } from "./kv/payload-files.ts";
+import {
+  compareContainers,
+  comparePresence,
+  compareSectionOrder,
+  expectationFrom,
+  isEmptyContentExpectation,
+  type ContainerColumns,
+  type DocumentInput,
+} from "./store-expectation.ts";
 
 /**
  * Asserts that a seeded store actually holds what this repo says it should.
@@ -33,6 +42,21 @@ interface ContentTagRow {
     tag: string;
 }
 
+/** The Container columns on `content`, read back with the identity that keys them. */
+interface ContentContainerRow {
+    slug: string;
+    lang: string | null;
+    series_slug: string | null;
+    series_section: string | null;
+    project_slug: string | null;
+    container_order: number | null;
+}
+
+interface ProjectRow {
+    slug: string;
+    lang: string;
+}
+
 interface SeriesRow {
     slug: string;
     lang: string;
@@ -44,12 +68,12 @@ interface SeriesSectionRow {
     slug: string;
 }
 
-/** What the Markdown says each table should hold, keyed by identity. */
-interface Expectation {
-    content: Set<string>;
-    contentTags: Set<string>;
-    series: Set<string>;
-    sections: Set<string>;
+/** A Series Section's own position in the arc, read back alongside its identity. */
+interface SeriesSectionOrderRow {
+    series_slug: string;
+    lang: string;
+    slug: string;
+    section_order: number;
 }
 
 function wrangler(args: string[], wranglerArgs: string[]): string {
@@ -74,34 +98,17 @@ function d1Query<T>(sql: string, wranglerArgs: string[]): T[] {
 }
 
 /**
- * The Markdown files are the source of truth, so the expectation is derived from
- * them rather than from the generated SQL — otherwise a generator that silently
- * dropped a file would produce a seed and a verification that agree with each
- * other and with nothing else.
- *
- * The rule mirrors `generate-seed-sql.ts` exactly, including what it skips: a
- * Post whose filename carries no Locale is not seeded, so it is not expected
- * here either — `…​.en-old.md` is one such file — and neither is any document
- * declaring `draft: true`, whatever its type.
+ * Every Markdown file under `app/content`, read but not yet classified: the
+ * path relative to `CONTENT_DIR` and the raw front matter. Classifying what
+ * each one is, and what it means for the stores, is `store-expectation.ts`'s
+ * job — this script owns only the disk (ADR 0012).
  */
-async function expectedFromMarkdown(): Promise<Expectation> {
-    const expectation: Expectation = {
-        content: new Set<string>(),
-        contentTags: new Set<string>(),
-        series: new Set<string>(),
-        sections: new Set<string>(),
-    };
+async function readContentDir(dir: string): Promise<DocumentInput[]> {
+    const documents: DocumentInput[] = [];
 
-    /** Keyed as the prune keys it: the Content Item's identity plus the Tag. */
-    const addTags = (slug: string, locale: string, tags: unknown) => {
-        for (const tag of Array.isArray(tags) ? tags : []) {
-            expectation.contentTags.add(`${slug}:${locale}:${tag}`);
-        }
-    };
-
-    async function walk(dir: string) {
-        for (const entry of await fsPromise.readdir(dir, { withFileTypes: true })) {
-            const full = path.join(dir, entry.name);
+    async function walk(current: string) {
+        for (const entry of await fsPromise.readdir(current, { withFileTypes: true })) {
+            const full = path.join(current, entry.name);
 
             if (entry.isDirectory()) {
                 await walk(full);
@@ -112,55 +119,17 @@ async function expectedFromMarkdown(): Promise<Expectation> {
                 continue;
             }
 
-            const match = entry.name.match(/^(.*?)(?:\.(en|es))?\.md$/);
+            const { attributes } = fm<DocumentInput["attributes"]>(
+                await fsPromise.readFile(full, "utf-8"),
+            );
 
-            if (!match) {
-                continue;
-            }
-
-            const [, slug, locale] = match;
-            const { attributes } = fm<{
-                type?: string;
-                tags?: unknown;
-                sections?: Array<{ slug: string }>;
-                draft?: unknown;
-            }>(await fsPromise.readFile(full, "utf-8"));
-
-            // `draft: true` produces no row, of any type — mirrored leniently:
-            // this script's job is comparing what publishes against what is
-            // stored, not re-validating that the flag is a boolean, which the
-            // build already refuses to seed from if it is not.
-            if (attributes.draft === true) {
-                continue;
-            }
-
-            if (attributes.type === "post") {
-                // A Post with no Locale in its filename is a draft under the
-                // `.en-old.md` convention: no row, and so no Tag rows either.
-                // The rule is the generator's, mirrored.
-                if (locale) {
-                    expectation.content.add(`${slug}:${locale}`);
-                    addTags(slug, locale, attributes.tags);
-                }
-            } else if (attributes.type === "link") {
-                expectation.content.add(`${slug}:`);
-                addTags(slug, "", attributes.tags);
-            } else if (attributes.type === "series" && locale) {
-                expectation.series.add(`${slug}:${locale}`);
-
-                // The sections are read straight off the manifest, not off the
-                // generated SQL, for the reason above: a generator that dropped
-                // one would otherwise agree with itself.
-                for (const section of attributes.sections ?? []) {
-                    expectation.sections.add(`${slug}:${locale}:${section.slug}`);
-                }
-            }
+            documents.push({ relativePath: path.relative(dir, full), attributes });
         }
     }
 
-    await walk(CONTENT_DIR);
+    await walk(dir);
 
-    return expectation;
+    return documents;
 }
 
 function report(label: string, ok: boolean, detail: string): boolean {
@@ -175,40 +144,109 @@ async function verify(mode: string): Promise<boolean> {
 
     console.log(`==> D1 (${mode})`);
 
-    const expected = await expectedFromMarkdown();
+    // The Markdown files are the source of truth, so the expectation is
+    // derived from them rather than from the generated SQL — otherwise a
+    // generator that silently dropped a file would produce a seed and a
+    // verification that agree with each other and with nothing else
+    // (ADR 0012). Classifying what each file is happens by placement, not by
+    // its front matter's `type` — `store-expectation.ts` is where that rule
+    // is shared with the generators, tested, and singular.
+    const documents = await readContentDir(CONTENT_DIR);
+    const expected = expectationFrom(documents);
+
+    // A broken derivation — a path constant that moves, a directory read
+    // that fails quietly — would otherwise produce an empty expectation, and
+    // an empty expectation compared against an empty store finds nothing
+    // wrong in either direction: the presence check below would pass and
+    // certify an empty `content` table. `generate-seed-sql.ts` already treats
+    // this state as impossible; the verifier now agrees (#58).
+    const contentExpectationIsEmpty = isEmptyContentExpectation(expected);
+
+    passed = report("Content Item expectation is not empty", !contentExpectationIsEmpty,
+        contentExpectationIsEmpty
+            ? "derived to nothing — a broken derivation would certify an empty store"
+            : `${expected.content.size} expected`) && passed;
 
     const contentRows = d1Query<ContentRow>("select slug, lang, type from content", wranglerArgs);
     const tagRows = d1Query<ContentTagRow>("select slug, lang, tag from content_tag", wranglerArgs);
+    const projectRows = d1Query<ProjectRow>("select slug, lang from project", wranglerArgs);
     const seriesRows = d1Query<SeriesRow>("select slug, lang from series", wranglerArgs);
     const sectionRows = d1Query<SeriesSectionRow>(
         "select series_slug, lang, slug from series_section",
         wranglerArgs,
     );
+    const containerRows = d1Query<ContentContainerRow>(
+        "select slug, lang, series_slug, series_section, project_slug, container_order from content",
+        wranglerArgs,
+    );
+    const sectionOrderRows = d1Query<SeriesSectionOrderRow>(
+        "select series_slug, lang, slug, section_order from series_section",
+        wranglerArgs,
+    );
 
-    /**
-     * Both directions, per table: a row the Markdown does not back is as wrong
-     * as one it backs and the store is missing. The second is the one a prune
-     * exists to prevent — a section dropped from a manifest keeps rendering on
-     * the landing until something notices it is still there.
-     */
-    const compareKeys = (noun: string, expectedKeys: Set<string>, presentKeys: Set<string>) => {
-        const missing = [...expectedKeys].filter((key) => !presentKeys.has(key));
-        const extra = [...presentKeys].filter((key) => !expectedKeys.has(key));
+    const presenceFindings = [
+        comparePresence("Content Item", expected.content,
+            new Set(contentRows.map((row) => `${row.slug}:${row.lang ?? ""}`))),
+        comparePresence("Tag row", expected.contentTags,
+            new Set(tagRows.map((row) => `${row.slug}:${row.lang ?? ""}:${row.tag}`))),
+        comparePresence("Project", expected.project,
+            new Set(projectRows.map((row) => `${row.slug}:${row.lang}`))),
+        comparePresence("Series", expected.series,
+            new Set(seriesRows.map((row) => `${row.slug}:${row.lang}`))),
+        comparePresence("Series Section", expected.sections,
+            new Set(sectionRows.map((row) => `${row.series_slug}:${row.lang}:${row.slug}`))),
+    ];
 
-        passed = report(`every ${noun} present`, missing.length === 0,
-            missing.length === 0 ? `${expectedKeys.size} rows` : `missing: ${missing.join(", ")}`) && passed;
-        passed = report(`no ${noun} left behind`, extra.length === 0,
-            extra.length === 0 ? "none" : `unexpected: ${extra.join(", ")}`) && passed;
-    };
+    // The comparison itself is `store-expectation.ts`'s: this only formats the
+    // findings it returns through the reporting this script already has.
+    for (const finding of presenceFindings) {
+        passed = report(`every ${finding.noun} present`, finding.missing.length === 0,
+            finding.missing.length === 0 ? `${finding.expectedCount} rows` : `missing: ${finding.missing.join(", ")}`) && passed;
+        passed = report(`no ${finding.noun} left behind`, finding.extra.length === 0,
+            finding.extra.length === 0 ? "none" : `unexpected: ${finding.extra.join(", ")}`) && passed;
+    }
 
-    compareKeys("Content Item", expected.content,
-        new Set(contentRows.map((row) => `${row.slug}:${row.lang ?? ""}`)));
-    compareKeys("Tag row", expected.contentTags,
-        new Set(tagRows.map((row) => `${row.slug}:${row.lang ?? ""}:${row.tag}`)));
-    compareKeys("Series", expected.series,
-        new Set(seriesRows.map((row) => `${row.slug}:${row.lang}`)));
-    compareKeys("Series Section", expected.sections,
-        new Set(sectionRows.map((row) => `${row.series_slug}:${row.lang}:${row.slug}`)));
+    // A Container is a value on a row that already exists, not a presence
+    // difference — comparing it keyed on identity is what names a wrong
+    // `container_order` as itself, rather than as one missing row plus one
+    // unexpected row (ADR 0012).
+    const presentContainers = new Map<string, ContainerColumns>(
+        containerRows.map((row) => [
+            `${row.slug}:${row.lang ?? ""}`,
+            {
+                seriesSlug: row.series_slug,
+                seriesSection: row.series_section,
+                projectSlug: row.project_slug,
+                containerOrder: row.container_order,
+            },
+        ]),
+    );
+    const containerFindings = compareContainers(expected.containers, presentContainers);
+
+    passed = report("every Container column agrees", containerFindings.length === 0,
+        containerFindings.length === 0
+            ? `${expected.containers.size} rows`
+            : containerFindings
+                .map((finding) => `${finding.identity} ${finding.column}: stored ${finding.stored ?? "null"}, expected ${finding.expected ?? "null"}`)
+                .join("; ")) && passed;
+
+    // Symmetric to the Container comparison, one level up: a Section's own
+    // position in the arc is a value on a row that already exists, not a
+    // presence difference (#57).
+    const presentSectionOrder = new Map<string, number>(
+        sectionOrderRows.map((row) => [
+            `${row.series_slug}:${row.lang}:${row.slug}`,
+            row.section_order,
+        ]),
+    );
+    const sectionOrderFindings = compareSectionOrder(expected.sectionOrder, presentSectionOrder);
+
+    passed = report("every Series Section position agrees", sectionOrderFindings.length === 0,
+        sectionOrderFindings.length === 0
+            ? `${expected.sectionOrder.size} rows`
+            : sectionOrderFindings
+                .map((finding) => `${finding.identity}: stored ${finding.stored}, expected ${finding.expected}`)
+                .join("; ")) && passed;
 
     console.log(`==> KV (${mode})`);
 

@@ -12,12 +12,25 @@
  * what exists, and a denominator would be a claim about the future.
  */
 
+import type { Locale } from "~/context";
+
 /** A Part as the arc knows it: enough to list it and link to it. */
 export interface ArcPart {
   slug: string;
   title: string;
   /** Already truncated to `YYYY-MM-DD` by the query. */
   publishedStringDate: string;
+  /**
+   * The Locales this Part's Slug exists in, read off the same correlated
+   * subquery `findPostBySlug` uses (Part 10 of
+   * `evolution-plan/15-phase-3-spanish.md`) — folded into `findSeriesArc`
+   * rather than a second query, since that one already returns this row.
+   *
+   * Optional only so this module's own fixtures, which build a Part by hand to
+   * test the orientation logic rather than a real address, need not invent one
+   * — this function never reads it, only carries it through.
+   */
+  locales?: Locale[];
 }
 
 export interface ArcSection {

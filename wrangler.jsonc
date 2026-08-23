@@ -53,8 +53,15 @@
 	 * values — currently just SESSION_THEME_SECRET, which signs the theme
 	 * cookie — go through `wrangler secret put`.
 	 *
-	 * `.dev.vars` overrides these locally, which is how DEPLOYMENT_ENV becomes
-	 * "development" on a dev machine.
+	 * `.dev.vars` overrides these locally. PUBLIC_HOST is the only one with a
+	 * reader — the canonical origin in `robots.txt`, which falls back to the
+	 * request's own origin without it.
+	 *
+	 * DEPLOYMENT_ENV is declared and unread. It used to decide whether the theme
+	 * cookie got `Secure` and `Domain=poschuler.com`, and the `__Host-` prefix
+	 * that replaced that logic forbids `Domain` outright — see
+	 * `app/color-scheme-cookie.ts`, and `docs/architecture.md` for the incident.
+	 * It stays declared so a local override exists the day it gains a reader.
 	 *
 	 * Note: a secret shadows a var of the same name in production. If either of
 	 * these ever stops taking effect, check `wrangler secret list` first.

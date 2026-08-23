@@ -32,6 +32,14 @@ export const PERMANENT_REDIRECTS: Record<string, string> = {
     "/series/pragmatic-nodejs-api/schema-validation-and-error-handling",
   "/blog/pragmatic-nodejs-api-vertical-slices-and-domain-logic":
     "/series/pragmatic-nodejs-api/vertical-slices-and-domain-logic",
+
+  // Phase 3. `resume` is a Spanish word — the third person singular of
+  // *resumir* — so `/es/resume` would read as a conjugated verb rather than
+  // as a CV. The route moved to `/cv` in both Locales (ADR 0010); the visible
+  // navigation label stays *resume* in English, because the label and the
+  // path are independent.
+  "/resume": "/cv",
+  "/resume.pdf": "/cv.pdf",
 };
 
 /**

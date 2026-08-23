@@ -1,3 +1,4 @@
+import { useStrings } from "~/lib/catalog";
 import { latestRevision, type Revision } from "~/lib/revisions";
 
 /**
@@ -20,6 +21,7 @@ export function RevisionLine({
   revisions: Revision[];
 }) {
   const latest = latestRevision(revisions);
+  const strings = useStrings();
 
   if (!publishedAt && !latest) {
     return null;
@@ -28,9 +30,9 @@ export function RevisionLine({
   return (
     <div className="text-sm text-low">
       <p className="tabular-nums">
-        {publishedAt && <span>Published {publishedAt}</span>}
+        {publishedAt && <span>{strings.revisions.published(publishedAt)}</span>}
         {publishedAt && latest && <span> · </span>}
-        {latest && <span>Updated {latest.date}</span>}
+        {latest && <span>{strings.revisions.updated(latest.date)}</span>}
       </p>
 
       {latest && <p className="mt-1 text-pretty">{latest.note}</p>}
@@ -46,6 +48,7 @@ export function RevisionLine({
  */
 export function RevisionHistory({ revisions }: { revisions: Revision[] }) {
   const earlier = revisions.slice(1);
+  const strings = useStrings();
 
   if (earlier.length === 0) {
     return null;
@@ -54,7 +57,7 @@ export function RevisionHistory({ revisions }: { revisions: Revision[] }) {
   return (
     <section className="mt-10 border-default border-t pt-6 text-sm text-low">
       <h2 className="font-mono text-xs font-semibold uppercase tracking-wide">
-        Earlier revisions
+        {strings.revisions.earlierRevisions}
       </h2>
 
       <ul className="mt-3 space-y-2">

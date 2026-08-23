@@ -14,7 +14,13 @@
  * position of a slug in a list, and never read from a Post's front matter.
  */
 
-import { basenameOf, declaredTypeMatches, isMisplaced, placementOf } from "./content-tree.ts";
+import {
+  basenameOf,
+  declaredTypeMatches,
+  isMisplaced,
+  localeMatchesTree,
+  placementOf,
+} from "./content-tree.ts";
 import { containerContradictionError, reconcileManifest } from "./manifest.ts";
 import {
   draftError,
@@ -218,10 +224,10 @@ function reconcileError(
  * The rows for one Series manifest, or the reason the build should stop.
  *
  * `partFiles` is every Markdown file under this Series folder that carries this
- * manifest's Locale and a recognised one at all. A draft filed under the
- * `.en-old.md` convention parses to no Locale, is never seeded, and so is not
- * reconciled against the manifest either — a draft declared with
- * `draft: true`, by contrast, is reconciled exactly like a published Part.
+ * manifest's Locale and a recognised one at all — a file whose suffix parses
+ * to no Locale fails the build in `contentRowFor` rather than being reconciled
+ * against anything here. A draft declared with `draft: true`, by contrast, is
+ * reconciled exactly like a published Part.
  */
 export function seriesRowsFor(
   relativePath: string,
@@ -253,10 +259,13 @@ export function seriesRowsFor(
 
   const { slug, lang } = parsed;
 
-  // A Series landing has no `.en-old.md` convention to hide behind, as on a
-  // Project: it is one page, revised in place, so a missing Locale is a
-  // mistake. `draft: true` is the only way one goes unpublished.
-  if (!lang) {
+  // A Series landing is one page, revised in place, so a missing Locale is a
+  // mistake. `draft: true` is the only way one goes unpublished. Read from
+  // `CONTENT_TREES` via `localeMatchesTree` rather than a local `!lang` — the
+  // rule this checks against is declared once, in `content-tree.ts`.
+  // `lang === null` leads the condition so TypeScript narrows `lang` to
+  // `string` below; `localeMatchesTree` alone is a plain boolean and cannot.
+  if (lang === null || !localeMatchesTree(placed.tree, lang)) {
     return { error: `${relativePath} must have a language in its filename` };
   }
 

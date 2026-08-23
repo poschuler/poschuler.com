@@ -1,9 +1,12 @@
+import { useStrings } from "~/lib/catalog";
 import { Section } from "./section";
 import { education } from "./resume.json";
 
 export function Education() {
+  let strings = useStrings();
+
   return (
-    <Section title="Education">
+    <Section title={strings.resume.headings.education}>
       {education.map((item) => (
         <article key={item.row} className="border-default border-l-2 py-3 pl-4">
           <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">

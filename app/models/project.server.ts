@@ -1,3 +1,4 @@
+import { parseLocaleSet, type Locale } from "~/context";
 import { dbQuery } from "~/db.server";
 import { parseRevisions, type Revision } from "~/lib/revisions";
 
@@ -30,7 +31,7 @@ export type ProjectTier = "flagship" | "supporting" | "experiment";
 type StoredProjectRow = {
   idProject: number;
   slug: string;
-  lang: string;
+  lang: Locale;
   title: string;
   /** Outcome-first, one or two sentences. What the index shows. */
   summary: string;
@@ -78,20 +79,28 @@ function hydrate<T extends StoredProjectRow>(
 }
 
 /**
- * Every Project, heaviest first.
+ * Every Project in a Locale, heaviest first.
  *
  * Ordered by `sort_order` rather than by any date, because recency is the wrong
  * signal for a portfolio: the strongest evidence is not the newest. `tier` is
  * not in the ordering — it groups the rendering, and mixing the two would make
  * a tier change silently reorder the page.
+ *
+ * Required and typed as `Locale` for the reason every sibling query in this
+ * file already takes one (Part 5 of `evolution-plan/15-phase-3-spanish.md`):
+ * without the filter, `/es/projects` and the home page's flagship block would
+ * both render this Locale's chrome around the English row — the outcome Part 6
+ * exists to prevent.
  */
-export async function findAllProjects(db: D1Database) {
+export async function findAllProjects(db: D1Database, locale: Locale) {
   const rows = await dbQuery<StoredProjectRow>(
     db,
     `select ${PROJECT_COLUMNS}
       from project
+      where lang = ?
       order by sort_order asc, slug asc
     `,
+    [locale],
   );
 
   return rows.map(hydrate);
@@ -102,19 +111,26 @@ export async function findAllProjects(db: D1Database) {
  *
  * Returns `null` rather than throwing: a Slug that does not exist is a 404 the
  * route decides on, not a database error.
+ *
+ * `locales` rides along as a correlated subquery — every Locale this Slug's
+ * Project exists in — so the landing can build its own `hreflang` alternates
+ * without a second round trip (Part 10 of `evolution-plan/15-phase-3-spanish.md`).
  */
-export async function findProjectBySlug(db: D1Database, slug: string, lang = "en") {
-  const rows = await dbQuery<StoredProjectRow>(
+export async function findProjectBySlug(db: D1Database, slug: string, locale: Locale) {
+  const rows = await dbQuery<StoredProjectRow & { locales: string | null }>(
     db,
-    `select ${PROJECT_COLUMNS}
+    `select ${PROJECT_COLUMNS},
+        (select group_concat(p2.lang) from project p2 where p2.slug = project.slug) as "locales"
       from project
       where slug = ? and lang = ?
       limit 1
     `,
-    [slug, lang],
+    [slug, locale],
   );
 
-  return rows[0] ? hydrate(rows[0]) : null;
+  const row = rows[0];
+
+  return row ? { ...hydrate(row), locales: parseLocaleSet(row.locales) } : null;
 }
 
 /** A Field Note as a Project's index and sibling list need it — no more. */
@@ -140,7 +156,7 @@ export type ProjectNoteRowType = {
 export async function findProjectNotes(
   db: D1Database,
   projectSlug: string,
-  lang = "en",
+  locale: Locale,
 ): Promise<ProjectNoteRowType[]> {
   return dbQuery<ProjectNoteRowType>(
     db,
@@ -153,7 +169,7 @@ export async function findProjectNotes(
       where type = 'post' and project_slug = ? and lang = ?
       order by container_order asc
     `,
-    [projectSlug, lang],
+    [projectSlug, locale],
   );
 }
 
@@ -178,7 +194,7 @@ export type ProjectListingRowType = ProjectRowType & {
  * and lets `/blog` filter it out on its own terms, `/blog` is the only reader
  * of this query and it never wants a Project with nothing written about it.
  */
-export async function findProjectsWithNotes(db: D1Database, lang = "en") {
+export async function findProjectsWithNotes(db: D1Database, locale: Locale) {
   const rows = await dbQuery<StoredProjectRow & { publishedAt: string }>(
     db,
     `select ${PROJECT_COLUMNS},
@@ -190,7 +206,7 @@ export async function findProjectsWithNotes(db: D1Database, lang = "en") {
       group by project.id_project
       order by "publishedAt" desc, project.slug asc
     `,
-    [lang],
+    [locale],
   );
 
   return rows.map((row): ProjectListingRowType => ({

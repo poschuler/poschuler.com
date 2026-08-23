@@ -1,3 +1,16 @@
+/**
+ * **No `/es/cv.pdf` (Part 8 of `evolution-plan/15-phase-3-spanish.md`, #48's
+ * open question, answered).** `/cv` renders from `resume.json` at request
+ * time, so once that document carried Spanish text (#48) the Spanish page
+ * followed with no extra work. This route does the opposite: it proxies one
+ * hand-produced static file from a CDN — nothing here renders a PDF from
+ * `resume.json` — so a Spanish download would be a second file, authored and
+ * uploaded by hand, kept in step with the English one forever. That is the
+ * same failure mode Part 8 rejected `resume.es.json` for, transposed to a
+ * binary this codebase cannot generate. `/cv`'s own download button
+ * (`routes/resume/hero.tsx`) therefore still points at this one URL from
+ * both Locales, and `app/routes.ts` mounts it once, outside `contentRoutes`.
+ */
 const PDF_URL = "https://cdn.poschuler.dev/Paul_Osorio_Schuler_Resume.pdf";
 const FILENAME = "Paul_Osorio_Schuler_Resume.pdf";
 
@@ -22,7 +35,7 @@ export async function loader() {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename=${FILENAME}`,
       "Cache-Control": "public, max-age=86400",
-      // The download serves a visitor who is already on `/resume`. Indexed, it
+      // The download serves a visitor who is already on `/cv`. Indexed, it
       // would compete with that page for the same queries and win nothing —
       // a PDF is a worse landing than the page that links to it.
       //

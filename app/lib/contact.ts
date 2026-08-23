@@ -1,3 +1,5 @@
+import type { Locale } from "~/context";
+
 /**
  * The ways to reach him, and where he is. One list, because three surfaces
  * render it — the home page's hero, the footer on every page, and the home
@@ -18,5 +20,14 @@ export const CONTACT_LINKS = [
 /**
  * A fact about where the work happens, not a signal that he is looking. The
  * timezone is the part a distributed team screens on.
+ *
+ * Per-Locale for one word: *Peru* carries an accent in Spanish and the site
+ * renders this on every page, so an unaccented *Peru* under `/es` would be a
+ * spelling mistake repeated site-wide rather than a translation missing. The
+ * city and the offset are the same string in both — a place name and a number
+ * are not translated.
  */
-export const LOCATION = "Lima, Peru · UTC-5";
+export const LOCATION = {
+  en: "Lima, Peru · UTC-5",
+  es: "Lima, Perú · UTC-5",
+} satisfies Record<Locale, string>;

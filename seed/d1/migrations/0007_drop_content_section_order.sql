@@ -1,0 +1,35 @@
+-- Phase 1b, contract half: `content.section_order` goes, and the rename that
+-- `0006` started is finished.
+--
+-- The three steps, and the order of them is the whole point:
+--
+--   0006  expand   — `container_order` arrives; `section_order` stays, written
+--                    by the generator with the same value. The Worker deployed
+--                    in that same publication reads the new column.
+--   84c03a8        — that publication reaches production. From here no
+--                    deployed Worker asks for `section_order`.
+--   0007  contract — the column goes, and the generator stops writing it.
+--
+-- The middle step is not a formality, and it is a *deploy* rather than a merge.
+-- This job applies migrations before it deploys the Worker (ADR 0006's
+-- amendment), so folding this file into the same publication as `0006` would
+-- drop the column while the previous Worker — still ordering by
+-- `c.section_order` — served the Series landing and every Part. Every one of
+-- them would answer `no such column`, through the seed, the two verifications,
+-- the build and the deploy. Minutes, not seconds.
+--
+-- Nothing is lost. `container_order` has carried every position since `0006`,
+-- written from the same manifest in the same statement, and the seed
+-- reconciles the whole table from the Markdown on the very next step of this
+-- job anyway (ADR 0001).
+--
+-- `DROP COLUMN` is available because the column is in no index, no primary key
+-- and no CHECK — SQLite refuses it otherwise. The partial unique indexes on
+-- `content` are over `(slug, lang)` and `(slug)`, the primary key is
+-- `id_content`, and the one CHECK is over `type` and `lang`, so none of them
+-- names this column.
+--
+-- `series_section.section_order` is untouched and keeps the name. It is the
+-- other half of the collision this rename closed: there the name means a
+-- section's position within the arc, and now it means only that.
+ALTER TABLE content DROP COLUMN section_order;

@@ -3,7 +3,8 @@ import { Download, Globe, Mail } from "lucide-react";
 
 import { chip } from "~/components/chip";
 import { BrandNetworkIcon } from "~/components/ui/brand-icons";
-import { Button } from "~/components/ui/button";
+import { button } from "~/components/ui/button";
+import { cn } from "~/lib/utils";
 import { basics, languages } from "./resume.json";
 
 export function Hero() {
@@ -38,45 +39,46 @@ export function Hero() {
           ))}
         </ul>
 
-        {/* The site's own button, rendered as the anchor each one needs. These
-          * were three copies of a fifteen-class string that had drifted from
-          * the component in two places. */}
+        {/* Every control here is a link — two addresses off this site and one
+          * file — wearing the site's button. They take `button()`, the class,
+          * rather than the `Button` component: these were three copies of a
+          * fifteen-class string that had drifted from the component in two
+          * places, and the class is the whole of what they were duplicating.
+          * Handing an `<a>` to `Button` instead would put Base UI's
+          * `useButton` over a link, which stamps `type="button"` onto it — see
+          * `~/components/ui/button` for why neither of its two modes fits. */}
         <div className="flex flex-wrap items-center gap-1 pt-2">
-          <Button
-            variant="outline"
-            size="icon"
-            render={<a href={`mailto:${email}`} title={`Mail to ${email}`} />}
+          <a
+            href={`mailto:${email}`}
+            title={`Mail to ${email}`}
+            className={cn(button({ variant: "outline", size: "icon" }))}
           >
             <Mail className="size-4" />
             <span className="sr-only">Email {name}</span>
-          </Button>
+          </a>
 
           {profiles.map((profile) => (
-            <Button
+            <a
               key={profile.network}
-              variant="outline"
-              size="icon"
-              render={
-                <a
-                  href={profile.url}
-                  title={profile.network}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                />
-              }
+              href={profile.url}
+              title={profile.network}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(button({ variant: "outline", size: "icon" }))}
             >
               <BrandNetworkIcon network={profile.network} className="size-4" />
               <span className="sr-only">{profile.network}</span>
-            </Button>
+            </a>
           ))}
 
-          <Button
-            variant="outline"
-            render={<Link to="/resume.pdf" reloadDocument />}
+          <Link
+            to="/cv.pdf"
+            reloadDocument
+            className={cn(button({ variant: "outline" }))}
           >
             <Download className="mr-2 size-4" />
             Download as PDF
-          </Button>
+          </Link>
         </div>
       </div>
 

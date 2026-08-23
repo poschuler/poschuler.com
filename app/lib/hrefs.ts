@@ -12,9 +12,68 @@
  * exist to feed — a second copy of the rule is a Part or a Field Note linking
  * to a 404 from whichever list nobody checked.
  *
+ * Every function here now takes a Locale too (Part 10 of
+ * `evolution-plan/15-phase-3-spanish.md`), and stays the one place a relative
+ * path is built: `app/lib/seo/alternates.ts` composes an absolute address out
+ * of what this module returns rather than reconstructing the segment itself,
+ * and so does every route that used to type one out by hand.
+ *
  * Pure and client-safe on purpose: the components that build these links are
  * bundled for the browser and cannot reach into `~/models/*.server`.
  */
+
+/**
+ * Relative, not `~/context` — `app/lib/seo/alternates.ts` is imported directly
+ * by `seed/kv/sitemap-routes.ts`, which Node runs as a plain script with no
+ * alias resolution (`tsconfig.test.json`'s own note on the same constraint).
+ * An alias here would work everywhere this module is bundled and break the one
+ * place it is not.
+ */
+import { ES_PREFIX, type Locale } from "../context.ts";
+
+/**
+ * The `/es` prefix every function below funnels through, so the two branches
+ * cannot disagree about what marks the Spanish one.
+ *
+ * The root is the one path that is not `${ES_PREFIX}${path}`, in either
+ * direction. `prefix("es", [route("/", …)])` produces exactly `/es`, with no
+ * trailing slash (ADR 0010, confirmed against the generated registry) —
+ * `${ES_PREFIX}/` would be wrong by one character. And the English root is the
+ * empty string, not `/`: `${SITE}/` is not the address this site's own
+ * canonical has ever declared, so `alternates.ts` composing `${SITE}${path}`
+ * has to be handed `""` to land on `${SITE}` exactly.
+ *
+ * Exported for `app/lib/seo/alternates.ts`, which localises the literal path of
+ * a page with no document behind it — an index, a listing, the home page —
+ * rather than reconstructing this rule a second time.
+ */
+export function withLocale(path: string, locale: Locale): string {
+  if (path === "/") {
+    return locale === "es" ? ES_PREFIX : "";
+  }
+
+  return locale === "es" ? `${ES_PREFIX}${path}` : path;
+}
+
+/**
+ * The same rule, for a `<Link to>` rather than for an address.
+ *
+ * The difference is the one path `withLocale` deliberately returns empty: the
+ * English root is `""`, because `alternates.ts` composes `${SITE}${path}` and
+ * has to land on the origin exactly. Handed to React Router, that empty string
+ * is not the root at all — an empty relative path resolves to *the current
+ * location*. A 404 page's way out, written as `withLocale("/", locale)`, was
+ * measured rendering `href="/the-address-that-404ed"`: the one link on the
+ * page that promised to lead somewhere led back to where the reader already
+ * was, in English only, which is why it survived a phase about Spanish.
+ *
+ * Every other path is identical in both functions, so navigation can call this
+ * one for the whole of a list without the root being a special case at each
+ * call site.
+ */
+export function navHref(path: string, locale: Locale): string {
+  return withLocale(path, locale) || "/";
+}
 
 /**
  * A Post's Container, derived from the two columns that can each hold one —
@@ -44,13 +103,13 @@ function containerOf(post: {
 }
 
 /** The Series landing — the page that holds the contract and the whole arc. */
-export function seriesHref(seriesSlug: string): string {
-  return `/series/${seriesSlug}`;
+export function seriesHref(seriesSlug: string, locale: Locale): string {
+  return withLocale(`/series/${seriesSlug}`, locale);
 }
 
 /** The Project landing — the case study a Field Note is framed by. */
-export function projectHref(projectSlug: string): string {
-  return `/projects/${projectSlug}`;
+export function projectHref(projectSlug: string, locale: Locale): string {
+  return withLocale(`/projects/${projectSlug}`, locale);
 }
 
 /**
@@ -59,8 +118,8 @@ export function projectHref(projectSlug: string): string {
  * encode and nothing to derive — a Tag that needed escaping here would have
  * failed the build.
  */
-export function tagHref(tag: string): string {
-  return `/tags/${tag}`;
+export function tagHref(tag: string, locale: Locale): string {
+  return withLocale(`/tags/${tag}`, locale);
 }
 
 /**
@@ -71,20 +130,23 @@ export function tagHref(tag: string): string {
  * a Series' own arc, where a Field Note cannot appear, and repeating `null`
  * at every one of them would say nothing a default does not already say.
  */
-export function postHref(post: {
-  slug: string;
-  seriesSlug: string | null;
-  projectSlug?: string | null;
-}): string {
+export function postHref(
+  post: {
+    slug: string;
+    seriesSlug: string | null;
+    projectSlug?: string | null;
+  },
+  locale: Locale,
+): string {
   const container = containerOf({ seriesSlug: post.seriesSlug, projectSlug: post.projectSlug ?? null });
 
   if (container?.kind === "series") {
-    return `${seriesHref(container.slug)}/${post.slug}`;
+    return `${seriesHref(container.slug, locale)}/${post.slug}`;
   }
 
   if (container?.kind === "project") {
-    return `${projectHref(container.slug)}/${post.slug}`;
+    return `${projectHref(container.slug, locale)}/${post.slug}`;
   }
 
-  return `/blog/${post.slug}`;
+  return withLocale(`/blog/${post.slug}`, locale);
 }

@@ -9,7 +9,13 @@
  */
 
 import { validateRevisions } from "../../app/lib/revisions.ts";
-import { basenameOf, declaredTypeMatches, isMisplaced, placementOf } from "./content-tree.ts";
+import {
+  basenameOf,
+  declaredTypeMatches,
+  isMisplaced,
+  localeMatchesTree,
+  placementOf,
+} from "./content-tree.ts";
 import { tagError, type TagVocabulary } from "./tag-vocabulary.ts";
 
 export interface FrontMatterAttributes {
@@ -144,9 +150,9 @@ export function escapeSql(text: string | null | undefined): string {
  * `<slug>.<locale>.md` → slug and Locale; `<slug>.md` → slug alone.
  *
  * Only `en` and `es` are recognised as a Locale. A filename like
- * `post.en-old.md` therefore parses as the slug `post.en-old` with no Locale,
- * which is how a draft ends up silently unpublished — see the Post branch of
- * `contentRowFor`.
+ * `post.en-old.md` therefore parses as the slug `post.en-old` with no Locale —
+ * `localeMatchesTree` is what turns that into a build failure under a tree
+ * that requires one, rather than the silent skip it used to be.
  */
 export function parseContentFilename(
   filename: string,
@@ -292,26 +298,27 @@ export function contentRowFor(
   }
 
   if (attributes.type === "post") {
-    if (!lang) {
-      return { reason: `post ${filename} must have a language in its filename` };
+    // Ahead of the Tag check, deliberately: a file whose suffix the parser
+    // does not recognise — `.en-old.md`, or a mistyped `.se.md` — used to be
+    // absorbed into the Slug and skipped without a word, so its Tags were
+    // never measured against the vocabulary either. Now it fails here, on the
+    // Locale, before anything downstream gets a chance to look at it.
+    if (!localeMatchesTree(placed.tree, lang)) {
+      return {
+        error: `${relativePath} carries no recognised Locale — a file under ${placed.tree}/ must end in .en.md or .es.md`,
+      };
     }
 
-    // Also after the Locale check, and for the same reason: a draft with no
-    // recognised Locale — the `.en-old.md` convention — is never seeded, so it
-    // is never measured against the vocabulary either. That is what leaves
-    // `project-setup.en-old.md` holding the pre-vocabulary spellings without
-    // stopping the build — and what turns renaming it into a build failure,
-    // which is the honest outcome.
     const badTag = tagError(relativePath, attributes.tags, vocabulary);
 
     if (badTag) {
       return { error: badTag };
     }
 
-    // After the Locale check, deliberately: a draft that carries no Locale is
-    // not seeded at all, so the manifest has no reason to list it. A draft
-    // declared with `draft: true`, by contrast, is listed exactly like a
-    // published Part or Field Note — see the check at the end of this branch.
+    // Every file with a recognised Locale reaches this, drafts included: a
+    // Part or a Field Note not listed in its manifest is a mistake whether or
+    // not `draft: true` is set — see the check at the end of this branch for
+    // the one place that flag is actually read.
     if (placed.container !== null && !container) {
       return {
         error: `${relativePath} is not listed in the ${placed.container} manifest — a Part nothing indexes cannot be reached or ordered`,
@@ -339,25 +346,36 @@ export function contentRowFor(
     // never both — which is why the invariant that they are all present or
     // all absent is not checked anywhere: it is not representable.
     //
-    // The position is written twice, once per order column: `container_order`
-    // is the one every query reads, and `section_order` is written beside it,
-    // unread, only because the previously deployed Worker still asks for it by
-    // that name during this publication's migrate-then-deploy window (ADR
-    // 0006's amendment). Dropped, and this duplication with it, once that
-    // publication is confirmed live.
+    // The position is written once, into `container_order`. It was written
+    // twice for one publication: `section_order` carried the same value,
+    // unread, because the Worker deployed while `0006` ran still asked for it
+    // by that name (ADR 0006's amendment). `0007` dropped the column once that
+    // publication was live, and this duplication went with it.
     const containerColumns = !container
-      ? "NULL, NULL, NULL, NULL, NULL"
+      ? "NULL, NULL, NULL, NULL"
       : isPartPlacement(container)
-        ? `${escapeSql(container.seriesSlug)}, ${escapeSql(container.section)}, NULL, ${container.order}, ${container.order}`
-        : `NULL, NULL, ${escapeSql(container.projectSlug)}, ${container.order}, ${container.order}`;
+        ? `${escapeSql(container.seriesSlug)}, ${escapeSql(container.section)}, NULL, ${container.order}`
+        : `NULL, NULL, ${escapeSql(container.projectSlug)}, ${container.order}`;
 
     return {
       statement: `
-INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, project_slug, section_order, container_order, updated_at)
+INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, project_slug, container_order, updated_at)
 VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attributes.description)}, ${publishedAt}, ${escapeSql(attributes.repository)}, ${escapeSql(JSON.stringify(revisions.revisions))}, ${containerColumns}, CURRENT_TIMESTAMP);
 `,
       key: `${slug}:${lang}`,
       tags: tagRowsFor(slug, lang, attributes.tags),
+    };
+  }
+
+  // A Bookmark is a pointer to somebody else's document, not a Translation of
+  // one, so a filename ending `.en.md` or `.es.md` is a mistake rather than a
+  // value nobody reads: it would seed with `lang` set against the partial
+  // unique index that assumes a Bookmark has none (Part 1 of
+  // `evolution-plan/15-phase-3-spanish.md`). Ahead of every other check, the
+  // same way the equivalent check leads the Post branch.
+  if (!localeMatchesTree(placed.tree, lang)) {
+    return {
+      error: `${relativePath} is a Bookmark and its filename carries a Locale suffix ('${lang}') — a Bookmark is a pointer and has no Locale to translate`,
     };
   }
 
@@ -368,11 +386,10 @@ VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attrib
     return { error: `${relativePath} is a Bookmark and cannot carry updates — the body is not here` };
   }
 
-  // A Bookmark has no Locale to hide behind, unlike the `.en-old.md`
-  // convention a Post can use — `draft: true` is the only way one goes
-  // unpublished. The vocabulary covers Bookmarks even though no Tag page
-  // lists them, so the day that question is reopened there is nothing to
-  // clean up first.
+  // `draft: true` is the only way a Bookmark goes unpublished — see the check
+  // at the end of this branch. The vocabulary covers Bookmarks even though no
+  // Tag page lists them, so the day that question is reopened there is
+  // nothing to clean up first.
   const badTag = tagError(relativePath, attributes.tags, vocabulary);
 
   if (badTag) {

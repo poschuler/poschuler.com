@@ -2,6 +2,8 @@ import { Link } from "react-router";
 import { chip } from "~/components/chip";
 import { RevisionHistory, RevisionLine } from "~/components/revisions";
 import { GitHubIcon } from "~/components/ui/brand-icons";
+import { useLocale } from "~/context";
+import { useStrings } from "~/lib/catalog";
 import { tagHref } from "~/lib/hrefs";
 import type { Revision } from "~/lib/revisions";
 import { cn } from "~/lib/utils";
@@ -18,6 +20,8 @@ const lowToneLink = "transition-colors duration-200 hover:text-default";
 
 /** The Post's Tags, each a link to its page. */
 function TagChips({ tags }: { tags: string[] }) {
+  const locale = useLocale();
+
   if (tags.length === 0) {
     return null;
   }
@@ -26,7 +30,7 @@ function TagChips({ tags }: { tags: string[] }) {
     <ul className="flex flex-wrap gap-2">
       {tags.map((tag) => (
         <li key={tag}>
-          <Link to={tagHref(tag)} className={cn(chip, lowToneLink)}>
+          <Link to={tagHref(tag, locale)} className={cn(chip, lowToneLink)}>
             {tag}
           </Link>
         </li>
@@ -69,6 +73,8 @@ export function PostArticle({
   revisions: Revision[];
   html: string;
 }) {
+  const strings = useStrings();
+
   return (
     <article className="prose mx-auto py-8">
       <h1>{title}</h1>
@@ -82,7 +88,7 @@ export function PostArticle({
             rel="noopener noreferrer"
             className={cn("flex items-center gap-2 text-lg text-low no-underline", lowToneLink)}
           >
-            View Github Repository
+            {strings.postArticle.viewGithubRepository}
           </Link>
         </p>
       )}

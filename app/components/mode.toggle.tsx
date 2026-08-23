@@ -1,6 +1,7 @@
 import { Monitor, Moon, Sun } from "lucide-react";
 import { Form, useRouteLoaderData } from "react-router";
 import { Button } from "~/components/ui/button";
+import { useStrings } from "~/lib/catalog";
 import { cn } from "~/lib/utils";
 import type { ColorScheme } from "~/color-scheme-cookie";
 
@@ -30,6 +31,12 @@ export function ModeToggle({ className }: { className?: string }) {
   const current = BY_VALUE[active] ?? SYSTEM;
   const next = NEXT[current.value];
   const { Icon } = current;
+  const strings = useStrings();
+  // `current.value`/`next.value` stay `light`/`dark`/`system` — the cookie's
+  // own vocabulary, posted verbatim by the form below. What is translated is
+  // only the word shown for each, looked up beside the sentence that uses it.
+  const currentLabel = strings.theme.mode[current.value];
+  const nextLabel = strings.theme.mode[next.value];
 
   return (
     <Form
@@ -44,12 +51,10 @@ export function ModeToggle({ className }: { className?: string }) {
         size="icon"
         name="color-scheme"
         value={next.value}
-        title={`Theme: ${current.value} — switch to ${next.value}`}
+        title={strings.theme.tooltip(currentLabel, nextLabel)}
       >
         <Icon className="size-5" />
-        <span className="sr-only">
-          Theme: {current.value}. Switch to {next.value}
-        </span>
+        <span className="sr-only">{strings.theme.srAnnouncement(currentLabel, nextLabel)}</span>
       </Button>
     </Form>
   );

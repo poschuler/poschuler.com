@@ -23,6 +23,13 @@
       "~/*": ["./app/*"]
     },
     "esModuleInterop": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    // `app/lib/hrefs.ts`, `app/lib/seo/alternates.ts` and `app/lib/seo/person.ts`
+    // import each other with a relative `.ts` extension rather than `~/*`
+    // (their own docblocks explain why: `seed/kv/sitemap-routes.ts` imports
+    // `alternates.ts` directly, and Node resolves a plain script's specifiers
+    // exactly as written, with no alias). `noEmit` is already true throughout
+    // this file's chain, which is this flag's only prerequisite.
+    "allowImportingTsExtensions": true
   }
 }

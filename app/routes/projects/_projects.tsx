@@ -1,12 +1,14 @@
-import { Link, useLoaderData, type MetaFunction } from "react-router";
+import { Link, useLoaderData } from "react-router";
 import { chip } from "~/components/chip";
+import { EmptyIndex } from "~/components/empty-index";
 import { LiveLink } from "~/components/live-link";
-import { cloudflareContext } from "~/context";
+import { cloudflareContext, localeContext, LOCALES } from "~/context";
+import { useStrings } from "~/lib/catalog";
+import { projectHref } from "~/lib/hrefs";
 import { skipRevalidationOnThemeChange } from "~/lib/revalidation";
+import { alternateLinks, documentAddresses, emptyIndexRobots } from "~/lib/seo/alternates";
 import { findAllProjects, type ProjectRowType } from "~/models/project.server";
 import type { Route } from "./+types/_projects";
-
-const SITE = "https://poschuler.com";
 
 const PROJECTS_TITLE = "Projects | Paul Osorio Schuler";
 const PROJECTS_DESCRIPTION =
@@ -14,37 +16,49 @@ const PROJECTS_DESCRIPTION =
 
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
-  const projects = await findAllProjects(env.POSCHULER_BD);
+  const locale = context.get(localeContext);
+  const projects = await findAllProjects(env.POSCHULER_BD, locale);
 
-  return { projects };
+  return { projects, locale };
 }
 
 export const shouldRevalidate = skipRevalidationOnThemeChange;
 
-export const meta: MetaFunction = () => {
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+  const addresses = documentAddresses(
+    { kind: "index", path: "/projects" },
+    loaderData.locale,
+    LOCALES,
+  );
+  const { canonical } = addresses;
+
   return [
     { title: PROJECTS_TITLE },
     { name: "description", content: PROJECTS_DESCRIPTION },
-    { tagName: "link", rel: "canonical", href: `${SITE}/projects` },
+    { tagName: "link", rel: "canonical", href: canonical },
+    ...alternateLinks(addresses),
     { property: "og:title", content: PROJECTS_TITLE },
     { property: "og:description", content: PROJECTS_DESCRIPTION },
-    { property: "og:image", content: `${SITE}/og.png` },
+    { property: "og:image", content: "https://poschuler.com/og.png" },
     { property: "og:image:width", content: "1200" },
     { property: "og:image:height", content: "630" },
     { property: "og:image:alt", content: "Paul Osorio Schuler — Senior Backend Engineer" },
     { property: "og:type", content: "website" },
-    { property: "og:url", content: `${SITE}/projects` },
+    { property: "og:url", content: canonical },
+    ...emptyIndexRobots(loaderData.projects.length === 0),
   ];
 };
 
 function ArchivedBadge({ project }: { project: ProjectRowType }) {
+  const strings = useStrings();
+
   if (project.status !== "archived") {
     return null;
   }
 
   return (
     <span className={chip}>
-      Archived
+      {strings.projects.archivedBadge}
     </span>
   );
 }
@@ -56,12 +70,13 @@ function ArchivedBadge({ project }: { project: ProjectRowType }) {
  */
 function Flagship({ project }: { project: ProjectRowType }) {
   const { stack } = project;
+  const strings = useStrings();
 
   return (
     <article className="border-default border-l-2 py-4 pl-4">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h2 className="text-2xl font-semibold tracking-tight">
-          <Link to={`/projects/${project.slug}`} className="hover:text-default">
+          <Link to={projectHref(project.slug, project.lang)} className="hover:text-default">
             {project.title}
           </Link>
         </h2>
@@ -78,10 +93,10 @@ function Flagship({ project }: { project: ProjectRowType }) {
       )}
 
       <Link
-        to={`/projects/${project.slug}`}
+        to={projectHref(project.slug, project.lang)}
         className="mt-4 inline-block font-mono text-sm text-low transition-colors duration-200 hover:text-default"
       >
-        Read the case →
+        {strings.projects.readTheCase}
       </Link>
     </article>
   );
@@ -93,7 +108,7 @@ function Supporting({ project }: { project: ProjectRowType }) {
   return (
     <article className="border-default border-l-2 py-3 pl-4">
       <h2 className="flex flex-wrap items-baseline gap-x-2 text-lg font-semibold">
-        <Link to={`/projects/${project.slug}`} className="hover:text-default">
+        <Link to={projectHref(project.slug, project.lang)} className="hover:text-default">
           {project.title}
         </Link>
         <ArchivedBadge project={project} />
@@ -110,6 +125,7 @@ function Supporting({ project }: { project: ProjectRowType }) {
 
 export default function Projects() {
   const { projects } = useLoaderData<typeof loader>();
+  const strings = useStrings();
 
   const flagship = projects.filter((project) => project.tier === "flagship");
   // Everything that is not the flagship, rather than `tier === 'supporting'`.
@@ -123,30 +139,34 @@ export default function Projects() {
       <section className="w-full">
         <div className="text-center">
           <h1 className="scroll-m-20 text-3xl font-semibold tracking-tight lg:text-4xl mt-8">
-            Projects
+            {strings.projects.heading}
           </h1>
         </div>
 
         <div className="max-w-[450px] mx-auto">
           <blockquote className="text-center mt-2 italic text-low text-lg">
-            Things I have built and run, rather than things I have used
+            {strings.projects.subtitle}
           </blockquote>
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-measure space-y-8">
-        {flagship.map((project) => (
-          <Flagship key={project.idProject} project={project} />
-        ))}
+      {projects.length === 0 ? (
+        <EmptyIndex englishHref="/projects" />
+      ) : (
+        <section className="mx-auto w-full max-w-measure space-y-8">
+          {flagship.map((project) => (
+            <Flagship key={project.idProject} project={project} />
+          ))}
 
-        {rest.length > 0 && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {rest.map((project) => (
-              <Supporting key={project.idProject} project={project} />
-            ))}
-          </div>
-        )}
-      </section>
+          {rest.length > 0 && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {rest.map((project) => (
+                <Supporting key={project.idProject} project={project} />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </main>
   );
 }
