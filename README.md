@@ -152,6 +152,7 @@ upload replaces every payload rather than merging.
 | `pnpm run verify:schema:local` | Check the migration chain arrives at `schema.sql`     |
 | `pnpm run verify:schema:remote` | Check the deployed D1 arrives at `schema.sql`        |
 | `pnpm run d1:migrate:remote` | Apply pending migrations to the deployed D1 (CI does this) |
+| `pnpm run diagrams`      | Re-export the architecture diagrams from `architecture/workspace.json` |
 
 Changing the schema is two files, not one: edit `seed/d1/schema.sql`, then add a
 migration under `seed/d1/migrations/` making the same change. `verify:schema:local`
@@ -175,6 +176,7 @@ seed/             Build-time generators for D1 and KV
 workers/app.ts    The Worker entry point
 tests/            Vitest — unit and integration, never beside the code
 scripts/          Local tooling, including the cold-start smoke test
+architecture/     The C4 model as Structurizr DSL, and the SVGs exported from it
 docs/             Authoring, architecture and design conventions
 docs/adr/         The decisions worth recording, indexed in its own README
 docs/templates/   One front matter template per kind, copied to start a document
@@ -191,6 +193,8 @@ The tests and the cold start do not overlap. The cold start proves the Worker bo
 
 Those checks also assert that the committed fixtures are what the generators produce today. Editing a Markdown file without regenerating used to republish the previous version in silence; now it fails the run instead.
 
+The last step of that job parses `architecture/workspace.dsl`. It runs last because it is the one check whose failure does not mean the site is broken, and it exists because a broken workspace is otherwise *invisible*: Structurizr Lite falls back to the last model it parsed successfully and serves it with a cheerful 200, logging nothing. The exported SVGs are **not** checked — rendering needs a browser, which is a 3.49 GB image, so what CI verifies is the source every diagram is derived from.
+
 On a push to `main`, and only once all of that passes, a second job performs the whole Publication in one place: it confirms the deployed D1 still has the shape `seed/d1/schema.sql` describes, seeds the **deployed** D1 and KV from the committed fixtures, reads both back, builds and deploys the Worker, and finally confirms the version it just uploaded is the one serving traffic. Both seed halves upsert rather than clear-and-rewrite, so running it repeatedly changes nothing and no request ever lands on a half-empty store. It reads `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` from the `production` environment, which only accepts `main`.
 
 The order is the point: the seed, the deploy and the check are one sequence with one owner, and any of them failing fails the run. It used to be two systems — this workflow and Cloudflare's Workers Builds — starting on the same push and never learning about each other. See [ADR 0003](docs/adr/0003-ci-owns-the-deploy-workers-builds-is-off.md).
@@ -202,7 +206,24 @@ The order is the point: the seed, the deploy and the check are one sequence with
 - [`docs/architecture.md`](docs/architecture.md) — runtime shape, the content pipeline, data stores, caching, known defects.
 - [`docs/runbook.md`](docs/runbook.md) — what to do when production is wrong: a failed publication, a rollback and what it does not undo, reverting content, and the symptoms with a known cause.
 - [`docs/design.md`](docs/design.md) — UI and module conventions: color, theming, component layers, data access.
-- [`docs/adr/`](docs/adr/) — the decisions worth recording, and why. Its [index](docs/adr/README.md) lists all eleven with their state, and says which ones were later amended or half superseded.
+- [`docs/adr/`](docs/adr/) — the decisions worth recording, and why. Its [index](docs/adr/README.md) lists all twelve with their state, and says which ones were later amended or half superseded.
+- [`architecture/`](architecture/) — the same system as a C4 model, in Structurizr DSL. Eight views across two tenses: the request path at runtime, and the build and Publication that produce what it serves. The prose above is the authority and the model does not restate it — every description is one line, and where the *why* matters it names an ADR.
+
+### Reading the model
+
+The diagrams are committed under [`architecture/diagrams/`](architecture/diagrams/), a `light/` and a `dark/` set, so they can be read without running anything. To open the model itself:
+
+```bash
+docker compose up -d               # Structurizr Lite on http://localhost:8081
+```
+
+Lite auto-saves `architecture/workspace.json` after every parse, and that file is committed because it carries the hand-placed layout of the one view an algorithm cannot order. It also rewrites a timestamp on every save, so a clone needs one local setting to keep that out of its diffs:
+
+```bash
+git config filter.structurizr.clean "jq -S 'del(.lastModifiedDate)'"
+```
+
+Without it nothing breaks — git simply stores the file unfiltered, and the first save after opening Lite shows a one-line diff that means nothing. `pnpm run diagrams` re-exports both sets; it needs Docker and nothing else, not even a running Lite.
 
 ## Licensing
 
