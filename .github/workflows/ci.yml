@@ -85,6 +85,30 @@ jobs:
       - name: Cold start
         run: bash scripts/smoke-test.sh
 
+      # Last, because it is the one step here whose failure does not mean the
+      # site is broken, and it should not stand between a push and a typecheck
+      # result.
+      #
+      # A broken architecture workspace is not merely unchecked, it is
+      # invisible. Structurizr Lite rewrites `workspace.json` after every
+      # successful parse, and when the DSL *later* fails to parse it falls back
+      # to that file in silence: 200 from the page and from the API, the
+      # last-good model served as if nothing were wrong, and not one line in the
+      # log. So the failure mode is not someone opening it and seeing an error —
+      # it is a model that reads correctly and is no longer the one the DSL
+      # produces. That is the same defect `check:fixtures` above exists to
+      # catch.
+      #
+      # The image is the small one, 431 MB: rendering is what needs a browser,
+      # and this only parses. Pinned for the same reason the exporter is —
+      # the parser is what decides whether this passes.
+      - name: The architecture workspace still parses
+        run: |
+          docker run --rm -u "$(id -u):$(id -g)" \
+            -v "${PWD}/architecture:/ws:ro" \
+            structurizr/structurizr:2026.06.28 \
+            validate -w /ws/workspace.dsl
+
   # One job owns the whole publication: schema, stores, deploy. Splitting it
   # would put the order in `needs:` rather than in a list of steps, and would
   # break the deploy outright — `wrangler deploy` finds the built Worker through
