@@ -18,6 +18,7 @@ The decisions worth recording, and why — each one written when it was made, an
 | [0010](./0010-english-at-the-root-spanish-under-es.md) | English at the root, Spanish under `/es`, one path map for both | Stands |
 | [0011](./0011-the-interface-language-is-a-typed-catalogue.md) | The interface language is a typed catalogue, not an i18n library | Stands |
 | [0012](./0012-the-verifier-shares-the-rules-never-the-rows.md) | The verifier shares the rules, never the rows | Stands |
+| [0013](./0013-the-model-is-the-dsl-the-diagrams-are-generated-never-drawn.md) | The model is the DSL, and the diagrams are generated from it, never drawn | Stands |
 
 ## What changed after the fact
 
@@ -31,6 +32,6 @@ The decisions worth recording, and why — each one written when it was made, an
 
 ## Writing a new one
 
-Number it sequentially and name the file after the decision rather than the area, in the same voice as the title inside it — `0008-a-tag-is-its-slug-and-the-vocabulary-is-declared.md`, not `0008-tags.md`. Then: the decision stated first, in the present tense and in one paragraph; **Considered Options**, each with why it was rejected, including the ones that look obvious in hindsight; and **Consequences**, including the ones that cost something. Ten of the eleven are shaped that way — 0002 argues its alternatives in prose instead, which is the older habit and not the one to copy.
+Number it sequentially and name the file after the decision rather than the area, in the same voice as the title inside it — `0008-a-tag-is-its-slug-and-the-vocabulary-is-declared.md`, not `0008-tags.md`. Then: the decision stated first, in the present tense and in one paragraph; **Considered Options**, each with why it was rejected, including the ones that look obvious in hindsight; and **Consequences**, including the ones that cost something. Twelve of the thirteen are shaped that way — 0002 argues its alternatives in prose instead, which is the older habit and not the one to copy.
 
 Record a decision here when it will outlive the code that implements it, when the obvious alternative was rejected for a reason a reader would not reconstruct, or when it constrains what can be done later — a URL shape, a store, a schema. Not every choice earns one. Add the row above in the same commit, or the index is one more thing that drifts.

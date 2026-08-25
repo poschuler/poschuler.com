@@ -206,7 +206,7 @@ The order is the point: the seed, the deploy and the check are one sequence with
 - [`docs/architecture.md`](docs/architecture.md) — runtime shape, the content pipeline, data stores, caching, known defects.
 - [`docs/runbook.md`](docs/runbook.md) — what to do when production is wrong: a failed publication, a rollback and what it does not undo, reverting content, and the symptoms with a known cause.
 - [`docs/design.md`](docs/design.md) — UI and module conventions: color, theming, component layers, data access.
-- [`docs/adr/`](docs/adr/) — the decisions worth recording, and why. Its [index](docs/adr/README.md) lists all twelve with their state, and says which ones were later amended or half superseded.
+- [`docs/adr/`](docs/adr/) — the decisions worth recording, and why. Its [index](docs/adr/README.md) lists all thirteen with their state, and says which ones were later amended or half superseded.
 - [`architecture/`](architecture/) — the same system as a C4 model, in Structurizr DSL. Eight views across two tenses: the request path at runtime, and the build and Publication that produce what it serves. The prose above is the authority and the model does not restate it — every description is one line, and where the *why* matters it names an ADR.
 
 ### Reading the model
