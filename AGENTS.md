@@ -26,7 +26,9 @@ Two rules hold in every session:
 
 Two directories hold planning material. `/plans/` holds one working document per piece of work Paul is about to do himself — the outline of a post he is writing, the shape of a change before it is a ticket. `/evolution-plan/` holds the long-form plan for where this site is going: positioning, content model, the phases. Both are scaffolding for the person, not a record of the repository.
 
-**Planning material is internal, and it stays internal.** Neither directory is versioned, and nothing that is versioned may reference either one — not a commit body, not a pull request, not an issue, not an ADR, not a docblock, not a test name, not a line of content. A plan is never cited, never quoted, never named. A reader of this repository has no way to tell that one exists, and that is the point. `.gitignore` is the sole exception, and only because naming them there is what keeps them out.
+**Planning material is internal, and it stays internal.** Neither directory is versioned, and nothing that is versioned may reference either one — not a commit body, not a pull request, not an issue, not an ADR, not a docblock, not a test name, not a line of content. A plan is never cited, never quoted, never named. Read anywhere else, this repository gives no sign that one exists, and that is the point.
+
+**Two files break that rule so that it holds.** `.gitignore` names both directories because naming them there is what keeps them out, and this section names them because a rule that cannot say what it forbids is one nobody enforces twice: the next agent to find `/plans/` on disk, having read nothing that rules it out, cites it. Those two are the whole list. Everywhere else the prohibition is absolute.
 
 **An anchor is a ticket.** A commit body cites the issue it implements, never the phase document and part that produced it. Reasoning worth keeping outlives its plan by moving into an ADR, a docblock or the content itself, in its own words — a docblock that has to point at a plan to be understood is a docblock that has not said its piece yet.
 
