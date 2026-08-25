@@ -1,0 +1,2636 @@
+{
+  "configuration": {
+    "scope": "SoftwareSystem"
+  },
+  "description": "The personal site of Paul Osorio Schuler, modelled in the two tenses it lives in: the request it serves, and the build that produces what it serves.",
+  "documentation": {},
+  "id": 1,
+  "model": {
+    "deploymentNodes": [
+      {
+        "children": [
+          {
+            "children": [
+              {
+                "containerInstances": [
+                  {
+                    "containerId": "8",
+                    "environment": "Production",
+                    "id": "123",
+                    "instanceId": 1,
+                    "properties": {
+                      "structurizr.dsl.identifier": "production.cloudflare.zoneNode.isolate.58c34620-2ece-4d6b-b538-60734246069d"
+                    },
+                    "relationships": [
+                      {
+                        "description": "One indexed query per listing, one row per document",
+                        "destinationId": "126",
+                        "id": "127",
+                        "linkedRelationshipId": "57",
+                        "sourceId": "123",
+                        "technology": "SQL over the POSCHULER_BD binding"
+                      },
+                      {
+                        "description": "One read per body, and one for the sitemap",
+                        "destinationId": "129",
+                        "id": "130",
+                        "linkedRelationshipId": "58",
+                        "sourceId": "123",
+                        "technology": "KV get, cacheTtl 3600"
+                      },
+                      {
+                        "description": "Proxies and streams the PDF, and 404s rather than serving an upstream error as one",
+                        "destinationId": "152",
+                        "id": "153",
+                        "linkedRelationshipId": "59",
+                        "sourceId": "123",
+                        "technology": "fetch, cacheTtl 86400"
+                      }
+                    ],
+                    "tags": "Container Instance"
+                  },
+                  {
+                    "containerId": "22",
+                    "environment": "Production",
+                    "id": "124",
+                    "instanceId": 1,
+                    "properties": {
+                      "structurizr.dsl.identifier": "production.cloudflare.zoneNode.isolate.35e4f989-47a6-4f89-989a-220b3d45ec46"
+                    },
+                    "tags": "Container Instance"
+                  }
+                ],
+                "description": "workers_dev is off, so this zone is the only origin that answers.",
+                "environment": "Production",
+                "id": "122",
+                "instances": "1",
+                "name": "Worker isolate",
+                "properties": {
+                  "structurizr.dsl.identifier": "production.cloudflare.zoneNode.isolate"
+                },
+                "tags": "Element,Deployment Node",
+                "technology": "Cloudflare Workers, compatibility date 2025-04-04, nodejs_compat"
+              },
+              {
+                "containerInstances": [
+                  {
+                    "containerId": "20",
+                    "environment": "Production",
+                    "id": "126",
+                    "instanceId": 1,
+                    "properties": {
+                      "structurizr.dsl.identifier": "production.cloudflare.zoneNode.database.cc318c8e-d0b2-453b-9ba8-b71010010b2d"
+                    },
+                    "tags": "Container Instance"
+                  }
+                ],
+                "description": "Bound read-only in practice: no request writes to it.",
+                "environment": "Production",
+                "id": "125",
+                "instances": "1",
+                "name": "POSCHULER_BD",
+                "properties": {
+                  "structurizr.dsl.identifier": "production.cloudflare.zoneNode.database"
+                },
+                "tags": "Element,Deployment Node",
+                "technology": "Cloudflare D1"
+              },
+              {
+                "containerInstances": [
+                  {
+                    "containerId": "21",
+                    "environment": "Production",
+                    "id": "129",
+                    "instanceId": 1,
+                    "properties": {
+                      "structurizr.dsl.identifier": "production.cloudflare.zoneNode.namespace.dd72091e-c822-42b1-ac64-520c7ffbeb14"
+                    },
+                    "tags": "Container Instance"
+                  }
+                ],
+                "description": "Bound read-only in practice, and read through the colo's own cache.",
+                "environment": "Production",
+                "id": "128",
+                "instances": "1",
+                "name": "BLOG_KV",
+                "properties": {
+                  "structurizr.dsl.identifier": "production.cloudflare.zoneNode.namespace"
+                },
+                "tags": "Element,Deployment Node",
+                "technology": "Cloudflare KV"
+              }
+            ],
+            "description": "Bot Fight Mode and AI Crawl Control's managed robots.txt both sit in front of the origin.",
+            "environment": "Production",
+            "id": "121",
+            "instances": "1",
+            "name": "Zone poschuler.com",
+            "properties": {
+              "structurizr.dsl.identifier": "production.cloudflare.zoneNode"
+            },
+            "tags": "Element,Deployment Node",
+            "technology": "Cloudflare zone"
+          }
+        ],
+        "description": "Every colo that answers for this zone.",
+        "environment": "Production",
+        "id": "120",
+        "instances": "1",
+        "name": "Cloudflare global network",
+        "properties": {
+          "structurizr.dsl.identifier": "production.cloudflare"
+        },
+        "tags": "Element,Deployment Node",
+        "technology": "Cloudflare"
+      },
+      {
+        "children": [
+          {
+            "containerInstances": [
+              {
+                "containerId": "38",
+                "environment": "Production",
+                "id": "133",
+                "instanceId": 1,
+                "properties": {
+                  "structurizr.dsl.identifier": "production.runner.productionEnv.804f3296-d42d-4a76-b412-2b6d4aba29a4"
+                },
+                "relationships": [
+                  {
+                    "description": "Builds and deploys it, last, after both stores have been read back",
+                    "destinationId": "123",
+                    "id": "134",
+                    "linkedRelationshipId": "72",
+                    "sourceId": "133",
+                    "technology": "wrangler deploy"
+                  },
+                  {
+                    "description": "Uploads them with the Worker",
+                    "destinationId": "124",
+                    "id": "135",
+                    "linkedRelationshipId": "73",
+                    "sourceId": "133",
+                    "technology": "wrangler deploy"
+                  },
+                  {
+                    "description": "Applies any new migrations, then upserts seed.sql",
+                    "destinationId": "126",
+                    "id": "136",
+                    "linkedRelationshipId": "70",
+                    "sourceId": "133",
+                    "technology": "wrangler d1 migrations apply, wrangler d1 execute --remote"
+                  },
+                  {
+                    "description": "Runs it after the seed and before the store verification",
+                    "destinationId": "137",
+                    "id": "139",
+                    "linkedRelationshipId": "71",
+                    "sourceId": "133",
+                    "technology": "pnpm run kv:upload:remote"
+                  },
+                  {
+                    "description": "Runs it after the migrations and before the seed",
+                    "destinationId": "140",
+                    "id": "142",
+                    "linkedRelationshipId": "74",
+                    "sourceId": "133",
+                    "technology": "pnpm run verify:schema:remote"
+                  },
+                  {
+                    "description": "Runs it after the seed and before the deploy",
+                    "destinationId": "143",
+                    "id": "146",
+                    "linkedRelationshipId": "75",
+                    "sourceId": "133",
+                    "technology": "pnpm run verify:stores:remote"
+                  },
+                  {
+                    "description": "Runs it after the deploy, on the version id wrangler reported",
+                    "destinationId": "148",
+                    "id": "150",
+                    "linkedRelationshipId": "76",
+                    "sourceId": "133",
+                    "technology": "bash scripts/verify-deployment.sh"
+                  }
+                ],
+                "tags": "Container Instance"
+              },
+              {
+                "containerId": "36",
+                "environment": "Production",
+                "id": "137",
+                "instanceId": 1,
+                "properties": {
+                  "structurizr.dsl.identifier": "production.runner.productionEnv.314da558-948b-4494-a5c9-8956d7fdaf2f"
+                },
+                "relationships": [
+                  {
+                    "description": "Replaces every payload in one pass, put before delete",
+                    "destinationId": "129",
+                    "id": "138",
+                    "linkedRelationshipId": "116",
+                    "sourceId": "137",
+                    "technology": "wrangler kv bulk"
+                  }
+                ],
+                "tags": "Container Instance"
+              },
+              {
+                "containerId": "39",
+                "environment": "Production",
+                "id": "140",
+                "instanceId": 1,
+                "properties": {
+                  "structurizr.dsl.identifier": "production.runner.productionEnv.284e7153-06dc-4a82-8302-c4ae16c1a6b7"
+                },
+                "relationships": [
+                  {
+                    "description": "Reads the shape back",
+                    "destinationId": "126",
+                    "id": "141",
+                    "linkedRelationshipId": "77",
+                    "sourceId": "140",
+                    "technology": "wrangler d1 execute"
+                  }
+                ],
+                "tags": "Container Instance"
+              },
+              {
+                "containerId": "40",
+                "environment": "Production",
+                "id": "143",
+                "instanceId": 1,
+                "properties": {
+                  "structurizr.dsl.identifier": "production.runner.productionEnv.d72d29a6-4353-4e62-9a65-b296f3b424d3"
+                },
+                "relationships": [
+                  {
+                    "description": "Reads every row back and compares it against the Markdown",
+                    "destinationId": "126",
+                    "id": "144",
+                    "linkedRelationshipId": "78",
+                    "sourceId": "143",
+                    "technology": "wrangler d1 execute"
+                  },
+                  {
+                    "description": "Reads every payload back and compares it against the Markdown",
+                    "destinationId": "129",
+                    "id": "145",
+                    "linkedRelationshipId": "79",
+                    "sourceId": "143",
+                    "technology": "wrangler kv key get"
+                  },
+                  {
+                    "description": "Shares the key rules and the payload listing, and nothing that builds a row (ADR 0012)",
+                    "destinationId": "137",
+                    "id": "147",
+                    "linkedRelationshipId": "117",
+                    "sourceId": "143",
+                    "technology": "Node"
+                  }
+                ],
+                "tags": "Container Instance"
+              },
+              {
+                "containerId": "42",
+                "environment": "Production",
+                "id": "148",
+                "instanceId": 1,
+                "properties": {
+                  "structurizr.dsl.identifier": "production.runner.productionEnv.a839a77f-8e9e-41f6-8a5c-800786f6b81a"
+                },
+                "relationships": [
+                  {
+                    "description": "Reads back which version is live, and refuses anything but this run's at 100%",
+                    "destinationId": "123",
+                    "id": "149",
+                    "linkedRelationshipId": "81",
+                    "sourceId": "148",
+                    "technology": "Cloudflare API"
+                  }
+                ],
+                "tags": "Container Instance"
+              }
+            ],
+            "description": "Holds CLOUDFLARE_API_TOKEN, scoped to D1:Edit, Workers KV Storage:Edit and Workers Scripts:Edit, and nothing else.",
+            "environment": "Production",
+            "id": "132",
+            "instances": "1",
+            "name": "production environment",
+            "properties": {
+              "structurizr.dsl.identifier": "production.runner.productionEnv"
+            },
+            "tags": "Element,Deployment Node",
+            "technology": "GitHub Environment"
+          }
+        ],
+        "description": "Exists for the length of one Publication, and is the only place that can write to any of the above.",
+        "environment": "Production",
+        "id": "131",
+        "instances": "1",
+        "name": "GitHub-hosted runner",
+        "properties": {
+          "structurizr.dsl.identifier": "production.runner"
+        },
+        "tags": "Element,Deployment Node",
+        "technology": "ubuntu-latest, Node 22, pnpm"
+      },
+      {
+        "description": "Outside both, and the one file this site publishes without building it.",
+        "environment": "Production",
+        "id": "151",
+        "instances": "1",
+        "name": "cdn.poschuler.dev",
+        "properties": {
+          "structurizr.dsl.identifier": "production.origin"
+        },
+        "softwareSystemInstances": [
+          {
+            "environment": "Production",
+            "id": "152",
+            "instanceId": 1,
+            "properties": {
+              "structurizr.dsl.identifier": "production.origin.8f3e2109-b9e1-4b89-973f-04718ff549c1"
+            },
+            "softwareSystemId": "5",
+            "tags": "Software System Instance"
+          }
+        ],
+        "tags": "Element,Deployment Node",
+        "technology": "External origin"
+      }
+    ],
+    "people": [
+      {
+        "description": "Arrives from a search result or a link, and reads in English at / or in Spanish at /es.",
+        "id": "1",
+        "name": "Reader",
+        "properties": {
+          "structurizr.dsl.identifier": "reader"
+        },
+        "relationships": [
+          {
+            "description": "Reads Posts, Bookmarks, the Series and the Resume, in English at / or in Spanish at /es",
+            "destinationId": "7",
+            "id": "43",
+            "sourceId": "1",
+            "tags": "Relationship",
+            "technology": "HTTPS"
+          },
+          {
+            "description": "Reads a page",
+            "destinationId": "9",
+            "id": "52",
+            "sourceId": "1",
+            "tags": "Relationship",
+            "technology": "HTTPS"
+          },
+          {
+            "description": "Reads a page",
+            "destinationId": "8",
+            "id": "53",
+            "linkedRelationshipId": "52",
+            "sourceId": "1",
+            "technology": "HTTPS"
+          },
+          {
+            "description": "Loads the client bundle, the fonts and the images",
+            "destinationId": "22",
+            "id": "54",
+            "sourceId": "1",
+            "tags": "Relationship",
+            "technology": "HTTPS"
+          }
+        ],
+        "tags": "Element,Person,Human"
+      },
+      {
+        "description": "Writes the Markdown, regenerates the committed fixtures, and merges to main.",
+        "id": "2",
+        "name": "Paul",
+        "properties": {
+          "structurizr.dsl.identifier": "paul"
+        },
+        "relationships": [
+          {
+            "description": "Writes the Markdown, and regenerates the fixtures beside it",
+            "destinationId": "7",
+            "id": "45",
+            "sourceId": "2",
+            "tags": "Relationship",
+            "technology": "Markdown in git"
+          },
+          {
+            "description": "Merges to main, which is the Publication",
+            "destinationId": "4",
+            "id": "46",
+            "sourceId": "2",
+            "tags": "Relationship",
+            "technology": "git, gh"
+          },
+          {
+            "description": "Writes every Document under app/content/",
+            "destinationId": "23",
+            "id": "61",
+            "sourceId": "2",
+            "tags": "Relationship",
+            "technology": "Markdown in git"
+          }
+        ],
+        "tags": "Element,Person,Human"
+      }
+    ],
+    "softwareSystems": [
+      {
+        "description": "Read the sitemap, robots.txt, the hreflang set, the JSON-LD and the Open Graph tags.",
+        "documentation": {},
+        "id": "3",
+        "name": "Search and social crawlers",
+        "properties": {
+          "structurizr.dsl.identifier": "crawlers"
+        },
+        "relationships": [
+          {
+            "description": "Fetch the sitemap and robots.txt, and read the hreflang set, the JSON-LD and the Open Graph tags",
+            "destinationId": "7",
+            "id": "44",
+            "sourceId": "3",
+            "tags": "Relationship",
+            "technology": "HTTPS"
+          },
+          {
+            "description": "Fetch /sitemap.xml, /robots.txt and every page's head",
+            "destinationId": "8",
+            "id": "55",
+            "sourceId": "3",
+            "tags": "Relationship",
+            "technology": "HTTPS"
+          }
+        ],
+        "tags": "Element,Software System,External"
+      },
+      {
+        "description": "Holds the repository and runs the workflow that publishes it.",
+        "documentation": {},
+        "id": "4",
+        "name": "GitHub",
+        "properties": {
+          "structurizr.dsl.identifier": "github"
+        },
+        "relationships": [
+          {
+            "description": "Runs the workflow that publishes it, on a push to main and nowhere else",
+            "destinationId": "7",
+            "id": "47",
+            "sourceId": "4",
+            "tags": "Relationship",
+            "technology": "GitHub Actions"
+          },
+          {
+            "description": "Runs it on a push to main, in the production environment",
+            "destinationId": "38",
+            "id": "67",
+            "sourceId": "4",
+            "tags": "Relationship",
+            "technology": "GitHub Actions"
+          },
+          {
+            "description": "Runs it on every push and pull request, before anything is published",
+            "destinationId": "41",
+            "id": "68",
+            "sourceId": "4",
+            "tags": "Relationship",
+            "technology": "GitHub Actions"
+          }
+        ],
+        "tags": "Element,Software System,External"
+      },
+      {
+        "description": "Hosts the one published file this site does not build: the Resume PDF.",
+        "documentation": {},
+        "id": "5",
+        "name": "cdn.poschuler.dev",
+        "properties": {
+          "structurizr.dsl.identifier": "cdn"
+        },
+        "tags": "Element,Software System,External"
+      },
+      {
+        "description": "Bot Fight Mode, AI Crawl Control's managed robots.txt, and the Insights beacon.",
+        "documentation": {},
+        "id": "6",
+        "name": "Cloudflare zone services",
+        "properties": {
+          "structurizr.dsl.identifier": "zone"
+        },
+        "relationships": [
+          {
+            "description": "Fronts every request, and challenges datacentre clients before one arrives",
+            "destinationId": "7",
+            "id": "50",
+            "sourceId": "6",
+            "tags": "Relationship",
+            "technology": "Bot Fight Mode"
+          },
+          {
+            "description": "Serves a robots.txt merged with the origin's, and only when the origin answers 200",
+            "destinationId": "3",
+            "id": "51",
+            "sourceId": "6",
+            "tags": "Relationship",
+            "technology": "AI Crawl Control"
+          },
+          {
+            "description": "Fronts every request, and challenges datacentre clients before one arrives",
+            "destinationId": "8",
+            "id": "56",
+            "sourceId": "6",
+            "tags": "Relationship",
+            "technology": "Bot Fight Mode"
+          }
+        ],
+        "tags": "Element,Software System,External"
+      },
+      {
+        "containers": [
+          {
+            "components": [
+              {
+                "description": "The only entry point, and the one place the per-request context is built.",
+                "documentation": {},
+                "id": "9",
+                "name": "fetch handler",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.worker.fetchHandler"
+                },
+                "relationships": [
+                  {
+                    "description": "Asks it first, because an address that no longer exists has no route to match and no loader to run",
+                    "destinationId": "10",
+                    "id": "82",
+                    "sourceId": "9",
+                    "tags": "Relationship",
+                    "technology": "resolveRedirect"
+                  },
+                  {
+                    "description": "Derives the Locale once, and sets it on the request context",
+                    "destinationId": "12",
+                    "id": "83",
+                    "sourceId": "9",
+                    "tags": "Relationship",
+                    "technology": "deriveLocale"
+                  },
+                  {
+                    "description": "Hands the request over with the context already built",
+                    "destinationId": "13",
+                    "id": "84",
+                    "sourceId": "9",
+                    "tags": "Relationship",
+                    "technology": "createRequestHandler"
+                  },
+                  {
+                    "description": "Hands every response back through it, the 301 included",
+                    "destinationId": "11",
+                    "id": "85",
+                    "sourceId": "9",
+                    "tags": "Relationship",
+                    "technology": "withSecurityHeaders"
+                  }
+                ],
+                "tags": "Element,Component",
+                "technology": "workers/app.ts"
+              },
+              {
+                "description": "Answers a retired address with a 301, before the router is given the chance to miss.",
+                "documentation": {},
+                "id": "10",
+                "name": "redirect table",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.worker.redirects"
+                },
+                "tags": "Element,Component,Extracted for test",
+                "technology": "app/lib/redirects.ts"
+              },
+              {
+                "description": "Rebuilds every response, and mints the CSP nonce in production.",
+                "documentation": {},
+                "id": "11",
+                "name": "security headers",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.worker.securityHeaders"
+                },
+                "tags": "Element,Component,Extracted for test",
+                "technology": "workers/security-headers.ts"
+              },
+              {
+                "description": "Reads the Locale off the path, in exactly one call site.",
+                "documentation": {},
+                "id": "12",
+                "name": "Locale derivation",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.worker.locale"
+                },
+                "tags": "Element,Component",
+                "technology": "app/context.ts"
+              },
+              {
+                "description": "Mounts every route twice, bare and under /es.",
+                "documentation": {},
+                "id": "13",
+                "name": "routes",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.worker.routes"
+                },
+                "relationships": [
+                  {
+                    "description": "Asks a loader's question by name",
+                    "destinationId": "14",
+                    "id": "86",
+                    "sourceId": "13",
+                    "tags": "Relationship",
+                    "technology": "Node"
+                  },
+                  {
+                    "description": "Builds the canonical, the hreflang set and the switcher's destination in meta()",
+                    "destinationId": "16",
+                    "id": "87",
+                    "sourceId": "13",
+                    "tags": "Relationship",
+                    "technology": "Node"
+                  },
+                  {
+                    "description": "Renders robots.txt, the JSON-LD and the Trail",
+                    "destinationId": "17",
+                    "id": "88",
+                    "sourceId": "13",
+                    "tags": "Relationship",
+                    "technology": "Node"
+                  },
+                  {
+                    "description": "Reads every string the Chrome shows",
+                    "destinationId": "18",
+                    "id": "89",
+                    "sourceId": "13",
+                    "tags": "Relationship",
+                    "technology": "Node"
+                  },
+                  {
+                    "description": "Reads the signed preference, and writes it back",
+                    "destinationId": "19",
+                    "id": "90",
+                    "sourceId": "13",
+                    "tags": "Relationship",
+                    "technology": "__Host-poschuler-color-scheme"
+                  },
+                  {
+                    "description": "Reads one body per document, and the sitemap XML the pipeline rendered",
+                    "destinationId": "21",
+                    "id": "91",
+                    "sourceId": "13",
+                    "tags": "Relationship",
+                    "technology": "KV get, cacheTtl 3600"
+                  },
+                  {
+                    "description": "Proxies and streams the PDF, and 404s rather than serving an upstream error as one",
+                    "destinationId": "5",
+                    "id": "92",
+                    "sourceId": "13",
+                    "tags": "Relationship",
+                    "technology": "fetch, cacheTtl 86400"
+                  }
+                ],
+                "tags": "Element,Component",
+                "technology": "app/routes.ts, app/routes/**"
+              },
+              {
+                "description": "Named domain queries, each one taking the Locale as an argument.",
+                "documentation": {},
+                "id": "14",
+                "name": "models",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.worker.models"
+                },
+                "relationships": [
+                  {
+                    "description": "Every query goes through it, with its values bound",
+                    "destinationId": "15",
+                    "id": "93",
+                    "sourceId": "14",
+                    "tags": "Relationship",
+                    "technology": "dbQuery"
+                  }
+                ],
+                "tags": "Element,Component",
+                "technology": "app/models/{content,project,series,tag}.server.ts"
+              },
+              {
+                "description": "The only path to D1, and it binds every value rather than interpolating it.",
+                "documentation": {},
+                "id": "15",
+                "name": "db helper",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.worker.db"
+                },
+                "relationships": [
+                  {
+                    "description": "One indexed query per listing, one row per document",
+                    "destinationId": "20",
+                    "id": "94",
+                    "sourceId": "15",
+                    "tags": "Relationship",
+                    "technology": "SQL over the POSCHULER_BD binding"
+                  }
+                ],
+                "tags": "Element,Component",
+                "technology": "app/db.server.ts"
+              },
+              {
+                "description": "Decides what a document's address is in each Locale, and which one is canonical.",
+                "documentation": {},
+                "id": "16",
+                "name": "address algebra",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.worker.addresses"
+                },
+                "tags": "Element,Component",
+                "technology": "app/lib/hrefs.ts, app/lib/seo/{alternates,switcher}.ts"
+              },
+              {
+                "description": "Renders robots.txt, the JSON-LD and the Trail.",
+                "documentation": {},
+                "id": "17",
+                "name": "SEO renderers",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.worker.seo"
+                },
+                "relationships": [
+                  {
+                    "description": "Takes every address from it, and builds none of its own",
+                    "destinationId": "16",
+                    "id": "95",
+                    "sourceId": "17",
+                    "tags": "Relationship",
+                    "technology": "Node"
+                  }
+                ],
+                "tags": "Element,Component",
+                "technology": "app/lib/seo/{robots,structured-data,person}.ts, app/lib/trail.ts"
+              },
+              {
+                "description": "Holds every string the Chrome shows, typed so that a missing Locale is a compile error (ADR 0011).",
+                "documentation": {},
+                "id": "18",
+                "name": "Chrome catalogue",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.worker.catalog"
+                },
+                "relationships": [
+                  {
+                    "description": "Builds the navigation's addresses in the reader's Locale",
+                    "destinationId": "16",
+                    "id": "96",
+                    "sourceId": "18",
+                    "tags": "Relationship",
+                    "technology": "Node"
+                  }
+                ],
+                "tags": "Element,Component",
+                "technology": "app/lib/catalog.ts"
+              },
+              {
+                "description": "Signs the colour-scheme preference, which is why no HTML this Worker serves is publicly cacheable.",
+                "documentation": {},
+                "id": "19",
+                "name": "colour-scheme cookie",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.worker.colorScheme"
+                },
+                "tags": "Element,Component",
+                "technology": "app/color-scheme-cookie.ts"
+              }
+            ],
+            "description": "Serves every page and resource route at the edge.",
+            "documentation": {},
+            "id": "8",
+            "name": "Worker",
+            "properties": {
+              "structurizr.dsl.identifier": "site.worker"
+            },
+            "relationships": [
+              {
+                "description": "One indexed query per listing, one row per document",
+                "destinationId": "20",
+                "id": "57",
+                "sourceId": "8",
+                "tags": "Relationship",
+                "technology": "SQL over the POSCHULER_BD binding"
+              },
+              {
+                "description": "One read per body, and one for the sitemap",
+                "destinationId": "21",
+                "id": "58",
+                "sourceId": "8",
+                "tags": "Relationship",
+                "technology": "KV get, cacheTtl 3600"
+              },
+              {
+                "description": "Proxies and streams the PDF, and 404s rather than serving an upstream error as one",
+                "destinationId": "5",
+                "id": "59",
+                "sourceId": "8",
+                "tags": "Relationship",
+                "technology": "fetch, cacheTtl 86400"
+              },
+              {
+                "description": "Embeds the Insights beacon, the only third-party origin the CSP allows",
+                "destinationId": "6",
+                "id": "60",
+                "sourceId": "8",
+                "tags": "Relationship",
+                "technology": "script-src"
+              }
+            ],
+            "tags": "Element,Container,Runtime",
+            "technology": "Cloudflare Workers, React Router v8 framework mode, SSR, nodejs_compat"
+          },
+          {
+            "description": "Holds Content Item metadata, and is never written by a request.",
+            "documentation": {},
+            "id": "20",
+            "name": "D1 POSCHULER_BD",
+            "properties": {
+              "structurizr.dsl.identifier": "site.d1"
+            },
+            "tags": "Element,Container,Runtime,Derived store",
+            "technology": "Cloudflare D1 (SQLite), hand-written SQL, no ORM"
+          },
+          {
+            "description": "Holds the rendered body of every published document and the sitemap XML.",
+            "documentation": {},
+            "id": "21",
+            "name": "KV BLOG_KV",
+            "properties": {
+              "structurizr.dsl.identifier": "site.kv"
+            },
+            "tags": "Element,Container,Runtime,Derived store",
+            "technology": "Cloudflare KV, read-only at runtime"
+          },
+          {
+            "description": "The client bundle, the self-hosted fonts, og.png and the portrait.",
+            "documentation": {},
+            "id": "22",
+            "name": "Static assets",
+            "properties": {
+              "structurizr.dsl.identifier": "site.assets"
+            },
+            "tags": "Element,Container,Runtime",
+            "technology": "Cloudflare Workers static assets"
+          },
+          {
+            "description": "The source of truth, and the arbiter of every disagreement (ADR 0001).",
+            "documentation": {},
+            "id": "23",
+            "name": "Content source",
+            "properties": {
+              "structurizr.dsl.identifier": "site.content"
+            },
+            "tags": "Element,Container,Build,Source of truth",
+            "technology": "Markdown in git, app/content/**"
+          },
+          {
+            "components": [
+              {
+                "description": "Reads each file's front matter, checks it against the tree, the Tag vocabulary and the Locale suffix, and writes seed.sql.",
+                "documentation": {},
+                "id": "25",
+                "name": "front matter reader",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.d1Generator.frontMatter"
+                },
+                "relationships": [
+                  {
+                    "description": "Reads the front matter of every file the walker claims",
+                    "destinationId": "23",
+                    "id": "97",
+                    "sourceId": "25",
+                    "tags": "Relationship",
+                    "technology": "Node, front-matter"
+                  },
+                  {
+                    "description": "Asks what each file is, and refuses one no tree claims",
+                    "destinationId": "26",
+                    "id": "98",
+                    "sourceId": "25",
+                    "tags": "Relationship",
+                    "technology": "Node"
+                  },
+                  {
+                    "description": "Hands it a validated Content Item to emit",
+                    "destinationId": "28",
+                    "id": "99",
+                    "sourceId": "25",
+                    "tags": "Relationship",
+                    "technology": "Node"
+                  },
+                  {
+                    "description": "Hands it the Project and Series manifests, and the documents nested under them",
+                    "destinationId": "29",
+                    "id": "100",
+                    "sourceId": "25",
+                    "tags": "Relationship",
+                    "technology": "Node"
+                  },
+                  {
+                    "description": "Writes seed.sql, and treats an empty walk as impossible rather than as empty",
+                    "destinationId": "37",
+                    "id": "101",
+                    "sourceId": "25",
+                    "tags": "Relationship",
+                    "technology": "Node, fs"
+                  }
+                ],
+                "tags": "Element,Component",
+                "technology": "seed/d1/generate-seed-sql.ts, front-matter"
+              },
+              {
+                "description": "Classifies every file by the tree it sits in and the depth it sits at, never by what its front matter claims (ADR 0004).",
+                "documentation": {},
+                "id": "26",
+                "name": "content tree walker",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.d1Generator.treeWalker"
+                },
+                "tags": "Element,Component",
+                "technology": "seed/d1/content-tree.ts"
+              },
+              {
+                "description": "Reads the Series arc and the Project's flat note list, which is the only place order is declared (ADR 0007).",
+                "documentation": {},
+                "id": "27",
+                "name": "manifest reader",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.d1Generator.manifestReader"
+                },
+                "tags": "Element,Component",
+                "technology": "seed/d1/manifest.ts"
+              },
+              {
+                "description": "Turns a classified file into a row, and emits the upserts before the prune, never a DELETE first.",
+                "documentation": {},
+                "id": "28",
+                "name": "SQL emitter",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.d1Generator.sqlEmitter"
+                },
+                "relationships": [
+                  {
+                    "description": "Checks every Tag against the closed set (ADR 0008)",
+                    "destinationId": "30",
+                    "id": "102",
+                    "sourceId": "28",
+                    "tags": "Relationship",
+                    "technology": "Node"
+                  }
+                ],
+                "tags": "Element,Component",
+                "technology": "seed/d1/seed-sql.ts"
+              },
+              {
+                "description": "Emits the Project and Series rows and their sections, reconciling the manifest against the disk.",
+                "documentation": {},
+                "id": "29",
+                "name": "container SQL",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.d1Generator.containerSql"
+                },
+                "relationships": [
+                  {
+                    "description": "Reads the declared arc, and refuses a manifest that contradicts the disk (ADR 0007)",
+                    "destinationId": "27",
+                    "id": "103",
+                    "sourceId": "29",
+                    "tags": "Relationship",
+                    "technology": "Node"
+                  },
+                  {
+                    "description": "Classifies a Container's own file the way a loose one is classified",
+                    "destinationId": "26",
+                    "id": "104",
+                    "sourceId": "29",
+                    "tags": "Relationship",
+                    "technology": "Node"
+                  }
+                ],
+                "tags": "Element,Component",
+                "technology": "seed/d1/{project,series}-sql.ts"
+              },
+              {
+                "description": "Holds the closed set a Tag must belong to, and fails the build for one that is not declared (ADR 0008).",
+                "documentation": {},
+                "id": "30",
+                "name": "Tag vocabulary",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.d1Generator.tagVocabulary"
+                },
+                "tags": "Element,Component",
+                "technology": "seed/d1/tag-vocabulary.ts, app/content/tags.json"
+              }
+            ],
+            "description": "Turns front matter into rows.",
+            "documentation": {},
+            "id": "24",
+            "name": "D1 seed generator",
+            "properties": {
+              "structurizr.dsl.identifier": "site.d1Generator"
+            },
+            "relationships": [
+              {
+                "description": "Reads the front matter of every Document",
+                "destinationId": "23",
+                "id": "62",
+                "sourceId": "24",
+                "tags": "Relationship",
+                "technology": "Node, front-matter"
+              },
+              {
+                "description": "Writes seed.sql, insert before prune, never DELETE first",
+                "destinationId": "37",
+                "id": "63",
+                "sourceId": "24",
+                "tags": "Relationship",
+                "technology": "Node, fs"
+              }
+            ],
+            "tags": "Element,Container,Build",
+            "technology": "Node, front-matter, seed/d1/generate-seed-sql.ts"
+          },
+          {
+            "components": [
+              {
+                "description": "Queries the already-seeded content table to decide what exists, and writes one payload per document.",
+                "documentation": {},
+                "id": "32",
+                "name": "payload writer",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.kvGenerator.payloadWriter"
+                },
+                "relationships": [
+                  {
+                    "description": "Reads the body of every published Document, and a Draft produces nothing (ADR 0009)",
+                    "destinationId": "23",
+                    "id": "105",
+                    "sourceId": "32",
+                    "tags": "Relationship",
+                    "technology": "Node, front-matter"
+                  },
+                  {
+                    "description": "Queries the already-seeded content table to decide what to render, which is why D1 goes first",
+                    "destinationId": "20",
+                    "id": "106",
+                    "sourceId": "32",
+                    "tags": "Relationship",
+                    "technology": "wrangler d1 execute --json"
+                  },
+                  {
+                    "description": "Sends every body through it, and renders none itself",
+                    "destinationId": "33",
+                    "id": "107",
+                    "sourceId": "32",
+                    "tags": "Relationship",
+                    "technology": "Node"
+                  },
+                  {
+                    "description": "Asks it which addresses the sitemap advertises",
+                    "destinationId": "34",
+                    "id": "108",
+                    "sourceId": "32",
+                    "tags": "Relationship",
+                    "technology": "Node"
+                  },
+                  {
+                    "description": "Writes one payload per document, and one for the sitemap",
+                    "destinationId": "37",
+                    "id": "109",
+                    "sourceId": "32",
+                    "tags": "Relationship",
+                    "technology": "Node, fs"
+                  }
+                ],
+                "tags": "Element,Component",
+                "technology": "seed/kv/generate-kv-json.ts"
+              },
+              {
+                "description": "The only place a body can be made safe, because the Worker injects it unexamined and never looks again.",
+                "documentation": {},
+                "id": "33",
+                "name": "Markdown renderer + sanitiser",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.kvGenerator.sanitiser"
+                },
+                "tags": "Element,Component",
+                "technology": "seed/kv/markdown.ts, marked"
+              },
+              {
+                "description": "Decides which addresses the sitemap advertises, and takes the date as an argument so the output is reproducible.",
+                "documentation": {},
+                "id": "34",
+                "name": "sitemap builder",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.kvGenerator.sitemapBuilder"
+                },
+                "relationships": [
+                  {
+                    "description": "Hands it the route list, with the date passed in",
+                    "destinationId": "35",
+                    "id": "110",
+                    "sourceId": "34",
+                    "tags": "Relationship",
+                    "technology": "Node"
+                  },
+                  {
+                    "description": "Builds every address the sitemap carries with the Worker's own algebra, run as a plain Node script",
+                    "destinationId": "16",
+                    "id": "111",
+                    "sourceId": "34",
+                    "tags": "Relationship",
+                    "technology": "Node"
+                  },
+                  {
+                    "description": "Builds every address the sitemap carries with the Worker's own algebra, run as a plain Node script",
+                    "destinationId": "8",
+                    "id": "112",
+                    "linkedRelationshipId": "111",
+                    "sourceId": "34",
+                    "technology": "Node"
+                  }
+                ],
+                "tags": "Element,Component",
+                "technology": "seed/kv/sitemap-routes.ts"
+              },
+              {
+                "description": "Renders the sitemap document, and is the one module under app/lib/seo that the Worker never imports.",
+                "documentation": {},
+                "id": "35",
+                "name": "sitemap XML renderer",
+                "properties": {
+                  "structurizr.dsl.identifier": "site.kvGenerator.sitemapRenderer"
+                },
+                "tags": "Element,Component",
+                "technology": "app/lib/seo/sitemap.ts"
+              }
+            ],
+            "description": "Renders each published body and the sitemap into payloads.",
+            "documentation": {},
+            "id": "31",
+            "name": "KV seed generator",
+            "properties": {
+              "structurizr.dsl.identifier": "site.kvGenerator"
+            },
+            "relationships": [
+              {
+                "description": "Reads the body of every published Document",
+                "destinationId": "23",
+                "id": "64",
+                "sourceId": "31",
+                "tags": "Relationship",
+                "technology": "Node, marked"
+              },
+              {
+                "description": "Queries the already-seeded content table to decide what to render, which is why D1 goes first",
+                "destinationId": "20",
+                "id": "65",
+                "sourceId": "31",
+                "tags": "Relationship",
+                "technology": "wrangler d1 execute --json"
+              },
+              {
+                "description": "Writes one payload per document, and the sitemap",
+                "destinationId": "37",
+                "id": "66",
+                "sourceId": "31",
+                "tags": "Relationship",
+                "technology": "Node, fs"
+              },
+              {
+                "description": "Builds every address the sitemap carries with the Worker's own algebra, run as a plain Node script",
+                "destinationId": "16",
+                "id": "113",
+                "linkedRelationshipId": "111",
+                "sourceId": "31",
+                "technology": "Node"
+              },
+              {
+                "description": "Builds every address the sitemap carries with the Worker's own algebra, run as a plain Node script",
+                "destinationId": "8",
+                "id": "114",
+                "linkedRelationshipId": "111",
+                "sourceId": "31",
+                "technology": "Node"
+              }
+            ],
+            "tags": "Element,Container,Build",
+            "technology": "Node, marked, seed/kv/generate-kv-json.ts"
+          },
+          {
+            "description": "Replaces every payload in one pass, put before delete, so no moment exists in which a document is missing.",
+            "documentation": {},
+            "id": "36",
+            "name": "KV uploader",
+            "properties": {
+              "structurizr.dsl.identifier": "site.kvUploader"
+            },
+            "relationships": [
+              {
+                "description": "Reads every committed payload, and lets the directory it sits in decide its key prefix",
+                "destinationId": "37",
+                "id": "115",
+                "sourceId": "36",
+                "tags": "Relationship",
+                "technology": "Node, fs"
+              },
+              {
+                "description": "Replaces every payload in one pass, put before delete",
+                "destinationId": "21",
+                "id": "116",
+                "sourceId": "36",
+                "tags": "Relationship",
+                "technology": "wrangler kv bulk"
+              }
+            ],
+            "tags": "Element,Container,Build",
+            "technology": "Node, seed/kv/{kv-bulk-upload,kv-keys,payload-files}.ts"
+          },
+          {
+            "description": "The interface between the laptop and the runner.",
+            "documentation": {},
+            "id": "37",
+            "name": "Committed fixtures",
+            "properties": {
+              "structurizr.dsl.identifier": "site.fixtures"
+            },
+            "tags": "Element,Container,Build",
+            "technology": "seed/d1/seed.sql, seed/kv/kv_payloads/"
+          },
+          {
+            "description": "Owns the whole Publication, in order, in one job (ADR 0003).",
+            "documentation": {},
+            "id": "38",
+            "name": "Publish job",
+            "properties": {
+              "structurizr.dsl.identifier": "site.publishJob"
+            },
+            "relationships": [
+              {
+                "description": "Uploads them exactly as git holds them, and never regenerates them",
+                "destinationId": "37",
+                "id": "69",
+                "sourceId": "38",
+                "tags": "Relationship",
+                "technology": "actions/checkout"
+              },
+              {
+                "description": "Applies any new migrations, then upserts seed.sql",
+                "destinationId": "20",
+                "id": "70",
+                "sourceId": "38",
+                "tags": "Relationship",
+                "technology": "wrangler d1 migrations apply, wrangler d1 execute --remote"
+              },
+              {
+                "description": "Runs it after the seed and before the store verification",
+                "destinationId": "36",
+                "id": "71",
+                "sourceId": "38",
+                "tags": "Relationship",
+                "technology": "pnpm run kv:upload:remote"
+              },
+              {
+                "description": "Builds and deploys it, last, after both stores have been read back",
+                "destinationId": "8",
+                "id": "72",
+                "sourceId": "38",
+                "tags": "Relationship",
+                "technology": "wrangler deploy"
+              },
+              {
+                "description": "Uploads them with the Worker",
+                "destinationId": "22",
+                "id": "73",
+                "sourceId": "38",
+                "tags": "Relationship",
+                "technology": "wrangler deploy"
+              },
+              {
+                "description": "Runs it after the migrations and before the seed",
+                "destinationId": "39",
+                "id": "74",
+                "sourceId": "38",
+                "tags": "Relationship",
+                "technology": "pnpm run verify:schema:remote"
+              },
+              {
+                "description": "Runs it after the seed and before the deploy",
+                "destinationId": "40",
+                "id": "75",
+                "sourceId": "38",
+                "tags": "Relationship",
+                "technology": "pnpm run verify:stores:remote"
+              },
+              {
+                "description": "Runs it after the deploy, on the version id wrangler reported",
+                "destinationId": "42",
+                "id": "76",
+                "sourceId": "38",
+                "tags": "Relationship",
+                "technology": "bash scripts/verify-deployment.sh"
+              }
+            ],
+            "tags": "Element,Container,Build",
+            "technology": "GitHub Actions, .github/workflows/ci.yml"
+          },
+          {
+            "description": "Asks whether the migration chain arrives at the shape schema.sql declares (ADR 0006).",
+            "documentation": {},
+            "id": "39",
+            "name": "Schema verifier",
+            "properties": {
+              "structurizr.dsl.identifier": "site.schemaVerifier"
+            },
+            "relationships": [
+              {
+                "description": "Reads the shape back",
+                "destinationId": "20",
+                "id": "77",
+                "sourceId": "39",
+                "tags": "Relationship",
+                "technology": "wrangler d1 execute"
+              }
+            ],
+            "tags": "Element,Container,Build,Verifier",
+            "technology": "Node, seed/verify-schema.ts"
+          },
+          {
+            "description": "Asks whether the stores hold what the Markdown says (ADR 0012).",
+            "documentation": {},
+            "id": "40",
+            "name": "Store verifier",
+            "properties": {
+              "structurizr.dsl.identifier": "site.storeVerifier"
+            },
+            "relationships": [
+              {
+                "description": "Reads every row back and compares it against the Markdown",
+                "destinationId": "20",
+                "id": "78",
+                "sourceId": "40",
+                "tags": "Relationship",
+                "technology": "wrangler d1 execute"
+              },
+              {
+                "description": "Reads every payload back and compares it against the Markdown",
+                "destinationId": "21",
+                "id": "79",
+                "sourceId": "40",
+                "tags": "Relationship",
+                "technology": "wrangler kv key get"
+              },
+              {
+                "description": "Shares the key rules and the payload listing, and nothing that builds a row (ADR 0012)",
+                "destinationId": "36",
+                "id": "117",
+                "sourceId": "40",
+                "tags": "Relationship",
+                "technology": "Node"
+              },
+              {
+                "description": "Shares the pure classification rules, and never a row builder (ADR 0012)",
+                "destinationId": "26",
+                "id": "118",
+                "sourceId": "40",
+                "tags": "Relationship",
+                "technology": "Node"
+              },
+              {
+                "description": "Shares the pure classification rules, and never a row builder (ADR 0012)",
+                "destinationId": "24",
+                "id": "119",
+                "linkedRelationshipId": "118",
+                "sourceId": "40",
+                "technology": "Node"
+              }
+            ],
+            "tags": "Element,Container,Build,Verifier",
+            "technology": "Node, seed/verify-stores.ts"
+          },
+          {
+            "description": "Asks whether the committed fixtures are what the generators produce today.",
+            "documentation": {},
+            "id": "41",
+            "name": "Fixture verifier",
+            "properties": {
+              "structurizr.dsl.identifier": "site.fixtureVerifier"
+            },
+            "relationships": [
+              {
+                "description": "Runs both generators and asks whether git already holds their output",
+                "destinationId": "37",
+                "id": "80",
+                "sourceId": "41",
+                "tags": "Relationship",
+                "technology": "git status --porcelain"
+              }
+            ],
+            "tags": "Element,Container,Build,Verifier",
+            "technology": "Bash, scripts/check-generated-fixtures.sh"
+          },
+          {
+            "description": "Asks whether the version this run uploaded is the version serving.",
+            "documentation": {},
+            "id": "42",
+            "name": "Deployment verifier",
+            "properties": {
+              "structurizr.dsl.identifier": "site.deploymentVerifier"
+            },
+            "relationships": [
+              {
+                "description": "Reads back which version is live, and refuses anything but this run's at 100%",
+                "destinationId": "8",
+                "id": "81",
+                "sourceId": "42",
+                "tags": "Relationship",
+                "technology": "Cloudflare API"
+              }
+            ],
+            "tags": "Element,Container,Build,Verifier",
+            "technology": "Bash, scripts/verify-deployment.sh"
+          }
+        ],
+        "description": "Serves every page in both Locales from stores derived from Markdown in git.",
+        "documentation": {},
+        "id": "7",
+        "name": "poschuler.com",
+        "properties": {
+          "structurizr.dsl.identifier": "site"
+        },
+        "relationships": [
+          {
+            "description": "Proxies the Resume PDF",
+            "destinationId": "5",
+            "id": "48",
+            "sourceId": "7",
+            "tags": "Relationship",
+            "technology": "HTTPS"
+          },
+          {
+            "description": "Embeds the Insights beacon",
+            "destinationId": "6",
+            "id": "49",
+            "sourceId": "7",
+            "tags": "Relationship",
+            "technology": "script-src"
+          }
+        ],
+        "tags": "Element,Software System"
+      }
+    ]
+  },
+  "name": "poschuler.com",
+  "properties": {
+    "structurizr.dsl": "d29ya3NwYWNlICJwb3NjaHVsZXIuY29tIiAiVGhlIHBlcnNvbmFsIHNpdGUgb2YgUGF1bCBPc29yaW8gU2NodWxlciwgbW9kZWxsZWQgaW4gdGhlIHR3byB0ZW5zZXMgaXQgbGl2ZXMgaW46IHRoZSByZXF1ZXN0IGl0IHNlcnZlcywgYW5kIHRoZSBidWlsZCB0aGF0IHByb2R1Y2VzIHdoYXQgaXQgc2VydmVzLiIgewoKICAgICFpZGVudGlmaWVycyBoaWVyYXJjaGljYWwKICAgICFpbXBsaWVkUmVsYXRpb25zaGlwcyB0cnVlCgogICAgbW9kZWwgewogICAgICAgIHJlYWRlciA9IHBlcnNvbiAiUmVhZGVyIiAiQXJyaXZlcyBmcm9tIGEgc2VhcmNoIHJlc3VsdCBvciBhIGxpbmssIGFuZCByZWFkcyBpbiBFbmdsaXNoIGF0IC8gb3IgaW4gU3BhbmlzaCBhdCAvZXMuIiAiSHVtYW4iCiAgICAgICAgcGF1bCA9IHBlcnNvbiAiUGF1bCIgIldyaXRlcyB0aGUgTWFya2Rvd24sIHJlZ2VuZXJhdGVzIHRoZSBjb21taXR0ZWQgZml4dHVyZXMsIGFuZCBtZXJnZXMgdG8gbWFpbi4iICJIdW1hbiIKCiAgICAgICAgY3Jhd2xlcnMgPSBzb2Z0d2FyZVN5c3RlbSAiU2VhcmNoIGFuZCBzb2NpYWwgY3Jhd2xlcnMiICJSZWFkIHRoZSBzaXRlbWFwLCByb2JvdHMudHh0LCB0aGUgaHJlZmxhbmcgc2V0LCB0aGUgSlNPTi1MRCBhbmQgdGhlIE9wZW4gR3JhcGggdGFncy4iICJFeHRlcm5hbCIKICAgICAgICBnaXRodWIgPSBzb2Z0d2FyZVN5c3RlbSAiR2l0SHViIiAiSG9sZHMgdGhlIHJlcG9zaXRvcnkgYW5kIHJ1bnMgdGhlIHdvcmtmbG93IHRoYXQgcHVibGlzaGVzIGl0LiIgIkV4dGVybmFsIgogICAgICAgIGNkbiA9IHNvZnR3YXJlU3lzdGVtICJjZG4ucG9zY2h1bGVyLmRldiIgIkhvc3RzIHRoZSBvbmUgcHVibGlzaGVkIGZpbGUgdGhpcyBzaXRlIGRvZXMgbm90IGJ1aWxkOiB0aGUgUmVzdW1lIFBERi4iICJFeHRlcm5hbCIKICAgICAgICB6b25lID0gc29mdHdhcmVTeXN0ZW0gIkNsb3VkZmxhcmUgem9uZSBzZXJ2aWNlcyIgIkJvdCBGaWdodCBNb2RlLCBBSSBDcmF3bCBDb250cm9sJ3MgbWFuYWdlZCByb2JvdHMudHh0LCBhbmQgdGhlIEluc2lnaHRzIGJlYWNvbi4iICJFeHRlcm5hbCIKCiAgICAgICAgc2l0ZSA9IHNvZnR3YXJlU3lzdGVtICJwb3NjaHVsZXIuY29tIiAiU2VydmVzIGV2ZXJ5IHBhZ2UgaW4gYm90aCBMb2NhbGVzIGZyb20gc3RvcmVzIGRlcml2ZWQgZnJvbSBNYXJrZG93biBpbiBnaXQuIiB7CgogICAgICAgICAgICB3b3JrZXIgPSBjb250YWluZXIgIldvcmtlciIgIlNlcnZlcyBldmVyeSBwYWdlIGFuZCByZXNvdXJjZSByb3V0ZSBhdCB0aGUgZWRnZS4iICJDbG91ZGZsYXJlIFdvcmtlcnMsIFJlYWN0IFJvdXRlciB2OCBmcmFtZXdvcmsgbW9kZSwgU1NSLCBub2RlanNfY29tcGF0IiAiUnVudGltZSIgewogICAgICAgICAgICAgICAgZmV0Y2hIYW5kbGVyID0gY29tcG9uZW50ICJmZXRjaCBoYW5kbGVyIiAiVGhlIG9ubHkgZW50cnkgcG9pbnQsIGFuZCB0aGUgb25lIHBsYWNlIHRoZSBwZXItcmVxdWVzdCBjb250ZXh0IGlzIGJ1aWx0LiIgIndvcmtlcnMvYXBwLnRzIgogICAgICAgICAgICAgICAgcmVkaXJlY3RzID0gY29tcG9uZW50ICJyZWRpcmVjdCB0YWJsZSIgIkFuc3dlcnMgYSByZXRpcmVkIGFkZHJlc3Mgd2l0aCBhIDMwMSwgYmVmb3JlIHRoZSByb3V0ZXIgaXMgZ2l2ZW4gdGhlIGNoYW5jZSB0byBtaXNzLiIgImFwcC9saWIvcmVkaXJlY3RzLnRzIiAiRXh0cmFjdGVkIGZvciB0ZXN0IgogICAgICAgICAgICAgICAgc2VjdXJpdHlIZWFkZXJzID0gY29tcG9uZW50ICJzZWN1cml0eSBoZWFkZXJzIiAiUmVidWlsZHMgZXZlcnkgcmVzcG9uc2UsIGFuZCBtaW50cyB0aGUgQ1NQIG5vbmNlIGluIHByb2R1Y3Rpb24uIiAid29ya2Vycy9zZWN1cml0eS1oZWFkZXJzLnRzIiAiRXh0cmFjdGVkIGZvciB0ZXN0IgogICAgICAgICAgICAgICAgbG9jYWxlID0gY29tcG9uZW50ICJMb2NhbGUgZGVyaXZhdGlvbiIgIlJlYWRzIHRoZSBMb2NhbGUgb2ZmIHRoZSBwYXRoLCBpbiBleGFjdGx5IG9uZSBjYWxsIHNpdGUuIiAiYXBwL2NvbnRleHQudHMiCiAgICAgICAgICAgICAgICByb3V0ZXMgPSBjb21wb25lbnQgInJvdXRlcyIgIk1vdW50cyBldmVyeSByb3V0ZSB0d2ljZSwgYmFyZSBhbmQgdW5kZXIgL2VzLiIgImFwcC9yb3V0ZXMudHMsIGFwcC9yb3V0ZXMvKioiCiAgICAgICAgICAgICAgICBtb2RlbHMgPSBjb21wb25lbnQgIm1vZGVscyIgIk5hbWVkIGRvbWFpbiBxdWVyaWVzLCBlYWNoIG9uZSB0YWtpbmcgdGhlIExvY2FsZSBhcyBhbiBhcmd1bWVudC4iICJhcHAvbW9kZWxzL3tjb250ZW50LHByb2plY3Qsc2VyaWVzLHRhZ30uc2VydmVyLnRzIgogICAgICAgICAgICAgICAgZGIgPSBjb21wb25lbnQgImRiIGhlbHBlciIgIlRoZSBvbmx5IHBhdGggdG8gRDEsIGFuZCBpdCBiaW5kcyBldmVyeSB2YWx1ZSByYXRoZXIgdGhhbiBpbnRlcnBvbGF0aW5nIGl0LiIgImFwcC9kYi5zZXJ2ZXIudHMiCiAgICAgICAgICAgICAgICBhZGRyZXNzZXMgPSBjb21wb25lbnQgImFkZHJlc3MgYWxnZWJyYSIgIkRlY2lkZXMgd2hhdCBhIGRvY3VtZW50J3MgYWRkcmVzcyBpcyBpbiBlYWNoIExvY2FsZSwgYW5kIHdoaWNoIG9uZSBpcyBjYW5vbmljYWwuIiAiYXBwL2xpYi9ocmVmcy50cywgYXBwL2xpYi9zZW8ve2FsdGVybmF0ZXMsc3dpdGNoZXJ9LnRzIgogICAgICAgICAgICAgICAgc2VvID0gY29tcG9uZW50ICJTRU8gcmVuZGVyZXJzIiAiUmVuZGVycyByb2JvdHMudHh0LCB0aGUgSlNPTi1MRCBhbmQgdGhlIFRyYWlsLiIgImFwcC9saWIvc2VvL3tyb2JvdHMsc3RydWN0dXJlZC1kYXRhLHBlcnNvbn0udHMsIGFwcC9saWIvdHJhaWwudHMiCiAgICAgICAgICAgICAgICBjYXRhbG9nID0gY29tcG9uZW50ICJDaHJvbWUgY2F0YWxvZ3VlIiAiSG9sZHMgZXZlcnkgc3RyaW5nIHRoZSBDaHJvbWUgc2hvd3MsIHR5cGVkIHNvIHRoYXQgYSBtaXNzaW5nIExvY2FsZSBpcyBhIGNvbXBpbGUgZXJyb3IgKEFEUiAwMDExKS4iICJhcHAvbGliL2NhdGFsb2cudHMiCiAgICAgICAgICAgICAgICBjb2xvclNjaGVtZSA9IGNvbXBvbmVudCAiY29sb3VyLXNjaGVtZSBjb29raWUiICJTaWducyB0aGUgY29sb3VyLXNjaGVtZSBwcmVmZXJlbmNlLCB3aGljaCBpcyB3aHkgbm8gSFRNTCB0aGlzIFdvcmtlciBzZXJ2ZXMgaXMgcHVibGljbHkgY2FjaGVhYmxlLiIgImFwcC9jb2xvci1zY2hlbWUtY29va2llLnRzIgogICAgICAgICAgICB9CiAgICAgICAgICAgIGQxID0gY29udGFpbmVyICJEMSBQT1NDSFVMRVJfQkQiICJIb2xkcyBDb250ZW50IEl0ZW0gbWV0YWRhdGEsIGFuZCBpcyBuZXZlciB3cml0dGVuIGJ5IGEgcmVxdWVzdC4iICJDbG91ZGZsYXJlIEQxIChTUUxpdGUpLCBoYW5kLXdyaXR0ZW4gU1FMLCBubyBPUk0iICJSdW50aW1lLERlcml2ZWQgc3RvcmUiCiAgICAgICAgICAgIGt2ID0gY29udGFpbmVyICJLViBCTE9HX0tWIiAiSG9sZHMgdGhlIHJlbmRlcmVkIGJvZHkgb2YgZXZlcnkgcHVibGlzaGVkIGRvY3VtZW50IGFuZCB0aGUgc2l0ZW1hcCBYTUwuIiAiQ2xvdWRmbGFyZSBLViwgcmVhZC1vbmx5IGF0IHJ1bnRpbWUiICJSdW50aW1lLERlcml2ZWQgc3RvcmUiCiAgICAgICAgICAgIGFzc2V0cyA9IGNvbnRhaW5lciAiU3RhdGljIGFzc2V0cyIgIlRoZSBjbGllbnQgYnVuZGxlLCB0aGUgc2VsZi1ob3N0ZWQgZm9udHMsIG9nLnBuZyBhbmQgdGhlIHBvcnRyYWl0LiIgIkNsb3VkZmxhcmUgV29ya2VycyBzdGF0aWMgYXNzZXRzIiAiUnVudGltZSIKCiAgICAgICAgICAgIGNvbnRlbnQgPSBjb250YWluZXIgIkNvbnRlbnQgc291cmNlIiAiVGhlIHNvdXJjZSBvZiB0cnV0aCwgYW5kIHRoZSBhcmJpdGVyIG9mIGV2ZXJ5IGRpc2FncmVlbWVudCAoQURSIDAwMDEpLiIgIk1hcmtkb3duIGluIGdpdCwgYXBwL2NvbnRlbnQvKioiICJCdWlsZCxTb3VyY2Ugb2YgdHJ1dGgiCiAgICAgICAgICAgIGQxR2VuZXJhdG9yID0gY29udGFpbmVyICJEMSBzZWVkIGdlbmVyYXRvciIgIlR1cm5zIGZyb250IG1hdHRlciBpbnRvIHJvd3MuIiAiTm9kZSwgZnJvbnQtbWF0dGVyLCBzZWVkL2QxL2dlbmVyYXRlLXNlZWQtc3FsLnRzIiAiQnVpbGQiIHsKICAgICAgICAgICAgICAgIGZyb250TWF0dGVyID0gY29tcG9uZW50ICJmcm9udCBtYXR0ZXIgcmVhZGVyIiAiUmVhZHMgZWFjaCBmaWxlJ3MgZnJvbnQgbWF0dGVyLCBjaGVja3MgaXQgYWdhaW5zdCB0aGUgdHJlZSwgdGhlIFRhZyB2b2NhYnVsYXJ5IGFuZCB0aGUgTG9jYWxlIHN1ZmZpeCwgYW5kIHdyaXRlcyBzZWVkLnNxbC4iICJzZWVkL2QxL2dlbmVyYXRlLXNlZWQtc3FsLnRzLCBmcm9udC1tYXR0ZXIiCiAgICAgICAgICAgICAgICB0cmVlV2Fsa2VyID0gY29tcG9uZW50ICJjb250ZW50IHRyZWUgd2Fsa2VyIiAiQ2xhc3NpZmllcyBldmVyeSBmaWxlIGJ5IHRoZSB0cmVlIGl0IHNpdHMgaW4gYW5kIHRoZSBkZXB0aCBpdCBzaXRzIGF0LCBuZXZlciBieSB3aGF0IGl0cyBmcm9udCBtYXR0ZXIgY2xhaW1zIChBRFIgMDAwNCkuIiAic2VlZC9kMS9jb250ZW50LXRyZWUudHMiCiAgICAgICAgICAgICAgICBtYW5pZmVzdFJlYWRlciA9IGNvbXBvbmVudCAibWFuaWZlc3QgcmVhZGVyIiAiUmVhZHMgdGhlIFNlcmllcyBhcmMgYW5kIHRoZSBQcm9qZWN0J3MgZmxhdCBub3RlIGxpc3QsIHdoaWNoIGlzIHRoZSBvbmx5IHBsYWNlIG9yZGVyIGlzIGRlY2xhcmVkIChBRFIgMDAwNykuIiAic2VlZC9kMS9tYW5pZmVzdC50cyIKICAgICAgICAgICAgICAgIHNxbEVtaXR0ZXIgPSBjb21wb25lbnQgIlNRTCBlbWl0dGVyIiAiVHVybnMgYSBjbGFzc2lmaWVkIGZpbGUgaW50byBhIHJvdywgYW5kIGVtaXRzIHRoZSB1cHNlcnRzIGJlZm9yZSB0aGUgcHJ1bmUsIG5ldmVyIGEgREVMRVRFIGZpcnN0LiIgInNlZWQvZDEvc2VlZC1zcWwudHMiCiAgICAgICAgICAgICAgICBjb250YWluZXJTcWwgPSBjb21wb25lbnQgImNvbnRhaW5lciBTUUwiICJFbWl0cyB0aGUgUHJvamVjdCBhbmQgU2VyaWVzIHJvd3MgYW5kIHRoZWlyIHNlY3Rpb25zLCByZWNvbmNpbGluZyB0aGUgbWFuaWZlc3QgYWdhaW5zdCB0aGUgZGlzay4iICJzZWVkL2QxL3twcm9qZWN0LHNlcmllc30tc3FsLnRzIgogICAgICAgICAgICAgICAgdGFnVm9jYWJ1bGFyeSA9IGNvbXBvbmVudCAiVGFnIHZvY2FidWxhcnkiICJIb2xkcyB0aGUgY2xvc2VkIHNldCBhIFRhZyBtdXN0IGJlbG9uZyB0bywgYW5kIGZhaWxzIHRoZSBidWlsZCBmb3Igb25lIHRoYXQgaXMgbm90IGRlY2xhcmVkIChBRFIgMDAwOCkuIiAic2VlZC9kMS90YWctdm9jYWJ1bGFyeS50cywgYXBwL2NvbnRlbnQvdGFncy5qc29uIgogICAgICAgICAgICB9CiAgICAgICAgICAgIGt2R2VuZXJhdG9yID0gY29udGFpbmVyICJLViBzZWVkIGdlbmVyYXRvciIgIlJlbmRlcnMgZWFjaCBwdWJsaXNoZWQgYm9keSBhbmQgdGhlIHNpdGVtYXAgaW50byBwYXlsb2Fkcy4iICJOb2RlLCBtYXJrZWQsIHNlZWQva3YvZ2VuZXJhdGUta3YtanNvbi50cyIgIkJ1aWxkIiB7CiAgICAgICAgICAgICAgICBwYXlsb2FkV3JpdGVyID0gY29tcG9uZW50ICJwYXlsb2FkIHdyaXRlciIgIlF1ZXJpZXMgdGhlIGFscmVhZHktc2VlZGVkIGNvbnRlbnQgdGFibGUgdG8gZGVjaWRlIHdoYXQgZXhpc3RzLCBhbmQgd3JpdGVzIG9uZSBwYXlsb2FkIHBlciBkb2N1bWVudC4iICJzZWVkL2t2L2dlbmVyYXRlLWt2LWpzb24udHMiCiAgICAgICAgICAgICAgICBzYW5pdGlzZXIgPSBjb21wb25lbnQgIk1hcmtkb3duIHJlbmRlcmVyICsgc2FuaXRpc2VyIiAiVGhlIG9ubHkgcGxhY2UgYSBib2R5IGNhbiBiZSBtYWRlIHNhZmUsIGJlY2F1c2UgdGhlIFdvcmtlciBpbmplY3RzIGl0IHVuZXhhbWluZWQgYW5kIG5ldmVyIGxvb2tzIGFnYWluLiIgInNlZWQva3YvbWFya2Rvd24udHMsIG1hcmtlZCIKICAgICAgICAgICAgICAgIHNpdGVtYXBCdWlsZGVyID0gY29tcG9uZW50ICJzaXRlbWFwIGJ1aWxkZXIiICJEZWNpZGVzIHdoaWNoIGFkZHJlc3NlcyB0aGUgc2l0ZW1hcCBhZHZlcnRpc2VzLCBhbmQgdGFrZXMgdGhlIGRhdGUgYXMgYW4gYXJndW1lbnQgc28gdGhlIG91dHB1dCBpcyByZXByb2R1Y2libGUuIiAic2VlZC9rdi9zaXRlbWFwLXJvdXRlcy50cyIKICAgICAgICAgICAgICAgIHNpdGVtYXBSZW5kZXJlciA9IGNvbXBvbmVudCAic2l0ZW1hcCBYTUwgcmVuZGVyZXIiICJSZW5kZXJzIHRoZSBzaXRlbWFwIGRvY3VtZW50LCBhbmQgaXMgdGhlIG9uZSBtb2R1bGUgdW5kZXIgYXBwL2xpYi9zZW8gdGhhdCB0aGUgV29ya2VyIG5ldmVyIGltcG9ydHMuIiAiYXBwL2xpYi9zZW8vc2l0ZW1hcC50cyIKICAgICAgICAgICAgfQogICAgICAgICAgICBrdlVwbG9hZGVyID0gY29udGFpbmVyICJLViB1cGxvYWRlciIgIlJlcGxhY2VzIGV2ZXJ5IHBheWxvYWQgaW4gb25lIHBhc3MsIHB1dCBiZWZvcmUgZGVsZXRlLCBzbyBubyBtb21lbnQgZXhpc3RzIGluIHdoaWNoIGEgZG9jdW1lbnQgaXMgbWlzc2luZy4iICJOb2RlLCBzZWVkL2t2L3trdi1idWxrLXVwbG9hZCxrdi1rZXlzLHBheWxvYWQtZmlsZXN9LnRzIiAiQnVpbGQiCiAgICAgICAgICAgIGZpeHR1cmVzID0gY29udGFpbmVyICJDb21taXR0ZWQgZml4dHVyZXMiICJUaGUgaW50ZXJmYWNlIGJldHdlZW4gdGhlIGxhcHRvcCBhbmQgdGhlIHJ1bm5lci4iICJzZWVkL2QxL3NlZWQuc3FsLCBzZWVkL2t2L2t2X3BheWxvYWRzLyIgIkJ1aWxkIgogICAgICAgICAgICBwdWJsaXNoSm9iID0gY29udGFpbmVyICJQdWJsaXNoIGpvYiIgIk93bnMgdGhlIHdob2xlIFB1YmxpY2F0aW9uLCBpbiBvcmRlciwgaW4gb25lIGpvYiAoQURSIDAwMDMpLiIgIkdpdEh1YiBBY3Rpb25zLCAuZ2l0aHViL3dvcmtmbG93cy9jaS55bWwiICJCdWlsZCIKCiAgICAgICAgICAgIHNjaGVtYVZlcmlmaWVyID0gY29udGFpbmVyICJTY2hlbWEgdmVyaWZpZXIiICJBc2tzIHdoZXRoZXIgdGhlIG1pZ3JhdGlvbiBjaGFpbiBhcnJpdmVzIGF0IHRoZSBzaGFwZSBzY2hlbWEuc3FsIGRlY2xhcmVzIChBRFIgMDAwNikuIiAiTm9kZSwgc2VlZC92ZXJpZnktc2NoZW1hLnRzIiAiQnVpbGQsVmVyaWZpZXIiCiAgICAgICAgICAgIHN0b3JlVmVyaWZpZXIgPSBjb250YWluZXIgIlN0b3JlIHZlcmlmaWVyIiAiQXNrcyB3aGV0aGVyIHRoZSBzdG9yZXMgaG9sZCB3aGF0IHRoZSBNYXJrZG93biBzYXlzIChBRFIgMDAxMikuIiAiTm9kZSwgc2VlZC92ZXJpZnktc3RvcmVzLnRzIiAiQnVpbGQsVmVyaWZpZXIiCiAgICAgICAgICAgIGZpeHR1cmVWZXJpZmllciA9IGNvbnRhaW5lciAiRml4dHVyZSB2ZXJpZmllciIgIkFza3Mgd2hldGhlciB0aGUgY29tbWl0dGVkIGZpeHR1cmVzIGFyZSB3aGF0IHRoZSBnZW5lcmF0b3JzIHByb2R1Y2UgdG9kYXkuIiAiQmFzaCwgc2NyaXB0cy9jaGVjay1nZW5lcmF0ZWQtZml4dHVyZXMuc2giICJCdWlsZCxWZXJpZmllciIKICAgICAgICAgICAgZGVwbG95bWVudFZlcmlmaWVyID0gY29udGFpbmVyICJEZXBsb3ltZW50IHZlcmlmaWVyIiAiQXNrcyB3aGV0aGVyIHRoZSB2ZXJzaW9uIHRoaXMgcnVuIHVwbG9hZGVkIGlzIHRoZSB2ZXJzaW9uIHNlcnZpbmcuIiAiQmFzaCwgc2NyaXB0cy92ZXJpZnktZGVwbG95bWVudC5zaCIgIkJ1aWxkLFZlcmlmaWVyIgogICAgICAgIH0KCiAgICAgICAgcmVhZGVyIC0+IHNpdGUgIlJlYWRzIFBvc3RzLCBCb29rbWFya3MsIHRoZSBTZXJpZXMgYW5kIHRoZSBSZXN1bWUsIGluIEVuZ2xpc2ggYXQgLyBvciBpbiBTcGFuaXNoIGF0IC9lcyIgIkhUVFBTIgogICAgICAgIGNyYXdsZXJzIC0+IHNpdGUgIkZldGNoIHRoZSBzaXRlbWFwIGFuZCByb2JvdHMudHh0LCBhbmQgcmVhZCB0aGUgaHJlZmxhbmcgc2V0LCB0aGUgSlNPTi1MRCBhbmQgdGhlIE9wZW4gR3JhcGggdGFncyIgIkhUVFBTIgogICAgICAgIHBhdWwgLT4gc2l0ZSAiV3JpdGVzIHRoZSBNYXJrZG93biwgYW5kIHJlZ2VuZXJhdGVzIHRoZSBmaXh0dXJlcyBiZXNpZGUgaXQiICJNYXJrZG93biBpbiBnaXQiCiAgICAgICAgcGF1bCAtPiBnaXRodWIgIk1lcmdlcyB0byBtYWluLCB3aGljaCBpcyB0aGUgUHVibGljYXRpb24iICJnaXQsIGdoIgogICAgICAgIGdpdGh1YiAtPiBzaXRlICJSdW5zIHRoZSB3b3JrZmxvdyB0aGF0IHB1Ymxpc2hlcyBpdCwgb24gYSBwdXNoIHRvIG1haW4gYW5kIG5vd2hlcmUgZWxzZSIgIkdpdEh1YiBBY3Rpb25zIgogICAgICAgIHNpdGUgLT4gY2RuICJQcm94aWVzIHRoZSBSZXN1bWUgUERGIiAiSFRUUFMiCiAgICAgICAgc2l0ZSAtPiB6b25lICJFbWJlZHMgdGhlIEluc2lnaHRzIGJlYWNvbiIgInNjcmlwdC1zcmMiCiAgICAgICAgem9uZSAtPiBzaXRlICJGcm9udHMgZXZlcnkgcmVxdWVzdCwgYW5kIGNoYWxsZW5nZXMgZGF0YWNlbnRyZSBjbGllbnRzIGJlZm9yZSBvbmUgYXJyaXZlcyIgIkJvdCBGaWdodCBNb2RlIgogICAgICAgIHpvbmUgLT4gY3Jhd2xlcnMgIlNlcnZlcyBhIHJvYm90cy50eHQgbWVyZ2VkIHdpdGggdGhlIG9yaWdpbidzLCBhbmQgb25seSB3aGVuIHRoZSBvcmlnaW4gYW5zd2VycyAyMDAiICJBSSBDcmF3bCBDb250cm9sIgoKICAgICAgICByZWFkZXIgLT4gc2l0ZS53b3JrZXIuZmV0Y2hIYW5kbGVyICJSZWFkcyBhIHBhZ2UiICJIVFRQUyIKICAgICAgICByZWFkZXIgLT4gc2l0ZS5hc3NldHMgIkxvYWRzIHRoZSBjbGllbnQgYnVuZGxlLCB0aGUgZm9udHMgYW5kIHRoZSBpbWFnZXMiICJIVFRQUyIKICAgICAgICBjcmF3bGVycyAtPiBzaXRlLndvcmtlciAiRmV0Y2ggL3NpdGVtYXAueG1sLCAvcm9ib3RzLnR4dCBhbmQgZXZlcnkgcGFnZSdzIGhlYWQiICJIVFRQUyIKICAgICAgICB6b25lIC0+IHNpdGUud29ya2VyICJGcm9udHMgZXZlcnkgcmVxdWVzdCwgYW5kIGNoYWxsZW5nZXMgZGF0YWNlbnRyZSBjbGllbnRzIGJlZm9yZSBvbmUgYXJyaXZlcyIgIkJvdCBGaWdodCBNb2RlIgoKICAgICAgICBzaXRlLndvcmtlciAtPiBzaXRlLmQxICJPbmUgaW5kZXhlZCBxdWVyeSBwZXIgbGlzdGluZywgb25lIHJvdyBwZXIgZG9jdW1lbnQiICJTUUwgb3ZlciB0aGUgUE9TQ0hVTEVSX0JEIGJpbmRpbmciCiAgICAgICAgc2l0ZS53b3JrZXIgLT4gc2l0ZS5rdiAiT25lIHJlYWQgcGVyIGJvZHksIGFuZCBvbmUgZm9yIHRoZSBzaXRlbWFwIiAiS1YgZ2V0LCBjYWNoZVR0bCAzNjAwIgogICAgICAgIHNpdGUud29ya2VyIC0+IGNkbiAiUHJveGllcyBhbmQgc3RyZWFtcyB0aGUgUERGLCBhbmQgNDA0cyByYXRoZXIgdGhhbiBzZXJ2aW5nIGFuIHVwc3RyZWFtIGVycm9yIGFzIG9uZSIgImZldGNoLCBjYWNoZVR0bCA4NjQwMCIKICAgICAgICBzaXRlLndvcmtlciAtPiB6b25lICJFbWJlZHMgdGhlIEluc2lnaHRzIGJlYWNvbiwgdGhlIG9ubHkgdGhpcmQtcGFydHkgb3JpZ2luIHRoZSBDU1AgYWxsb3dzIiAic2NyaXB0LXNyYyIKCiAgICAgICAgcGF1bCAtPiBzaXRlLmNvbnRlbnQgIldyaXRlcyBldmVyeSBEb2N1bWVudCB1bmRlciBhcHAvY29udGVudC8iICJNYXJrZG93biBpbiBnaXQiCiAgICAgICAgc2l0ZS5kMUdlbmVyYXRvciAtPiBzaXRlLmNvbnRlbnQgIlJlYWRzIHRoZSBmcm9udCBtYXR0ZXIgb2YgZXZlcnkgRG9jdW1lbnQiICJOb2RlLCBmcm9udC1tYXR0ZXIiCiAgICAgICAgc2l0ZS5kMUdlbmVyYXRvciAtPiBzaXRlLmZpeHR1cmVzICJXcml0ZXMgc2VlZC5zcWwsIGluc2VydCBiZWZvcmUgcHJ1bmUsIG5ldmVyIERFTEVURSBmaXJzdCIgIk5vZGUsIGZzIgogICAgICAgIHNpdGUua3ZHZW5lcmF0b3IgLT4gc2l0ZS5jb250ZW50ICJSZWFkcyB0aGUgYm9keSBvZiBldmVyeSBwdWJsaXNoZWQgRG9jdW1lbnQiICJOb2RlLCBtYXJrZWQiCiAgICAgICAgc2l0ZS5rdkdlbmVyYXRvciAtPiBzaXRlLmQxICJRdWVyaWVzIHRoZSBhbHJlYWR5LXNlZWRlZCBjb250ZW50IHRhYmxlIHRvIGRlY2lkZSB3aGF0IHRvIHJlbmRlciwgd2hpY2ggaXMgd2h5IEQxIGdvZXMgZmlyc3QiICJ3cmFuZ2xlciBkMSBleGVjdXRlIC0tanNvbiIKICAgICAgICBzaXRlLmt2R2VuZXJhdG9yIC0+IHNpdGUuZml4dHVyZXMgIldyaXRlcyBvbmUgcGF5bG9hZCBwZXIgZG9jdW1lbnQsIGFuZCB0aGUgc2l0ZW1hcCIgIk5vZGUsIGZzIgoKICAgICAgICBnaXRodWIgLT4gc2l0ZS5wdWJsaXNoSm9iICJSdW5zIGl0IG9uIGEgcHVzaCB0byBtYWluLCBpbiB0aGUgcHJvZHVjdGlvbiBlbnZpcm9ubWVudCIgIkdpdEh1YiBBY3Rpb25zIgogICAgICAgIGdpdGh1YiAtPiBzaXRlLmZpeHR1cmVWZXJpZmllciAiUnVucyBpdCBvbiBldmVyeSBwdXNoIGFuZCBwdWxsIHJlcXVlc3QsIGJlZm9yZSBhbnl0aGluZyBpcyBwdWJsaXNoZWQiICJHaXRIdWIgQWN0aW9ucyIKICAgICAgICBzaXRlLnB1Ymxpc2hKb2IgLT4gc2l0ZS5maXh0dXJlcyAiVXBsb2FkcyB0aGVtIGV4YWN0bHkgYXMgZ2l0IGhvbGRzIHRoZW0sIGFuZCBuZXZlciByZWdlbmVyYXRlcyB0aGVtIiAiYWN0aW9ucy9jaGVja291dCIKICAgICAgICBzaXRlLnB1Ymxpc2hKb2IgLT4gc2l0ZS5kMSAiQXBwbGllcyBhbnkgbmV3IG1pZ3JhdGlvbnMsIHRoZW4gdXBzZXJ0cyBzZWVkLnNxbCIgIndyYW5nbGVyIGQxIG1pZ3JhdGlvbnMgYXBwbHksIHdyYW5nbGVyIGQxIGV4ZWN1dGUgLS1yZW1vdGUiCiAgICAgICAgc2l0ZS5wdWJsaXNoSm9iIC0+IHNpdGUua3ZVcGxvYWRlciAiUnVucyBpdCBhZnRlciB0aGUgc2VlZCBhbmQgYmVmb3JlIHRoZSBzdG9yZSB2ZXJpZmljYXRpb24iICJwbnBtIHJ1biBrdjp1cGxvYWQ6cmVtb3RlIgogICAgICAgIHNpdGUucHVibGlzaEpvYiAtPiBzaXRlLndvcmtlciAiQnVpbGRzIGFuZCBkZXBsb3lzIGl0LCBsYXN0LCBhZnRlciBib3RoIHN0b3JlcyBoYXZlIGJlZW4gcmVhZCBiYWNrIiAid3JhbmdsZXIgZGVwbG95IgogICAgICAgIHNpdGUucHVibGlzaEpvYiAtPiBzaXRlLmFzc2V0cyAiVXBsb2FkcyB0aGVtIHdpdGggdGhlIFdvcmtlciIgIndyYW5nbGVyIGRlcGxveSIKICAgICAgICBzaXRlLnB1Ymxpc2hKb2IgLT4gc2l0ZS5zY2hlbWFWZXJpZmllciAiUnVucyBpdCBhZnRlciB0aGUgbWlncmF0aW9ucyBhbmQgYmVmb3JlIHRoZSBzZWVkIiAicG5wbSBydW4gdmVyaWZ5OnNjaGVtYTpyZW1vdGUiCiAgICAgICAgc2l0ZS5wdWJsaXNoSm9iIC0+IHNpdGUuc3RvcmVWZXJpZmllciAiUnVucyBpdCBhZnRlciB0aGUgc2VlZCBhbmQgYmVmb3JlIHRoZSBkZXBsb3kiICJwbnBtIHJ1biB2ZXJpZnk6c3RvcmVzOnJlbW90ZSIKICAgICAgICBzaXRlLnB1Ymxpc2hKb2IgLT4gc2l0ZS5kZXBsb3ltZW50VmVyaWZpZXIgIlJ1bnMgaXQgYWZ0ZXIgdGhlIGRlcGxveSwgb24gdGhlIHZlcnNpb24gaWQgd3JhbmdsZXIgcmVwb3J0ZWQiICJiYXNoIHNjcmlwdHMvdmVyaWZ5LWRlcGxveW1lbnQuc2giCgogICAgICAgIHNpdGUuc2NoZW1hVmVyaWZpZXIgLT4gc2l0ZS5kMSAiUmVhZHMgdGhlIHNoYXBlIGJhY2siICJ3cmFuZ2xlciBkMSBleGVjdXRlIgogICAgICAgIHNpdGUuc3RvcmVWZXJpZmllciAtPiBzaXRlLmQxICJSZWFkcyBldmVyeSByb3cgYmFjayBhbmQgY29tcGFyZXMgaXQgYWdhaW5zdCB0aGUgTWFya2Rvd24iICJ3cmFuZ2xlciBkMSBleGVjdXRlIgogICAgICAgIHNpdGUuc3RvcmVWZXJpZmllciAtPiBzaXRlLmt2ICJSZWFkcyBldmVyeSBwYXlsb2FkIGJhY2sgYW5kIGNvbXBhcmVzIGl0IGFnYWluc3QgdGhlIE1hcmtkb3duIiAid3JhbmdsZXIga3Yga2V5IGdldCIKICAgICAgICBzaXRlLmZpeHR1cmVWZXJpZmllciAtPiBzaXRlLmZpeHR1cmVzICJSdW5zIGJvdGggZ2VuZXJhdG9ycyBhbmQgYXNrcyB3aGV0aGVyIGdpdCBhbHJlYWR5IGhvbGRzIHRoZWlyIG91dHB1dCIgImdpdCBzdGF0dXMgLS1wb3JjZWxhaW4iCiAgICAgICAgc2l0ZS5kZXBsb3ltZW50VmVyaWZpZXIgLT4gc2l0ZS53b3JrZXIgIlJlYWRzIGJhY2sgd2hpY2ggdmVyc2lvbiBpcyBsaXZlLCBhbmQgcmVmdXNlcyBhbnl0aGluZyBidXQgdGhpcyBydW4ncyBhdCAxMDAlIiAiQ2xvdWRmbGFyZSBBUEkiCgoKICAgICAgICBzaXRlLndvcmtlci5mZXRjaEhhbmRsZXIgLT4gc2l0ZS53b3JrZXIucmVkaXJlY3RzICJBc2tzIGl0IGZpcnN0LCBiZWNhdXNlIGFuIGFkZHJlc3MgdGhhdCBubyBsb25nZXIgZXhpc3RzIGhhcyBubyByb3V0ZSB0byBtYXRjaCBhbmQgbm8gbG9hZGVyIHRvIHJ1biIgInJlc29sdmVSZWRpcmVjdCIKICAgICAgICBzaXRlLndvcmtlci5mZXRjaEhhbmRsZXIgLT4gc2l0ZS53b3JrZXIubG9jYWxlICJEZXJpdmVzIHRoZSBMb2NhbGUgb25jZSwgYW5kIHNldHMgaXQgb24gdGhlIHJlcXVlc3QgY29udGV4dCIgImRlcml2ZUxvY2FsZSIKICAgICAgICBzaXRlLndvcmtlci5mZXRjaEhhbmRsZXIgLT4gc2l0ZS53b3JrZXIucm91dGVzICJIYW5kcyB0aGUgcmVxdWVzdCBvdmVyIHdpdGggdGhlIGNvbnRleHQgYWxyZWFkeSBidWlsdCIgImNyZWF0ZVJlcXVlc3RIYW5kbGVyIgogICAgICAgIHNpdGUud29ya2VyLmZldGNoSGFuZGxlciAtPiBzaXRlLndvcmtlci5zZWN1cml0eUhlYWRlcnMgIkhhbmRzIGV2ZXJ5IHJlc3BvbnNlIGJhY2sgdGhyb3VnaCBpdCwgdGhlIDMwMSBpbmNsdWRlZCIgIndpdGhTZWN1cml0eUhlYWRlcnMiCiAgICAgICAgc2l0ZS53b3JrZXIucm91dGVzIC0+IHNpdGUud29ya2VyLm1vZGVscyAiQXNrcyBhIGxvYWRlcidzIHF1ZXN0aW9uIGJ5IG5hbWUiICJOb2RlIgogICAgICAgIHNpdGUud29ya2VyLnJvdXRlcyAtPiBzaXRlLndvcmtlci5hZGRyZXNzZXMgIkJ1aWxkcyB0aGUgY2Fub25pY2FsLCB0aGUgaHJlZmxhbmcgc2V0IGFuZCB0aGUgc3dpdGNoZXIncyBkZXN0aW5hdGlvbiBpbiBtZXRhKCkiICJOb2RlIgogICAgICAgIHNpdGUud29ya2VyLnJvdXRlcyAtPiBzaXRlLndvcmtlci5zZW8gIlJlbmRlcnMgcm9ib3RzLnR4dCwgdGhlIEpTT04tTEQgYW5kIHRoZSBUcmFpbCIgIk5vZGUiCiAgICAgICAgc2l0ZS53b3JrZXIucm91dGVzIC0+IHNpdGUud29ya2VyLmNhdGFsb2cgIlJlYWRzIGV2ZXJ5IHN0cmluZyB0aGUgQ2hyb21lIHNob3dzIiAiTm9kZSIKICAgICAgICBzaXRlLndvcmtlci5yb3V0ZXMgLT4gc2l0ZS53b3JrZXIuY29sb3JTY2hlbWUgIlJlYWRzIHRoZSBzaWduZWQgcHJlZmVyZW5jZSwgYW5kIHdyaXRlcyBpdCBiYWNrIiAiX19Ib3N0LXBvc2NodWxlci1jb2xvci1zY2hlbWUiCiAgICAgICAgc2l0ZS53b3JrZXIucm91dGVzIC0+IHNpdGUua3YgIlJlYWRzIG9uZSBib2R5IHBlciBkb2N1bWVudCwgYW5kIHRoZSBzaXRlbWFwIFhNTCB0aGUgcGlwZWxpbmUgcmVuZGVyZWQiICJLViBnZXQsIGNhY2hlVHRsIDM2MDAiCiAgICAgICAgc2l0ZS53b3JrZXIucm91dGVzIC0+IGNkbiAiUHJveGllcyBhbmQgc3RyZWFtcyB0aGUgUERGLCBhbmQgNDA0cyByYXRoZXIgdGhhbiBzZXJ2aW5nIGFuIHVwc3RyZWFtIGVycm9yIGFzIG9uZSIgImZldGNoLCBjYWNoZVR0bCA4NjQwMCIKICAgICAgICBzaXRlLndvcmtlci5tb2RlbHMgLT4gc2l0ZS53b3JrZXIuZGIgIkV2ZXJ5IHF1ZXJ5IGdvZXMgdGhyb3VnaCBpdCwgd2l0aCBpdHMgdmFsdWVzIGJvdW5kIiAiZGJRdWVyeSIKICAgICAgICBzaXRlLndvcmtlci5kYiAtPiBzaXRlLmQxICJPbmUgaW5kZXhlZCBxdWVyeSBwZXIgbGlzdGluZywgb25lIHJvdyBwZXIgZG9jdW1lbnQiICJTUUwgb3ZlciB0aGUgUE9TQ0hVTEVSX0JEIGJpbmRpbmciCiAgICAgICAgc2l0ZS53b3JrZXIuc2VvIC0+IHNpdGUud29ya2VyLmFkZHJlc3NlcyAiVGFrZXMgZXZlcnkgYWRkcmVzcyBmcm9tIGl0LCBhbmQgYnVpbGRzIG5vbmUgb2YgaXRzIG93biIgIk5vZGUiCiAgICAgICAgc2l0ZS53b3JrZXIuY2F0YWxvZyAtPiBzaXRlLndvcmtlci5hZGRyZXNzZXMgIkJ1aWxkcyB0aGUgbmF2aWdhdGlvbidzIGFkZHJlc3NlcyBpbiB0aGUgcmVhZGVyJ3MgTG9jYWxlIiAiTm9kZSIKCiAgICAgICAgc2l0ZS5kMUdlbmVyYXRvci5mcm9udE1hdHRlciAtPiBzaXRlLmNvbnRlbnQgIlJlYWRzIHRoZSBmcm9udCBtYXR0ZXIgb2YgZXZlcnkgZmlsZSB0aGUgd2Fsa2VyIGNsYWltcyIgIk5vZGUsIGZyb250LW1hdHRlciIKICAgICAgICBzaXRlLmQxR2VuZXJhdG9yLmZyb250TWF0dGVyIC0+IHNpdGUuZDFHZW5lcmF0b3IudHJlZVdhbGtlciAiQXNrcyB3aGF0IGVhY2ggZmlsZSBpcywgYW5kIHJlZnVzZXMgb25lIG5vIHRyZWUgY2xhaW1zIiAiTm9kZSIKICAgICAgICBzaXRlLmQxR2VuZXJhdG9yLmZyb250TWF0dGVyIC0+IHNpdGUuZDFHZW5lcmF0b3Iuc3FsRW1pdHRlciAiSGFuZHMgaXQgYSB2YWxpZGF0ZWQgQ29udGVudCBJdGVtIHRvIGVtaXQiICJOb2RlIgogICAgICAgIHNpdGUuZDFHZW5lcmF0b3IuZnJvbnRNYXR0ZXIgLT4gc2l0ZS5kMUdlbmVyYXRvci5jb250YWluZXJTcWwgIkhhbmRzIGl0IHRoZSBQcm9qZWN0IGFuZCBTZXJpZXMgbWFuaWZlc3RzLCBhbmQgdGhlIGRvY3VtZW50cyBuZXN0ZWQgdW5kZXIgdGhlbSIgIk5vZGUiCiAgICAgICAgc2l0ZS5kMUdlbmVyYXRvci5mcm9udE1hdHRlciAtPiBzaXRlLmZpeHR1cmVzICJXcml0ZXMgc2VlZC5zcWwsIGFuZCB0cmVhdHMgYW4gZW1wdHkgd2FsayBhcyBpbXBvc3NpYmxlIHJhdGhlciB0aGFuIGFzIGVtcHR5IiAiTm9kZSwgZnMiCiAgICAgICAgc2l0ZS5kMUdlbmVyYXRvci5zcWxFbWl0dGVyIC0+IHNpdGUuZDFHZW5lcmF0b3IudGFnVm9jYWJ1bGFyeSAiQ2hlY2tzIGV2ZXJ5IFRhZyBhZ2FpbnN0IHRoZSBjbG9zZWQgc2V0IChBRFIgMDAwOCkiICJOb2RlIgogICAgICAgIHNpdGUuZDFHZW5lcmF0b3IuY29udGFpbmVyU3FsIC0+IHNpdGUuZDFHZW5lcmF0b3IubWFuaWZlc3RSZWFkZXIgIlJlYWRzIHRoZSBkZWNsYXJlZCBhcmMsIGFuZCByZWZ1c2VzIGEgbWFuaWZlc3QgdGhhdCBjb250cmFkaWN0cyB0aGUgZGlzayAoQURSIDAwMDcpIiAiTm9kZSIKICAgICAgICBzaXRlLmQxR2VuZXJhdG9yLmNvbnRhaW5lclNxbCAtPiBzaXRlLmQxR2VuZXJhdG9yLnRyZWVXYWxrZXIgIkNsYXNzaWZpZXMgYSBDb250YWluZXIncyBvd24gZmlsZSB0aGUgd2F5IGEgbG9vc2Ugb25lIGlzIGNsYXNzaWZpZWQiICJOb2RlIgoKICAgICAgICBzaXRlLmt2R2VuZXJhdG9yLnBheWxvYWRXcml0ZXIgLT4gc2l0ZS5jb250ZW50ICJSZWFkcyB0aGUgYm9keSBvZiBldmVyeSBwdWJsaXNoZWQgRG9jdW1lbnQsIGFuZCBhIERyYWZ0IHByb2R1Y2VzIG5vdGhpbmcgKEFEUiAwMDA5KSIgIk5vZGUsIGZyb250LW1hdHRlciIKICAgICAgICBzaXRlLmt2R2VuZXJhdG9yLnBheWxvYWRXcml0ZXIgLT4gc2l0ZS5kMSAiUXVlcmllcyB0aGUgYWxyZWFkeS1zZWVkZWQgY29udGVudCB0YWJsZSB0byBkZWNpZGUgd2hhdCB0byByZW5kZXIsIHdoaWNoIGlzIHdoeSBEMSBnb2VzIGZpcnN0IiAid3JhbmdsZXIgZDEgZXhlY3V0ZSAtLWpzb24iCiAgICAgICAgc2l0ZS5rdkdlbmVyYXRvci5wYXlsb2FkV3JpdGVyIC0+IHNpdGUua3ZHZW5lcmF0b3Iuc2FuaXRpc2VyICJTZW5kcyBldmVyeSBib2R5IHRocm91Z2ggaXQsIGFuZCByZW5kZXJzIG5vbmUgaXRzZWxmIiAiTm9kZSIKICAgICAgICBzaXRlLmt2R2VuZXJhdG9yLnBheWxvYWRXcml0ZXIgLT4gc2l0ZS5rdkdlbmVyYXRvci5zaXRlbWFwQnVpbGRlciAiQXNrcyBpdCB3aGljaCBhZGRyZXNzZXMgdGhlIHNpdGVtYXAgYWR2ZXJ0aXNlcyIgIk5vZGUiCiAgICAgICAgc2l0ZS5rdkdlbmVyYXRvci5wYXlsb2FkV3JpdGVyIC0+IHNpdGUuZml4dHVyZXMgIldyaXRlcyBvbmUgcGF5bG9hZCBwZXIgZG9jdW1lbnQsIGFuZCBvbmUgZm9yIHRoZSBzaXRlbWFwIiAiTm9kZSwgZnMiCiAgICAgICAgc2l0ZS5rdkdlbmVyYXRvci5zaXRlbWFwQnVpbGRlciAtPiBzaXRlLmt2R2VuZXJhdG9yLnNpdGVtYXBSZW5kZXJlciAiSGFuZHMgaXQgdGhlIHJvdXRlIGxpc3QsIHdpdGggdGhlIGRhdGUgcGFzc2VkIGluIiAiTm9kZSIKICAgICAgICBzaXRlLmt2R2VuZXJhdG9yLnNpdGVtYXBCdWlsZGVyIC0+IHNpdGUud29ya2VyLmFkZHJlc3NlcyAiQnVpbGRzIGV2ZXJ5IGFkZHJlc3MgdGhlIHNpdGVtYXAgY2FycmllcyB3aXRoIHRoZSBXb3JrZXIncyBvd24gYWxnZWJyYSwgcnVuIGFzIGEgcGxhaW4gTm9kZSBzY3JpcHQiICJOb2RlIgoKICAgICAgICBzaXRlLmt2VXBsb2FkZXIgLT4gc2l0ZS5maXh0dXJlcyAiUmVhZHMgZXZlcnkgY29tbWl0dGVkIHBheWxvYWQsIGFuZCBsZXRzIHRoZSBkaXJlY3RvcnkgaXQgc2l0cyBpbiBkZWNpZGUgaXRzIGtleSBwcmVmaXgiICJOb2RlLCBmcyIKICAgICAgICBzaXRlLmt2VXBsb2FkZXIgLT4gc2l0ZS5rdiAiUmVwbGFjZXMgZXZlcnkgcGF5bG9hZCBpbiBvbmUgcGFzcywgcHV0IGJlZm9yZSBkZWxldGUiICJ3cmFuZ2xlciBrdiBidWxrIgogICAgICAgIHNpdGUuc3RvcmVWZXJpZmllciAtPiBzaXRlLmt2VXBsb2FkZXIgIlNoYXJlcyB0aGUga2V5IHJ1bGVzIGFuZCB0aGUgcGF5bG9hZCBsaXN0aW5nLCBhbmQgbm90aGluZyB0aGF0IGJ1aWxkcyBhIHJvdyAoQURSIDAwMTIpIiAiTm9kZSIKICAgICAgICBzaXRlLnN0b3JlVmVyaWZpZXIgLT4gc2l0ZS5kMUdlbmVyYXRvci50cmVlV2Fsa2VyICJTaGFyZXMgdGhlIHB1cmUgY2xhc3NpZmljYXRpb24gcnVsZXMsIGFuZCBuZXZlciBhIHJvdyBidWlsZGVyIChBRFIgMDAxMikiICJOb2RlIgogICAgICAgIHByb2R1Y3Rpb24gPSBkZXBsb3ltZW50RW52aXJvbm1lbnQgIlByb2R1Y3Rpb24iIHsKCiAgICAgICAgICAgIGNsb3VkZmxhcmUgPSBkZXBsb3ltZW50Tm9kZSAiQ2xvdWRmbGFyZSBnbG9iYWwgbmV0d29yayIgIkV2ZXJ5IGNvbG8gdGhhdCBhbnN3ZXJzIGZvciB0aGlzIHpvbmUuIiAiQ2xvdWRmbGFyZSIgewogICAgICAgICAgICAgICAgem9uZU5vZGUgPSBkZXBsb3ltZW50Tm9kZSAiWm9uZSBwb3NjaHVsZXIuY29tIiAiQm90IEZpZ2h0IE1vZGUgYW5kIEFJIENyYXdsIENvbnRyb2wncyBtYW5hZ2VkIHJvYm90cy50eHQgYm90aCBzaXQgaW4gZnJvbnQgb2YgdGhlIG9yaWdpbi4iICJDbG91ZGZsYXJlIHpvbmUiIHsKICAgICAgICAgICAgICAgICAgICBpc29sYXRlID0gZGVwbG95bWVudE5vZGUgIldvcmtlciBpc29sYXRlIiAid29ya2Vyc19kZXYgaXMgb2ZmLCBzbyB0aGlzIHpvbmUgaXMgdGhlIG9ubHkgb3JpZ2luIHRoYXQgYW5zd2Vycy4iICJDbG91ZGZsYXJlIFdvcmtlcnMsIGNvbXBhdGliaWxpdHkgZGF0ZSAyMDI1LTA0LTA0LCBub2RlanNfY29tcGF0IiB7CiAgICAgICAgICAgICAgICAgICAgICAgIGNvbnRhaW5lckluc3RhbmNlIHNpdGUud29ya2VyCiAgICAgICAgICAgICAgICAgICAgICAgIGNvbnRhaW5lckluc3RhbmNlIHNpdGUuYXNzZXRzCiAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgICAgIGRhdGFiYXNlID0gZGVwbG95bWVudE5vZGUgIlBPU0NIVUxFUl9CRCIgIkJvdW5kIHJlYWQtb25seSBpbiBwcmFjdGljZTogbm8gcmVxdWVzdCB3cml0ZXMgdG8gaXQuIiAiQ2xvdWRmbGFyZSBEMSIgewogICAgICAgICAgICAgICAgICAgICAgICBjb250YWluZXJJbnN0YW5jZSBzaXRlLmQxCiAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgICAgIG5hbWVzcGFjZSA9IGRlcGxveW1lbnROb2RlICJCTE9HX0tWIiAiQm91bmQgcmVhZC1vbmx5IGluIHByYWN0aWNlLCBhbmQgcmVhZCB0aHJvdWdoIHRoZSBjb2xvJ3Mgb3duIGNhY2hlLiIgIkNsb3VkZmxhcmUgS1YiIHsKICAgICAgICAgICAgICAgICAgICAgICAgY29udGFpbmVySW5zdGFuY2Ugc2l0ZS5rdgogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfQoKICAgICAgICAgICAgcnVubmVyID0gZGVwbG95bWVudE5vZGUgIkdpdEh1Yi1ob3N0ZWQgcnVubmVyIiAiRXhpc3RzIGZvciB0aGUgbGVuZ3RoIG9mIG9uZSBQdWJsaWNhdGlvbiwgYW5kIGlzIHRoZSBvbmx5IHBsYWNlIHRoYXQgY2FuIHdyaXRlIHRvIGFueSBvZiB0aGUgYWJvdmUuIiAidWJ1bnR1LWxhdGVzdCwgTm9kZSAyMiwgcG5wbSIgewogICAgICAgICAgICAgICAgcHJvZHVjdGlvbkVudiA9IGRlcGxveW1lbnROb2RlICJwcm9kdWN0aW9uIGVudmlyb25tZW50IiAiSG9sZHMgQ0xPVURGTEFSRV9BUElfVE9LRU4sIHNjb3BlZCB0byBEMTpFZGl0LCBXb3JrZXJzIEtWIFN0b3JhZ2U6RWRpdCBhbmQgV29ya2VycyBTY3JpcHRzOkVkaXQsIGFuZCBub3RoaW5nIGVsc2UuIiAiR2l0SHViIEVudmlyb25tZW50IiB7CiAgICAgICAgICAgICAgICAgICAgY29udGFpbmVySW5zdGFuY2Ugc2l0ZS5wdWJsaXNoSm9iCiAgICAgICAgICAgICAgICAgICAgY29udGFpbmVySW5zdGFuY2Ugc2l0ZS5rdlVwbG9hZGVyCiAgICAgICAgICAgICAgICAgICAgY29udGFpbmVySW5zdGFuY2Ugc2l0ZS5zY2hlbWFWZXJpZmllcgogICAgICAgICAgICAgICAgICAgIGNvbnRhaW5lckluc3RhbmNlIHNpdGUuc3RvcmVWZXJpZmllcgogICAgICAgICAgICAgICAgICAgIGNvbnRhaW5lckluc3RhbmNlIHNpdGUuZGVwbG95bWVudFZlcmlmaWVyCiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgIH0KCiAgICAgICAgICAgIG9yaWdpbiA9IGRlcGxveW1lbnROb2RlICJjZG4ucG9zY2h1bGVyLmRldiIgIk91dHNpZGUgYm90aCwgYW5kIHRoZSBvbmUgZmlsZSB0aGlzIHNpdGUgcHVibGlzaGVzIHdpdGhvdXQgYnVpbGRpbmcgaXQuIiAiRXh0ZXJuYWwgb3JpZ2luIiB7CiAgICAgICAgICAgICAgICBzb2Z0d2FyZVN5c3RlbUluc3RhbmNlIGNkbgogICAgICAgICAgICB9CiAgICAgICAgfQogICAgfQoKICAgIHZpZXdzIHsKICAgICAgICBzeXN0ZW1Db250ZXh0IHNpdGUgImNvbnRleHQiICJUaGUgZm91ciBraW5kcyBvZiB1c2VyIHRoaXMgc2l0ZSBoYXMsIHR3byBvZiB3aGljaCBhcmUgbm90IHBlb3BsZS4iIHsKICAgICAgICAgICAgaW5jbHVkZSAqCiAgICAgICAgICAgIGF1dG9sYXlvdXQgbHIKICAgICAgICB9CgogICAgICAgIGNvbnRhaW5lciBzaXRlICJjb250YWluZXJzLXJ1bnRpbWUiICJUaGUgcmVxdWVzdCBwYXRoOiBvbmUgV29ya2VyLCB0d28gZGVyaXZlZCBzdG9yZXMsIGFuZCBvbmUgZmlsZSBpdCBkb2VzIG5vdCBob2xkLiIgewogICAgICAgICAgICBpbmNsdWRlIHJlYWRlciBjcmF3bGVycyB6b25lIGNkbiBzaXRlLndvcmtlciBzaXRlLmQxIHNpdGUua3Ygc2l0ZS5hc3NldHMKICAgICAgICAgICAgYXV0b2xheW91dCBscgogICAgICAgIH0KCiAgICAgICAgY29udGFpbmVyIHNpdGUgImNvbnRhaW5lcnMtYnVpbGQiICJXaGVyZSB0aGUgY29udGVudCBhY3R1YWxseSBjb21lcyBmcm9tLCBhbmQgdGhlIG9yZGVyIHRoZSBzdG9yZXMgYXJlIG1vdmVkIGluLiIgewogICAgICAgICAgICBpbmNsdWRlIHBhdWwgZ2l0aHViIHNpdGUuY29udGVudCBzaXRlLmQxR2VuZXJhdG9yIHNpdGUua3ZHZW5lcmF0b3Igc2l0ZS5maXh0dXJlcyBzaXRlLmt2VXBsb2FkZXIgc2l0ZS5wdWJsaXNoSm9iIHNpdGUuc2NoZW1hVmVyaWZpZXIgc2l0ZS5zdG9yZVZlcmlmaWVyIHNpdGUuZml4dHVyZVZlcmlmaWVyIHNpdGUuZGVwbG95bWVudFZlcmlmaWVyIHNpdGUuZDEgc2l0ZS5rdiBzaXRlLndvcmtlciBzaXRlLmFzc2V0cwogICAgICAgICAgICBleGNsdWRlIHNpdGUud29ya2VyLT5zaXRlLmQxIHNpdGUud29ya2VyLT5zaXRlLmt2IHNpdGUua3ZHZW5lcmF0b3ItPnNpdGUud29ya2VyCiAgICAgICAgICAgIGF1dG9sYXlvdXQgdGIKICAgICAgICB9CgogICAgICAgIGNvbXBvbmVudCBzaXRlLndvcmtlciAiY29tcG9uZW50cy13b3JrZXIiICJUaGUgcmVxdWVzdCBwaXBlbGluZSwgYW5kIHRoZSBhbGdlYnJhIHRoYXQgZGVjaWRlcyB3aGF0IGV2ZXJ5IGFkZHJlc3MgaXMuIiB7CiAgICAgICAgICAgIGluY2x1ZGUgKgogICAgICAgICAgICBleGNsdWRlIHNpdGUua3ZHZW5lcmF0b3ItPnNpdGUuZDEKICAgICAgICAgICAgYXV0b2xheW91dCBscgogICAgICAgIH0KCiAgICAgICAgY29tcG9uZW50IHNpdGUuZDFHZW5lcmF0b3IgImNvbXBvbmVudHMtcGlwZWxpbmUiICJIb3cgTWFya2Rvd24gYmVjb21lcyB0aGUgdHdvIHN0b3JlczogdGhlIHRyZWUgY2xhc3NpZmllcywgdGhlIHZvY2FidWxhcnkgY2xvc2VzLCB0aGUgc2FuaXRpc2VyIGlzIHRoZSBvbmx5IHNhZmUgcGxhY2UuIiB7CiAgICAgICAgICAgIGluY2x1ZGUgKgogICAgICAgICAgICBpbmNsdWRlIHNpdGUua3ZHZW5lcmF0b3IucGF5bG9hZFdyaXRlciBzaXRlLmt2R2VuZXJhdG9yLnNhbml0aXNlciBzaXRlLmt2R2VuZXJhdG9yLnNpdGVtYXBCdWlsZGVyIHNpdGUua3ZHZW5lcmF0b3Iuc2l0ZW1hcFJlbmRlcmVyCiAgICAgICAgICAgIGluY2x1ZGUgc2l0ZS5kMSBzaXRlLmt2IHNpdGUua3ZVcGxvYWRlcgogICAgICAgICAgICBhdXRvbGF5b3V0IHRiCiAgICAgICAgfQoKICAgICAgICBkeW5hbWljIHNpdGUud29ya2VyICJkeW5hbWljLXJlcXVlc3QiICJBIFNwYW5pc2ggUG9zdCwgYmVjYXVzZSBpdCBleGVyY2lzZXMgdGhlIGJyYW5jaCBhbiBFbmdsaXNoIG9uZSBza2lwcy4iIHsKICAgICAgICAgICAgcmVhZGVyIC0+IHNpdGUud29ya2VyLmZldGNoSGFuZGxlciAiQXNrcyBmb3IgYSBQb3N0IHVuZGVyIC9lcyIKICAgICAgICAgICAgc2l0ZS53b3JrZXIuZmV0Y2hIYW5kbGVyIC0+IHNpdGUud29ya2VyLnJlZGlyZWN0cyAiQXNrcyB0aGUgdGFibGUgZmlyc3QsIGFuZCBtaXNzZXMiCiAgICAgICAgICAgIHNpdGUud29ya2VyLmZldGNoSGFuZGxlciAtPiBzaXRlLndvcmtlci5sb2NhbGUgIkRlcml2ZXMgZXMgZnJvbSB0aGUgcHJlZml4LCBvbmNlIgogICAgICAgICAgICBzaXRlLndvcmtlci5mZXRjaEhhbmRsZXIgLT4gc2l0ZS53b3JrZXIucm91dGVzICJIYW5kcyBvdmVyIHRoZSByZXF1ZXN0IHdpdGggdGhlIExvY2FsZSBhbmQgdGhlIG5vbmNlIGFscmVhZHkgc2V0IgogICAgICAgICAgICBzaXRlLndvcmtlci5yb3V0ZXMgLT4gc2l0ZS53b3JrZXIubW9kZWxzICJBc2tzIGZvciB0aGUgUG9zdCBieSBzbHVnLCBpbiB0aGUgZGVyaXZlZCBMb2NhbGUiCiAgICAgICAgICAgIHNpdGUud29ya2VyLm1vZGVscyAtPiBzaXRlLndvcmtlci5kYiAiT25lIHF1ZXJ5LCB3aXRoIHRoZSBzbHVnIGJvdW5kIgogICAgICAgICAgICBzaXRlLndvcmtlci5kYiAtPiBzaXRlLmQxICJSZXR1cm5zIHRoZSByb3csIG9yIHRoZSBDb250YWluZXIgdGhpcyBQb3N0IDMwMXMgdG8gaW5zdGVhZCIKICAgICAgICAgICAgc2l0ZS53b3JrZXIucm91dGVzIC0+IHNpdGUua3YgIlJlYWRzIHRoZSBib2R5LCBrZXllZCBvZmYgdGhlIHJlc29sdmVkIHJvdydzIG93biBMb2NhbGUgcmF0aGVyIHRoYW4gdGhlIHJlcXVlc3QncyIKICAgICAgICAgICAgc2l0ZS53b3JrZXIucm91dGVzIC0+IHNpdGUud29ya2VyLmFkZHJlc3NlcyAiQnVpbGRzIHRoZSBjYW5vbmljYWwsIHRoZSBocmVmbGFuZyBzZXQgYW5kIHRoZSBKU09OLUxEIGZyb20gb25lIHNldCBvZiBhZGRyZXNzZXMiCiAgICAgICAgICAgIHNpdGUud29ya2VyLmZldGNoSGFuZGxlciAtPiBzaXRlLndvcmtlci5zZWN1cml0eUhlYWRlcnMgIlJlYnVpbGRzIHRoZSByZXNwb25zZSBhcm91bmQgdGhlIG5vbmNlIHRoYXQgc2lnbmVkIGl0cyBzY3JpcHRzIgogICAgICAgICAgICBhdXRvbGF5b3V0IGxyCiAgICAgICAgfQoKICAgICAgICBkeW5hbWljIHNpdGUgImR5bmFtaWMtcHVibGljYXRpb24iICJUaGUgUHVibGljYXRpb24sIGluIHRoZSBvcmRlciB0aGUgam9iIHJ1bnMgaXQg4oCUIGFuZCBpdCBoYXMgbm8gcm9sbGJhY2s6IGlmIHRoZSBkZXBsb3kgZmFpbHMgYWZ0ZXIgdGhlIHN0b3JlcyBoYXZlIG1vdmVkLCBvbGQgY29kZSBzZXJ2ZXMgbmV3IGNvbnRlbnQgdW50aWwgc29tZW9uZSBtZXJnZXMgYSBmaXguIiB7CiAgICAgICAgICAgIGdpdGh1YiAtPiBzaXRlLnB1Ymxpc2hKb2IgIk1lcmdlcyB0byBtYWluLCB3aGljaCBpcyB0aGUgb25seSB0cmlnZ2VyIHRoZXJlIGlzIgogICAgICAgICAgICBzaXRlLnB1Ymxpc2hKb2IgLT4gc2l0ZS5kMSAiQXBwbGllcyBhbnkgbmV3IG1pZ3JhdGlvbnMsIHRoZSBvbmUgd3JpdGUgdG8gcHJvZHVjdGlvbiB0aGF0IHByZWNlZGVzIHRoZSBzZWVkIgogICAgICAgICAgICBzaXRlLnB1Ymxpc2hKb2IgLT4gc2l0ZS5zY2hlbWFWZXJpZmllciAiQXNrcyB3aGV0aGVyIHRoZSBkZXBsb3llZCBzaGFwZSBpcyB0aGUgZGVjbGFyZWQgb25lLCBiZWZvcmUgYW55IHJvdyBpcyB3cml0dGVuIgogICAgICAgICAgICBzaXRlLnB1Ymxpc2hKb2IgLT4gc2l0ZS5kMSAiVXBzZXJ0cyBzZWVkLnNxbCwgYW5kIGVtcHRpZXMgbm90aGluZyBmaXJzdCIKICAgICAgICAgICAgc2l0ZS5wdWJsaXNoSm9iIC0+IHNpdGUua3ZVcGxvYWRlciAiUmVwbGFjZXMgZXZlcnkgcGF5bG9hZCwgcHV0IGJlZm9yZSBkZWxldGUiCiAgICAgICAgICAgIHNpdGUucHVibGlzaEpvYiAtPiBzaXRlLnN0b3JlVmVyaWZpZXIgIlJlYWRzIGJvdGggc3RvcmVzIGJhY2ssIGJlZm9yZSB0aGUgY29kZSB0aGF0IHNlcnZlcyB0aGVtIGdvZXMgbGl2ZSIKICAgICAgICAgICAgc2l0ZS5wdWJsaXNoSm9iIC0+IHNpdGUud29ya2VyICJCdWlsZHMgYW5kIGRlcGxveXMsIGxhc3Qgb2YgYWxsIgogICAgICAgICAgICBzaXRlLnB1Ymxpc2hKb2IgLT4gc2l0ZS5kZXBsb3ltZW50VmVyaWZpZXIgIkFza3Mgd2hldGhlciB0aGUgdmVyc2lvbiBqdXN0IHVwbG9hZGVkIGlzIHRoZSB2ZXJzaW9uIHNlcnZpbmcg4oCUIGFuZCB0aGVyZSBpcyBub3RoaW5nIHRvIHVuZG8gaWYgaXQgaXMgbm90IgogICAgICAgIH0KCiAgICAgICAgZGVwbG95bWVudCBzaXRlICJQcm9kdWN0aW9uIiAiZGVwbG95bWVudC1wcm9kdWN0aW9uIiAiV2hlcmUgZWFjaCBwcm9jZXNzIHJ1bnMuIFRoZSBwb2ludCBpcyB3aGF0IHRoZSBlZGdlIGRvZXMgbm90IGhvbGQ6IG5vIGdlbmVyYXRvciwgbm8gdmVyaWZpZXIsIG5vIE1hcmtkb3duLiIgewogICAgICAgICAgICBpbmNsdWRlICoKICAgICAgICAgICAgZXhjbHVkZSBzaXRlLnN0b3JlVmVyaWZpZXItPnNpdGUua3ZVcGxvYWRlcgogICAgICAgICAgICBhdXRvbGF5b3V0IHRiCiAgICAgICAgfQoKICAgICAgICBzdHlsZXMgewogICAgICAgICAgICBlbGVtZW50ICJIdW1hbiIgewogICAgICAgICAgICAgICAgc2hhcGUgUGVyc29uCiAgICAgICAgICAgICAgICBiYWNrZ3JvdW5kICMxZDNjNWEKICAgICAgICAgICAgICAgIGNvbG9yICNmZmZmZmYKICAgICAgICAgICAgfQogICAgICAgICAgICBlbGVtZW50ICJTb2Z0d2FyZSBTeXN0ZW0iIHsKICAgICAgICAgICAgICAgIGJhY2tncm91bmQgIzJjNjQ5NAogICAgICAgICAgICAgICAgY29sb3IgI2ZmZmZmZgogICAgICAgICAgICB9CiAgICAgICAgICAgIGVsZW1lbnQgIkNvbnRhaW5lciIgewogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAjM2Q4NGJkCiAgICAgICAgICAgICAgICBjb2xvciAjZmZmZmZmCiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxlbWVudCAiQ29tcG9uZW50IiB7CiAgICAgICAgICAgICAgICBiYWNrZ3JvdW5kICM3OGFlZDYKICAgICAgICAgICAgICAgIGNvbG9yICMwMDAwMDAKICAgICAgICAgICAgfQogICAgICAgICAgICBlbGVtZW50ICJFeHRlcm5hbCIgewogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAjNmQ3NDgwCiAgICAgICAgICAgICAgICBjb2xvciAjZmZmZmZmCiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxlbWVudCAiUnVudGltZSIgewogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAjMmM2NDk0CiAgICAgICAgICAgICAgICBjb2xvciAjZmZmZmZmCiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxlbWVudCAiQnVpbGQiIHsKICAgICAgICAgICAgICAgIGJhY2tncm91bmQgIzZjNTA5MQogICAgICAgICAgICAgICAgY29sb3IgI2ZmZmZmZgogICAgICAgICAgICB9CiAgICAgICAgICAgIGVsZW1lbnQgIlNvdXJjZSBvZiB0cnV0aCIgewogICAgICAgICAgICAgICAgc2hhcGUgRm9sZGVyCiAgICAgICAgICAgICAgICBiYWNrZ3JvdW5kICMyZjdhNTgKICAgICAgICAgICAgICAgIGNvbG9yICNmZmZmZmYKICAgICAgICAgICAgfQogICAgICAgICAgICBlbGVtZW50ICJEZXJpdmVkIHN0b3JlIiB7CiAgICAgICAgICAgICAgICBzaGFwZSBDeWxpbmRlcgogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAjM2Q4NGJkCiAgICAgICAgICAgICAgICBjb2xvciAjZmZmZmZmCiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxlbWVudCAiVmVyaWZpZXIiIHsKICAgICAgICAgICAgICAgIHNoYXBlIEhleGFnb24KICAgICAgICAgICAgICAgIGJhY2tncm91bmQgI2E4NTcxYwogICAgICAgICAgICAgICAgY29sb3IgI2ZmZmZmZgogICAgICAgICAgICB9CiAgICAgICAgICAgIGVsZW1lbnQgIkV4dHJhY3RlZCBmb3IgdGVzdCIgewogICAgICAgICAgICAgICAgc3Ryb2tlICMxMDE0MTgKICAgICAgICAgICAgICAgIHN0cm9rZVdpZHRoIDgKICAgICAgICAgICAgfQogICAgICAgIH0KCiAgICAgICAgdGhlbWUgZGVmYXVsdAogICAgfQoKICAgIGNvbmZpZ3VyYXRpb24gewogICAgICAgIHNjb3BlIHNvZnR3YXJlc3lzdGVtCiAgICB9Cn0=",
+    "structurizr.inspection.error": "2",
+    "structurizr.inspection.ignore": "0",
+    "structurizr.inspection.info": "0",
+    "structurizr.inspection.warning": "0"
+  },
+  "views": {
+    "componentViews": [
+      {
+        "automaticLayout": {
+          "edgeSeparation": 50,
+          "nodeSeparation": 50,
+          "rankDirection": "LeftRight",
+          "rankSeparation": 100,
+          "vertices": true
+        },
+        "containerId": "8",
+        "description": "The request pipeline, and the algebra that decides what every address is.",
+        "elements": [
+          {
+            "id": "1",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "5",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "9",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "10",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "11",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "12",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "13",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "14",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "15",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "16",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "17",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "18",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "19",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "20",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "21",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "31",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalContainerBoundariesVisible": false,
+        "key": "components-worker",
+        "name": "Component View: poschuler.com - Worker",
+        "order": 4,
+        "relationships": [
+          {
+            "id": "113"
+          },
+          {
+            "id": "52"
+          },
+          {
+            "id": "82"
+          },
+          {
+            "id": "83"
+          },
+          {
+            "id": "84"
+          },
+          {
+            "id": "85"
+          },
+          {
+            "id": "86"
+          },
+          {
+            "id": "87"
+          },
+          {
+            "id": "88"
+          },
+          {
+            "id": "89"
+          },
+          {
+            "id": "90"
+          },
+          {
+            "id": "91"
+          },
+          {
+            "id": "92"
+          },
+          {
+            "id": "93"
+          },
+          {
+            "id": "94"
+          },
+          {
+            "id": "95"
+          },
+          {
+            "id": "96"
+          }
+        ]
+      },
+      {
+        "automaticLayout": {
+          "edgeSeparation": 50,
+          "nodeSeparation": 50,
+          "rankDirection": "TopBottom",
+          "rankSeparation": 100,
+          "vertices": true
+        },
+        "containerId": "24",
+        "description": "How Markdown becomes the two stores: the tree classifies, the vocabulary closes, the sanitiser is the only safe place.",
+        "elements": [
+          {
+            "id": "20",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "21",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "23",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "25",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "26",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "27",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "28",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "29",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "30",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "32",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "33",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "34",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "35",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "36",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "37",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "40",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalContainerBoundariesVisible": false,
+        "key": "components-pipeline",
+        "name": "Component View: poschuler.com - D1 seed generator",
+        "order": 5,
+        "relationships": [
+          {
+            "id": "100"
+          },
+          {
+            "id": "101"
+          },
+          {
+            "id": "102"
+          },
+          {
+            "id": "103"
+          },
+          {
+            "id": "104"
+          },
+          {
+            "id": "105"
+          },
+          {
+            "id": "106"
+          },
+          {
+            "id": "107"
+          },
+          {
+            "id": "108"
+          },
+          {
+            "id": "109"
+          },
+          {
+            "id": "110"
+          },
+          {
+            "id": "115"
+          },
+          {
+            "id": "116"
+          },
+          {
+            "id": "117"
+          },
+          {
+            "id": "118"
+          },
+          {
+            "id": "78"
+          },
+          {
+            "id": "79"
+          },
+          {
+            "id": "97"
+          },
+          {
+            "id": "98"
+          },
+          {
+            "id": "99"
+          }
+        ]
+      }
+    ],
+    "configuration": {
+      "styles": {
+        "elements": [
+          {
+            "background": "#6c5091",
+            "color": "#ffffff",
+            "tag": "Build"
+          },
+          {
+            "background": "#78aed6",
+            "color": "#000000",
+            "tag": "Component"
+          },
+          {
+            "background": "#3d84bd",
+            "color": "#ffffff",
+            "tag": "Container"
+          },
+          {
+            "background": "#3d84bd",
+            "color": "#ffffff",
+            "shape": "Cylinder",
+            "tag": "Derived store"
+          },
+          {
+            "background": "#6d7480",
+            "color": "#ffffff",
+            "tag": "External"
+          },
+          {
+            "stroke": "#101418",
+            "strokeWidth": 8,
+            "tag": "Extracted for test"
+          },
+          {
+            "background": "#1d3c5a",
+            "color": "#ffffff",
+            "shape": "Person",
+            "tag": "Human"
+          },
+          {
+            "background": "#2c6494",
+            "color": "#ffffff",
+            "tag": "Runtime"
+          },
+          {
+            "background": "#2c6494",
+            "color": "#ffffff",
+            "tag": "Software System"
+          },
+          {
+            "background": "#2f7a58",
+            "color": "#ffffff",
+            "shape": "Folder",
+            "tag": "Source of truth"
+          },
+          {
+            "background": "#a8571c",
+            "color": "#ffffff",
+            "shape": "Hexagon",
+            "tag": "Verifier"
+          }
+        ]
+      },
+      "terminology": {},
+      "themes": [
+        "https://static.structurizr.com/themes/default/theme.json"
+      ]
+    },
+    "containerViews": [
+      {
+        "automaticLayout": {
+          "edgeSeparation": 50,
+          "nodeSeparation": 50,
+          "rankDirection": "LeftRight",
+          "rankSeparation": 100,
+          "vertices": true
+        },
+        "description": "The request path: one Worker, two derived stores, and one file it does not hold.",
+        "elements": [
+          {
+            "id": "1",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "3",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "5",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "6",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "8",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "20",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "21",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "22",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalSoftwareSystemBoundariesVisible": false,
+        "key": "containers-runtime",
+        "name": "Container View: poschuler.com",
+        "order": 2,
+        "relationships": [
+          {
+            "id": "51"
+          },
+          {
+            "id": "53"
+          },
+          {
+            "id": "54"
+          },
+          {
+            "id": "55"
+          },
+          {
+            "id": "56"
+          },
+          {
+            "id": "57"
+          },
+          {
+            "id": "58"
+          },
+          {
+            "id": "59"
+          },
+          {
+            "id": "60"
+          }
+        ],
+        "softwareSystemId": "7"
+      },
+      {
+        "automaticLayout": {
+          "edgeSeparation": 50,
+          "nodeSeparation": 50,
+          "rankDirection": "TopBottom",
+          "rankSeparation": 100,
+          "vertices": true
+        },
+        "description": "Where the content actually comes from, and the order the stores are moved in.",
+        "elements": [
+          {
+            "id": "2",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "4",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "8",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "20",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "21",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "22",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "23",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "24",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "31",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "36",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "37",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "38",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "39",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "40",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "41",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "42",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalSoftwareSystemBoundariesVisible": false,
+        "key": "containers-build",
+        "name": "Container View: poschuler.com",
+        "order": 3,
+        "relationships": [
+          {
+            "id": "115"
+          },
+          {
+            "id": "116"
+          },
+          {
+            "id": "117"
+          },
+          {
+            "id": "119"
+          },
+          {
+            "id": "46"
+          },
+          {
+            "id": "61"
+          },
+          {
+            "id": "62"
+          },
+          {
+            "id": "63"
+          },
+          {
+            "id": "64"
+          },
+          {
+            "id": "65"
+          },
+          {
+            "id": "66"
+          },
+          {
+            "id": "67"
+          },
+          {
+            "id": "68"
+          },
+          {
+            "id": "69"
+          },
+          {
+            "id": "70"
+          },
+          {
+            "id": "71"
+          },
+          {
+            "id": "72"
+          },
+          {
+            "id": "73"
+          },
+          {
+            "id": "74"
+          },
+          {
+            "id": "75"
+          },
+          {
+            "id": "76"
+          },
+          {
+            "id": "77"
+          },
+          {
+            "id": "78"
+          },
+          {
+            "id": "79"
+          },
+          {
+            "id": "80"
+          },
+          {
+            "id": "81"
+          }
+        ],
+        "softwareSystemId": "7"
+      }
+    ],
+    "deploymentViews": [
+      {
+        "automaticLayout": {
+          "edgeSeparation": 50,
+          "nodeSeparation": 50,
+          "rankDirection": "TopBottom",
+          "rankSeparation": 100,
+          "vertices": true
+        },
+        "description": "Where each process runs. The point is what the edge does not hold: no generator, no verifier, no Markdown.",
+        "elements": [
+          {
+            "id": "120",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "121",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "122",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "123",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "124",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "125",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "126",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "128",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "129",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "131",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "132",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "133",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "137",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "140",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "143",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "148",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "151",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "152",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "environment": "Production",
+        "key": "deployment-production",
+        "name": "Deployment View: poschuler.com - Production",
+        "order": 8,
+        "relationships": [
+          {
+            "id": "127"
+          },
+          {
+            "id": "130"
+          },
+          {
+            "id": "134"
+          },
+          {
+            "id": "135"
+          },
+          {
+            "id": "136"
+          },
+          {
+            "id": "138"
+          },
+          {
+            "id": "139"
+          },
+          {
+            "id": "141"
+          },
+          {
+            "id": "142"
+          },
+          {
+            "id": "144"
+          },
+          {
+            "id": "145"
+          },
+          {
+            "id": "146"
+          },
+          {
+            "id": "149"
+          },
+          {
+            "id": "150"
+          },
+          {
+            "id": "153"
+          }
+        ],
+        "softwareSystemId": "7"
+      }
+    ],
+    "dynamicViews": [
+      {
+        "automaticLayout": {
+          "edgeSeparation": 50,
+          "nodeSeparation": 50,
+          "rankDirection": "LeftRight",
+          "rankSeparation": 100,
+          "vertices": true
+        },
+        "description": "A Spanish Post, because it exercises the branch an English one skips.",
+        "elementId": "8",
+        "elements": [
+          {
+            "id": "1",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "9",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "10",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "11",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "12",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "13",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "14",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "15",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "16",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "20",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "21",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalBoundariesVisible": false,
+        "key": "dynamic-request",
+        "name": "Dynamic View: poschuler.com - Worker",
+        "order": 6,
+        "relationships": [
+          {
+            "description": "Asks for a Post under /es",
+            "id": "52",
+            "order": "1",
+            "response": false
+          },
+          {
+            "description": "Asks the table first, and misses",
+            "id": "82",
+            "order": "2",
+            "response": false
+          },
+          {
+            "description": "Derives es from the prefix, once",
+            "id": "83",
+            "order": "3",
+            "response": false
+          },
+          {
+            "description": "Hands over the request with the Locale and the nonce already set",
+            "id": "84",
+            "order": "4",
+            "response": false
+          },
+          {
+            "description": "Asks for the Post by slug, in the derived Locale",
+            "id": "86",
+            "order": "5",
+            "response": false
+          },
+          {
+            "description": "One query, with the slug bound",
+            "id": "93",
+            "order": "6",
+            "response": false
+          },
+          {
+            "description": "Returns the row, or the Container this Post 301s to instead",
+            "id": "94",
+            "order": "7",
+            "response": false
+          },
+          {
+            "description": "Reads the body, keyed off the resolved row's own Locale rather than the request's",
+            "id": "91",
+            "order": "8",
+            "response": false
+          },
+          {
+            "description": "Builds the canonical, the hreflang set and the JSON-LD from one set of addresses",
+            "id": "87",
+            "order": "9",
+            "response": false
+          },
+          {
+            "description": "Rebuilds the response around the nonce that signed its scripts",
+            "id": "85",
+            "order": "10",
+            "response": false
+          }
+        ]
+      },
+      {
+        "description": "The Publication, in the order the job runs it — and it has no rollback: if the deploy fails after the stores have moved, old code serves new content until someone merges a fix.",
+        "elementId": "7",
+        "elements": [
+          {
+            "id": "4",
+            "x": 200,
+            "y": 2000
+          },
+          {
+            "id": "8",
+            "x": 4200,
+            "y": 3100
+          },
+          {
+            "id": "20",
+            "x": 4200,
+            "y": 300
+          },
+          {
+            "id": "36",
+            "x": 4200,
+            "y": 1700
+          },
+          {
+            "id": "38",
+            "x": 1600,
+            "y": 2000
+          },
+          {
+            "id": "39",
+            "x": 4200,
+            "y": 1000
+          },
+          {
+            "id": "40",
+            "x": 4200,
+            "y": 2400
+          },
+          {
+            "id": "42",
+            "x": 4200,
+            "y": 3800
+          }
+        ],
+        "externalBoundariesVisible": false,
+        "key": "dynamic-publication",
+        "name": "Dynamic View: poschuler.com",
+        "order": 7,
+        "paperSize": "A2_Landscape",
+        "relationships": [
+          {
+            "description": "Merges to main, which is the only trigger there is",
+            "id": "67",
+            "order": "1",
+            "position": 50,
+            "response": false
+          },
+          {
+            "description": "Applies any new migrations, the one write to production that precedes the seed",
+            "id": "70",
+            "order": "2",
+            "position": 20,
+            "response": false
+          },
+          {
+            "description": "Asks whether the deployed shape is the declared one, before any row is written",
+            "id": "74",
+            "order": "3",
+            "position": 40,
+            "response": false
+          },
+          {
+            "description": "Upserts seed.sql, and empties nothing first",
+            "id": "70",
+            "order": "4",
+            "position": 62,
+            "response": false
+          },
+          {
+            "description": "Replaces every payload, put before delete",
+            "id": "71",
+            "order": "5",
+            "position": 58,
+            "response": false
+          },
+          {
+            "description": "Reads both stores back, before the code that serves them goes live",
+            "id": "75",
+            "order": "6",
+            "position": 40,
+            "response": false
+          },
+          {
+            "description": "Builds and deploys, last of all",
+            "id": "72",
+            "order": "7",
+            "position": 55,
+            "response": false
+          },
+          {
+            "description": "Asks whether the version just uploaded is the version serving — and there is nothing to undo if it is not",
+            "id": "76",
+            "order": "8",
+            "position": 35,
+            "response": false
+          }
+        ]
+      }
+    ],
+    "systemContextViews": [
+      {
+        "automaticLayout": {
+          "edgeSeparation": 50,
+          "nodeSeparation": 50,
+          "rankDirection": "LeftRight",
+          "rankSeparation": 100,
+          "vertices": true
+        },
+        "description": "The four kinds of user this site has, two of which are not people.",
+        "elements": [
+          {
+            "id": "1",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "2",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "3",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "4",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "5",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "6",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "7",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "enterpriseBoundaryVisible": true,
+        "key": "context",
+        "name": "System Context View: poschuler.com",
+        "order": 1,
+        "relationships": [
+          {
+            "id": "43"
+          },
+          {
+            "id": "44"
+          },
+          {
+            "id": "45"
+          },
+          {
+            "id": "46"
+          },
+          {
+            "id": "47"
+          },
+          {
+            "id": "48"
+          },
+          {
+            "id": "49"
+          },
+          {
+            "id": "50"
+          },
+          {
+            "id": "51"
+          }
+        ],
+        "softwareSystemId": "7"
+      }
+    ]
+  }
+}
