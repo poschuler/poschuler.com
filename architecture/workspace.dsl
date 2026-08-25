@@ -233,6 +233,9 @@ workspace "poschuler.com" "The personal site of Paul Osorio Schuler, modelled in
         }
 
         styles {
+            element "Element" {
+                shape RoundedBox
+            }
             element "Human" {
                 shape Person
                 background #1d3c5a
@@ -282,8 +285,6 @@ workspace "poschuler.com" "The personal site of Paul Osorio Schuler, modelled in
                 strokeWidth 8
             }
         }
-
-        theme default
     }
 
     configuration {
