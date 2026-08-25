@@ -77,6 +77,15 @@ pnpm run verify:stores:local     # both local stores hold what the Markdown says
 pnpm run smoke                   # builds, then boots it with no vars and no secrets
 ```
 
+If you touched anything under `architecture/`, add the check CI runs on it — it needs Docker, which nothing else in this list does, so it is not part of the block above:
+
+```bash
+docker run --rm -u "$(id -u):$(id -g)" -v "$PWD/architecture:/ws:ro" \
+  structurizr/structurizr:2026.06.28 validate -w /ws/workspace.dsl
+```
+
+It is silent on success. Do not check a broken workspace by opening Structurizr Lite: when the DSL stops parsing, Lite serves the last model it parsed successfully and says nothing.
+
 The order is the cheap checks first and the one needing a build last — `smoke` builds for you, which is why `pnpm build` is not a separate line here; CI splits the two because it has other reasons to want the build step named. The smoke test is the one catching what no unit test can: a module reading configuration at evaluation time, which took the whole site down once.
 
 ## Content, and the files generated from it
