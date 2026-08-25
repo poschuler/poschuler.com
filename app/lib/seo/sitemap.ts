@@ -1,11 +1,9 @@
 /**
  * Minimal sitemap renderer following the sitemaps.org 0.9 protocol.
  *
- * Only the fields this site actually publishes are supported: `loc`,
- * `lastmod`, `changefreq`, `priority` and, since Part 10 of
- * `evolution-plan/15-phase-3-spanish.md`, the `xhtml` alternates below. No
- * image, video or news extensions, so the document declares no namespace for
- * either of those.
+ * Only the fields this site actually publishes are supported: `loc`, `lastmod`,
+ * `changefreq`, `priority` and the `xhtml` alternates below. No image, video or
+ * news extensions, so the document declares no namespace for either of those.
  *
  * **Two namespaces, not one.** This used to declare a single one and say so
  * deliberately. `hreflang` needs the `xhtml` namespace's own

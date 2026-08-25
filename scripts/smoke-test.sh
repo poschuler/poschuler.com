@@ -74,7 +74,7 @@ mapfile -t PROJECT_SLUGS < <(
 )
 
 # The same pair, for a Project's Field Notes — read from its `notes:` manifest,
-# which lists a Draft note exactly as it lists a published one (1b/2). A Draft
+# which lists a Draft note exactly as it lists a published one. A Draft
 # produces no `blog:` payload at all, so PROJECT_NOTES is filtered below to the
 # ones that do before it is used for anything — the manifest is not, on its
 # own, proof that a note is live.
@@ -211,10 +211,10 @@ fi
 # The Spanish branch. Hardcoded rather than derived, and that is the difference
 # between this block and every one above it: these four addresses do not depend
 # on any Spanish document existing. An index exists in every Locale whether or
-# not its list has anything in it (Part 6 of Phase 3), the home page is one,
-# and `/es/cv` renders from `resume.json`, which carries both Locales. The
-# routes that *do* need a Translation — a Post, a Series, a Project — answer
-# 404 in Spanish today and correctly so, which is why none of them is here.
+# not its list has anything in it, the home page is one, and `/es/cv` renders
+# from `resume.json`, which carries both Locales. The routes that *do* need a
+# Translation — a Post, a Series, a Project — answer 404 in Spanish today and
+# correctly so, which is why none of them is here.
 #
 # It is the half of the route table the English probes cannot reach: the Locale
 # is derived from the pathname before the router runs, and an empty index goes

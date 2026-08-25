@@ -116,9 +116,8 @@ export function findAllPosts(db: D1Database, locale: Locale) {
  * Notes individually, because their question is *what happened lately*.
  *
  * `/blog` lists a Project-with-notes as an entry of its own — see
- * `findProjectsWithNotes` — and this query is what keeps a Field Note from
- * also being double-counted here as a loose Post (1b/6,
- * `evolution-plan/14-phase-1b-field-notes.md` Part 10).
+ * `findProjectsWithNotes` — and this query is what keeps a Field Note from also
+ * being double-counted here as a loose Post.
  */
 export function findLoosePosts(db: D1Database, locale: Locale) {
   return findContent<PostRowType>(
@@ -137,11 +136,11 @@ export function findLoosePosts(db: D1Database, locale: Locale) {
  *
  * `locales` rides along as a correlated subquery — the Locales some Post of
  * this Slug exists in, not only this one — so the page this row frames can
- * build its own `hreflang` alternates without a second round trip (Part 10 of
- * `evolution-plan/15-phase-3-spanish.md`, and `CONTENT_COLUMNS`'s docblock,
- * which names this the correlated-subquery precedent). Scoped to `type =
- * 'post'` the same way the outer query is, so a Bookmark that happened to
- * share a Slug could never be counted as a Translation.
+ * build its own `hreflang` alternates without a second round trip (see
+ * `CONTENT_COLUMNS`'s docblock, which names this the correlated-subquery
+ * precedent). Scoped to `type = 'post'` the same way the outer query is, so a
+ * Bookmark that happened to share a Slug could never be counted as a
+ * Translation.
  */
 export async function findPostBySlug(db: D1Database, slug: string, locale: Locale) {
   const rows = await dbQuery<PostRowType & { locales: string | null }>(

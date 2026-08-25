@@ -14,7 +14,7 @@ The width lives in one place too, `--container-measure` in `app.css`, and that i
 
 ### The home page is the exception, on purpose
 
-`/` is a landing page, not a notebook page, and it breaks three of the rules above deliberately. The reasoning is in `evolution-plan/01-information-architecture.md`, Decision 3; what follows is the rule as it now stands.
+`/` is a landing page, not a notebook page, and it breaks three of the rules above deliberately. The Timeline used to live at this address and moved to `/timeline`, working exactly as it did and still linked: a visitor arriving from an application has to learn what this person does before a reverse-chronological list of everything becomes worth reading. What follows is the rule as it now stands.
 
 - **It leads with content above the fold** — a portrait, the role, the timezone, and two paragraphs — because a visitor who arrives from an application has to learn what this person does before anything else is worth reading.
 - **Its column is `max-w-measure`, like every other page.** Both sections of the home use it, so the page reads as a single strip rather than a landing page with a wider index bolted underneath.

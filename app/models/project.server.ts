@@ -87,10 +87,10 @@ function hydrate<T extends StoredProjectRow>(
  * a tier change silently reorder the page.
  *
  * Required and typed as `Locale` for the reason every sibling query in this
- * file already takes one (Part 5 of `evolution-plan/15-phase-3-spanish.md`):
- * without the filter, `/es/projects` and the home page's flagship block would
- * both render this Locale's chrome around the English row — the outcome Part 6
- * exists to prevent.
+ * file already takes one: without the filter, `/es/projects` and the home
+ * page's flagship block would both render this Locale's chrome around the
+ * English row — Spanish furniture around an English document, which is the one
+ * thing the Spanish branch must never produce.
  */
 export async function findAllProjects(db: D1Database, locale: Locale) {
   const rows = await dbQuery<StoredProjectRow>(
@@ -114,7 +114,7 @@ export async function findAllProjects(db: D1Database, locale: Locale) {
  *
  * `locales` rides along as a correlated subquery — every Locale this Slug's
  * Project exists in — so the landing can build its own `hreflang` alternates
- * without a second round trip (Part 10 of `evolution-plan/15-phase-3-spanish.md`).
+ * without a second round trip.
  */
 export async function findProjectBySlug(db: D1Database, slug: string, locale: Locale) {
   const rows = await dbQuery<StoredProjectRow & { locales: string | null }>(
@@ -143,9 +143,9 @@ export type ProjectNoteRowType = {
 };
 
 /**
- * The published Field Notes of one Project, in manifest order (Part 8 of
- * `evolution-plan/14-phase-1b-field-notes.md`) — the order the author chose,
- * not the order they were written, so the strongest note can lead.
+ * The published Field Notes of one Project, in manifest order — the order the
+ * author chose, not the order they were written, so the strongest note can
+ * lead.
  *
  * A Draft holds no `content` row at all, so it is absent from this list by
  * construction, and reappears in the position it already had the moment its
@@ -186,8 +186,8 @@ export type ProjectListingRowType = ProjectRowType & {
 };
 
 /**
- * Every Project with at least one published Field Note, most recently
- * advanced first (Part 10 of `evolution-plan/14-phase-1b-field-notes.md`).
+ * Every Project with at least one published Field Note, most recently advanced
+ * first.
  *
  * The `join` — not a `left join` — is what excludes a Project with none: unlike
  * `findAllSeries`, which lists an announced-but-unwritten Series on `/series`

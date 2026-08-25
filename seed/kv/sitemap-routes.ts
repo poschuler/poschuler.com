@@ -17,14 +17,14 @@ import { latestRevision, parseRevisions } from "../../app/lib/revisions.ts";
  * matters — an empty store — impossible to test and the output impossible to
  * reproduce.
  *
- * **Locale-aware since Part 10 of `evolution-plan/15-phase-3-spanish.md`.**
- * This used to map each row to one URL with no Locale in it at all — so a
- * Post translated into Spanish would have advertised `/blog/<slug>` twice,
- * once per row, both times the same address. It now groups every document by
- * Slug first and emits one `SitemapRoute` per Locale that actually exists for
- * it, each carrying the reciprocal alternates `app/lib/seo/alternates.ts`
- * computes — the same module the page `<head>` reads, so the sitemap and the
- * `hreflang` cannot disagree about which Locales exist for a document.
+ * **Locale-aware.** This used to map each row to one URL with no Locale in it
+ * at all — so a Post translated into Spanish would have advertised
+ * `/blog/<slug>` twice, once per row, both times the same address. It now
+ * groups every document by Slug first and emits one `SitemapRoute` per Locale
+ * that actually exists for it, each carrying the reciprocal alternates
+ * `app/lib/seo/alternates.ts` computes — the same module the page `<head>`
+ * reads, so the sitemap and the `hreflang` cannot disagree about which Locales
+ * exist for a document.
  */
 
 /** Only the columns the sitemap reads. */
@@ -115,9 +115,8 @@ export type SitemapSeries = {
 /**
  * A Tag some Post carries in some Locale — one row per `(Tag, Locale)` pair
  * that reaches a Post, which is what decides whether `/tags` and `/es/tags`
- * each have anything to advertise, independently (Part 11 of
- * `evolution-plan/15-phase-3-spanish.md`: a Spanish Tags index counts Spanish
- * Posts only).
+ * each have anything to advertise, independently: a Spanish Tags index counts
+ * Spanish Posts only.
  *
  * Only the Tags **Posts** carry, which is what the index lists and therefore
  * what decides whether the index has anything on it. The table holds Bookmark
@@ -429,9 +428,9 @@ export function buildSitemapRoutes(
   // published Field Note, all as a single entry — `/blog`'s own rule. Every
   // one of the three is a Post (a loose Post, a Part or a Field Note), so a
   // Locale with zero Posts of any kind has none of the three, and this is one
-  // filter rather than three (Part 6: "an index advertising nothing is worse
-  // than no index" applies here exactly as it already does to `/projects`,
-  // `/series` and `/tags`).
+  // filter rather than three: an index advertising nothing is worse than no
+  // index, and that applies here exactly as it already does to `/projects`,
+  // `/series` and `/tags`.
   const blogIndexLocales = LOCALES.filter((locale) => inLocale(posts, locale).length > 0);
   const blogIndexRoutes: SitemapRoute[] =
     blogIndexLocales.length > 0
@@ -444,12 +443,12 @@ export function buildSitemapRoutes(
         )
       : [];
 
-  // --- Home, Bookmarks and Timeline: always both Locales. Part 6 makes every
-  // index exist unconditionally, and none of the three route modules ever
-  // calls `emptyIndexRobots` — the home page describes a person, not a list;
-  // Bookmarks belong to both Locales identically (Part 7); and the Timeline
-  // interleaves this Locale's Posts with every Bookmark, so it is only ever
-  // as empty as `/bookmarks` is.
+  // --- Home, Bookmarks and Timeline: always both Locales. Every index exists
+  // unconditionally, and none of the three route modules ever calls
+  // `emptyIndexRobots` — the home page describes a person, not a list;
+  // Bookmarks belong to both Locales identically, having no Locale of their
+  // own; and the Timeline interleaves this Locale's Posts with every Bookmark,
+  // so it is only ever as empty as `/bookmarks` is.
   const homeRoutes = routesFor(
     { kind: "index", path: "/" },
     LOCALES,
@@ -475,8 +474,8 @@ export function buildSitemapRoutes(
   );
 
   // --- The Resume: both Locales, like Home, Bookmarks and Timeline above —
-  // `/cv` is mounted in both branches (ADR 0010) and, since Phase 3's Part 8
-  // (#48), each carries its own text, so there is no empty Locale to exclude.
+  // `/cv` is mounted in both branches (ADR 0010) and, since #48, each carries
+  // its own text, so there is no empty Locale to exclude.
   // Dated by the same `resumeLastmod` on both sides: one document, one
   // `meta.lastModified`, regardless of which Locale is asking.
   const cvRoutes = routesFor({ kind: "index", path: "/cv" }, LOCALES, () => resumeLastmod, "monthly", 0.8);

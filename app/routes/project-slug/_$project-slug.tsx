@@ -38,9 +38,8 @@ export async function loader({ params, context }: Route.LoaderArgs) {
       // from its own cache instead of reaching KV's central store.
       cacheTtl: 3600,
     }),
-    // The index at the foot of the landing (Part 11 of
-    // `evolution-plan/14-phase-1b-field-notes.md`). A Draft holds no row, so
-    // it is already absent here — nothing extra to filter.
+    // The index at the foot of the landing. A Draft holds no row, so it is
+    // already absent here — nothing extra to filter.
     findProjectNotes(env.POSCHULER_BD, project.slug, project.lang),
   ]);
 
@@ -59,8 +58,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     revisions: project.revisions,
     locale: project.lang,
     // Read off the same row, via the correlated subquery `findProjectBySlug`
-    // now carries (Part 10 of `evolution-plan/15-phase-3-spanish.md`) — the
-    // canonical's alternates, without a second round trip.
+    // now carries — the canonical's alternates, without a second round trip.
     existingLocales: project.locales,
     html: body.html,
     notes,
@@ -145,7 +143,7 @@ export default function Project() {
       {/* Below the case study, never above it — a hiring manager reading
         * sixty seconds and leaving must not hit an index first. Absent
         * entirely rather than an empty heading when there is nothing
-        * published yet (Part 11 of `evolution-plan/14-phase-1b-field-notes.md`). */}
+        * published yet. */}
       {notes.length > 0 && (
         <section className="mx-auto w-full max-w-measure pb-8">
           <h2 className="font-semibold text-xl tracking-tight">{strings.projects.fieldNotesHeading}</h2>

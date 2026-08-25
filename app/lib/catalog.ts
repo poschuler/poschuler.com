@@ -1,8 +1,8 @@
 import { type Locale, useLocale } from "~/context";
 
 /**
- * The interface language, as a typed catalogue rather than an i18n library
- * (ADR 0011, Part 3 of `evolution-plan/15-phase-3-spanish.md`).
+ * The interface language, as a typed catalogue rather than an i18n library (ADR
+ * 0011).
  *
  * Every string the site renders **around** its content — navigation, the
  * theme row, headings, empty states, listing metadata — lives here, keyed by
@@ -59,11 +59,10 @@ type Chrome = {
     bookmarks: string;
     timeline: string;
     /**
-     * Deliberately identical in both Locales. *Resume* is a Spanish word —
-     * the third person singular of *resumir* — so translating the label
-     * would misread as a conjugated verb; the address moves to `/cv`
-     * instead (Part 4 of `evolution-plan/15-phase-3-spanish.md`, #43) and
-     * the label stays put. Catalogued anyway, so this file is still the one
+     * Deliberately identical in both Locales. *Resume* is a Spanish word — the
+     * third person singular of *resumir* — so translating the label would
+     * misread as a conjugated verb; the address moves to `/cv` instead (#43)
+     * and the label stays put. Catalogued anyway, so this file is still the one
      * place every nav string comes from.
      */
     resume: string;
@@ -84,11 +83,10 @@ type Chrome = {
     srAnnouncement: (current: string, next: string) => string;
   };
   /**
-   * The language switcher's own copy (Part 9 of
-   * `evolution-plan/15-phase-3-spanish.md`). Looked up by the *destination*
-   * Locale, never the page's own — the switcher is written in the language it
-   * leads to, so `Español` reads correctly to a screen reader on an English
-   * page and vice versa.
+   * The language switcher's own copy. Looked up by the *destination* Locale,
+   * never the page's own — the switcher is written in the language it leads to,
+   * so `Español` reads correctly to a screen reader on an English page and vice
+   * versa.
    */
   languageSwitcher: {
     /**
@@ -116,12 +114,11 @@ type Chrome = {
     backHome: string;
   };
   /**
-   * What an index answers when its list is empty rather than 404ing (Part 6 of
-   * `evolution-plan/15-phase-3-spanish.md`) — today only reachable under `/es`,
-   * before the first Spanish document of a section exists. One pair reused by
-   * every index that can be empty: the heading above it already names the
-   * section, so the message only has to say why the list below is missing and
-   * the link only has to say where the content already is.
+   * What an index answers when its list is empty rather than 404ing — today
+   * only reachable under `/es`, before the first Spanish document of a section
+   * exists. One pair reused by every index that can be empty: the heading above
+   * it already names the section, so the message only has to say why the list
+   * below is missing and the link only has to say where the content already is.
    */
   emptyIndex: {
     message: string;
@@ -197,8 +194,7 @@ type Chrome = {
     subtitle: string;
   };
   /**
-   * The Resume's own section headings (Part 8 of
-   * `evolution-plan/15-phase-3-spanish.md`, #48) — the one piece of chrome
+   * The Resume's own section headings (#48) — the one piece of chrome
    * `resume.json` itself does not carry, because a heading is not a fact about
    * the person the way `basics`, `work` or `education` are. Everything else the
    * Resume renders either travels bilingual inside `resume.json` (the About

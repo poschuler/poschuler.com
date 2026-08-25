@@ -1,8 +1,7 @@
 import type { Locale } from "~/context";
 
 /**
- * A Post's publication date, formatted for the reader who will see it (Part 10
- * of `evolution-plan/15-phase-3-spanish.md`).
+ * A Post's publication date, formatted for the reader who will see it.
  *
  * Called from a loader, and only from a loader. `Date.prototype.toLocaleDateString`
  * reads whichever locale it is given — pass none and it reads the runtime's

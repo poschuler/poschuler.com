@@ -93,10 +93,9 @@ function fetchAll(): ContentRowType[] {
     // be rendered. `lang` is still selected, and it is what used to be the
     // latent defect here: `buildSitemapRoutes` ignored it and built the same
     // `/blog/<slug>`-shaped URL for both a Post and its Translation, so the
-    // first Spanish Post would have advertised one address twice. It now
-    // groups these rows by Slug and reads `lang` off each one to build the
-    // correct address per Locale (Part 10 of
-    // `evolution-plan/15-phase-3-spanish.md`).
+    // first Spanish Post would have advertised one address twice. It now groups
+    // these rows by Slug and reads `lang` off each one to build the correct
+    // address per Locale.
     const rows = queryD1<ContentRowType>(
         `select id_content as "idContent", slug as "slug", lang as "lang", type as "type", title as "title", published_at as "publishedAt", strftime('%Y-%m-%d', published_at) AS "publishedStringDate", description as "description", external_url as "externalUrl", source as "source", updates as "updates", series_slug as "seriesSlug", project_slug as "projectSlug" from content order by published_at desc`,
     );
@@ -144,16 +143,14 @@ function fetchAllSeries(): SeriesRowType[] {
  * NULL to another), and `type = 'post'` is what says so. A Tag carried by
  * Bookmarks alone backs no page and is not an entry on the index.
  *
- * **Carries `lang`, where it used to carry no Locale at all.** This was the
- * one query in the pipeline with no Locale in it, and its own former note
- * named the deferred decision: *"whether a Spanish Tag page lists only
- * Spanish Posts."* Part 11 of `evolution-plan/15-phase-3-spanish.md` answers
- * it — yes, a Tag is a subject and has no language, but an index reading
- * *ddd · 3 posts* over three English articles would be a lie, so `/es/tags`
- * counts Spanish Posts only. Selecting `lang` here is what lets
+ * **Carries `lang`, where it used to carry no Locale at all.** This was the one
+ * query in the pipeline with no Locale in it, and its own former note named the
+ * deferred decision: *"whether a Spanish Tag page lists only Spanish Posts."*
+ * It is answered here — yes, a Tag is a subject and has no language, but an
+ * index reading *ddd · 3 posts* over three English articles would be a lie, so
+ * `/es/tags` counts Spanish Posts only. Selecting `lang` here is what lets
  * `buildSitemapRoutes` decide, per Locale, whether `/tags` or `/es/tags` has
- * anything to advertise, the same way it already does for Projects and
- * Series.
+ * anything to advertise, the same way it already does for Projects and Series.
  */
 function fetchTaggedPostTags(): SitemapTag[] {
     return queryD1<SitemapTag>(
@@ -199,13 +196,13 @@ async function writePayload(
  * Reads the *already seeded* local D1, writes every payload and the sitemap
  * into `outputDir`.
  *
- * One parameter, not a second pipeline (Part 3 of the field notes): called
- * with none, this is byte-for-byte what it always was. `preview:drafts` is
- * the only caller that passes one — a directory outside `seed/kv/`, so
- * nothing tracked is touched. There is no `includeDrafts` here: this
- * generator does not decide what is published, it renders whatever `content`
- * already holds, and `generate-seed-sql.ts --include-drafts` is what put a
- * Draft's row there in the first place.
+ * One parameter, not a second pipeline: called with none, this is
+ * byte-for-byte what it always was. `preview:drafts` is the only caller that
+ * passes one — a directory outside `seed/kv/`, so nothing tracked is touched.
+ * There is no `includeDrafts` here: this generator does not decide what is
+ * published, it renders whatever `content` already holds, and
+ * `generate-seed-sql.ts --include-drafts` is what put a Draft's row there in
+ * the first place.
  */
 async function generateKvJsonFiles(outputDir: string = DEFAULT_OUTPUT_DIR) {
     console.log("⚙️ Starting content processing and JSON file generation...");

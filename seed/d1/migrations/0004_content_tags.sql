@@ -1,4 +1,4 @@
--- Phase 2b: Tags become rows a query can reach.
+-- Tags become rows a query can reach.
 --
 -- No `IF NOT EXISTS`, following 0002 and 0003: this runs exactly once against a
 -- database that does not have it, and a statement that quietly does nothing is

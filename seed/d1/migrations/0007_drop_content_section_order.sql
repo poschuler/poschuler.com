@@ -1,4 +1,4 @@
--- Phase 1b, contract half: `content.section_order` goes, and the rename that
+-- Contract half: `content.section_order` goes, and the rename that
 -- `0006` started is finished.
 --
 -- The three steps, and the order of them is the whole point:

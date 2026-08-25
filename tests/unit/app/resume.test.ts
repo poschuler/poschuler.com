@@ -4,13 +4,12 @@ import { meta as resumeMeta } from "~/routes/resume/_resume";
 
 /**
  * `/cv` has no loader (`_resume.tsx`'s own note explains why), so `meta()` is
- * the one piece of request-time behaviour this route has — reading the
- * Locale off `root`'s loader data through `matches` rather than a loader of
- * its own (Part 8 of `evolution-plan/15-phase-3-spanish.md`, #48). What
- * matters here is exactly what broke before this ticket: the canonical, the
- * `og:url` and the structured data's `mainEntityOfPage` all have to follow
- * the Locale the page was actually served under, rather than always reading
- * English.
+ * the one piece of request-time behaviour this route has — reading the Locale
+ * off `root`'s loader data through `matches` rather than a loader of its own
+ * (#48). What matters here is exactly what broke before this ticket: the
+ * canonical, the `og:url` and the structured data's `mainEntityOfPage` all have
+ * to follow the Locale the page was actually served under, rather than always
+ * reading English.
  */
 
 const metaArgs = (rootLoaderData: unknown) =>

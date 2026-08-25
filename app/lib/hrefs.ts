@@ -12,11 +12,10 @@
  * exist to feed — a second copy of the rule is a Part or a Field Note linking
  * to a 404 from whichever list nobody checked.
  *
- * Every function here now takes a Locale too (Part 10 of
- * `evolution-plan/15-phase-3-spanish.md`), and stays the one place a relative
- * path is built: `app/lib/seo/alternates.ts` composes an absolute address out
- * of what this module returns rather than reconstructing the segment itself,
- * and so does every route that used to type one out by hand.
+ * Every function here now takes a Locale too, and stays the one place a
+ * relative path is built: `app/lib/seo/alternates.ts` composes an absolute
+ * address out of what this module returns rather than reconstructing the
+ * segment itself, and so does every route that used to type one out by hand.
  *
  * Pure and client-safe on purpose: the components that build these links are
  * bundled for the browser and cannot reach into `~/models/*.server`.

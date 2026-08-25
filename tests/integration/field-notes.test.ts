@@ -12,14 +12,13 @@ import { kvKeyFor } from "../../seed/kv/kv-keys";
 import { openTestPlatform, routeArgs, type TestPlatform } from "../setup/platform";
 
 /**
- * No Field Note is published in the fixtures — the first one, Chekalo's
- * product matching, enters as a Draft (`evolution-plan/14-phase-1b-field-notes.md`
- * Part 13), so `seed/d1/seed.sql` seeds none. The tests below insert Content
- * Item rows and their `blog:` payloads directly, the way `content.test.ts`
- * already inserts rows to exercise a constraint, and remove them again in
- * `afterAll` — the test state directory is shared for the whole run, and a
- * leftover row would move the counts `content.test.ts` and `series.test.ts`
- * assert.
+ * No Field Note is published in the fixtures — the first one, Chekalo's product
+ * matching, enters as a Draft, so `seed/d1/seed.sql` seeds none. The tests
+ * below insert Content Item rows and their `blog:` payloads directly, the way
+ * `content.test.ts` already inserts rows to exercise a constraint, and remove
+ * them again in `afterAll` — the test state directory is shared for the whole
+ * run, and a leftover row would move the counts `content.test.ts` and
+ * `series.test.ts` assert.
  *
  * Two notes, not one: the landing's index and a note's sibling list both need
  * a manifest with more than one entry to prove they order it rather than just
@@ -112,8 +111,7 @@ describe("findLoosePosts — excludes a Field Note", () => {
 });
 
 /**
- * The read the landing's index and a note's sibling list share (Part 11 of
- * `evolution-plan/14-phase-1b-field-notes.md`).
+ * The read the landing's index and a note's sibling list share.
  */
 describe("findProjectNotes", () => {
   it("returns a Project's published notes in manifest order, each with its summary", async () => {
@@ -131,8 +129,7 @@ describe("findProjectNotes", () => {
 });
 
 /**
- * The read `/blog` needs to list a Project with Field Notes as a single entry
- * (Part 10 of `evolution-plan/14-phase-1b-field-notes.md`).
+ * The read `/blog` needs to list a Project with Field Notes as a single entry.
  */
 describe("findProjectsWithNotes", () => {
   it("returns a Project with at least one published note, dated by the most recent", async () => {
@@ -151,7 +148,7 @@ describe("findProjectsWithNotes", () => {
 
 /**
  * `/blog` changes unit: a Project with Field Notes appears as one entry, not
- * one per note (1b/6, Part 10).
+ * one per note.
  */
 describe("/blog — a Project with Field Notes is one entry", () => {
   const load = () => blogLoader(routeArgs<ArgsOf<typeof blogLoader>>(platform, get("/blog")));
@@ -241,7 +238,7 @@ describe("/projects/:projectSlug/:noteSlug — a Field Note", () => {
   /**
    * The sibling list at the foot: the Project's other published notes, this
    * one's own Slug still in the set the loader hands the route — `NoteSiblings`
-   * is what filters it out, so this is what it filters (Part 11).
+   * is what filters it out, so this is what it filters.
    */
   it("hands the route every published note of the Project, siblings included", async () => {
     const payload = await projectNoteLoader(args(PROJECT_SLUG, NOTE_SLUG));
@@ -258,10 +255,9 @@ describe("/projects/:projectSlug/:noteSlug — a Field Note", () => {
   });
 
   /**
-   * A Draft produces no row at all (Part 3 of the field notes), so it reads
-   * exactly like an unknown Slug from this route's point of view — there is
-   * nothing in D1 to distinguish "never written" from "written, not yet
-   * published".
+   * A Draft produces no row at all, so it reads exactly like an unknown Slug
+   * from this route's point of view — there is nothing in D1 to distinguish
+   * "never written" from "written, not yet published".
    */
   it("404s on a note that is a Draft, the same way it 404s on an unknown one", async () => {
     await expect(

@@ -111,8 +111,8 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
         slug: blogSlug,
         locale: post.lang,
         // Read off the same row, via the correlated subquery `findPostBySlug`
-        // now carries (Part 10 of `evolution-plan/15-phase-3-spanish.md`) — the
-        // canonical's alternates, without a second round trip.
+        // now carries — the canonical's alternates, without a second round
+        // trip.
         existingLocales: post.locales,
         repository: attributes.repository,
         // A malformed list is caught at build time; a page is better off

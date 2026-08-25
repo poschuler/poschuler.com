@@ -22,7 +22,7 @@
  * rather than a fact about history.
  */
 export const PERMANENT_REDIRECTS: Record<string, string> = {
-  // Phase 2a. The three Parts of Pragmatic Node.js API were published under
+  // The three Parts of Pragmatic Node.js API were published under
   // `/blog` with the Series name written by hand into each Slug, because
   // nothing yet read the directory a file sat in. They now live under their
   // Container, and the Slug says only what the Part is about.
@@ -33,7 +33,7 @@ export const PERMANENT_REDIRECTS: Record<string, string> = {
   "/blog/pragmatic-nodejs-api-vertical-slices-and-domain-logic":
     "/series/pragmatic-nodejs-api/vertical-slices-and-domain-logic",
 
-  // Phase 3. `resume` is a Spanish word — the third person singular of
+  // `resume` is a Spanish word — the third person singular of
   // *resumir* — so `/es/resume` would read as a conjugated verb rather than
   // as a CV. The route moved to `/cv` in both Locales (ADR 0010); the visible
   // navigation label stays *resume* in English, because the label and the

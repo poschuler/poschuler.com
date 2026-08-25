@@ -160,8 +160,7 @@ describe("contentRowFor — Posts", () => {
   /**
    * `en-old` is not a Locale the parser recognises, so a file declaring
    * `type: post` under `blog/` arrives with no Locale. It used to be absorbed
-   * into the Slug and skipped without a word (Part 1 of
-   * `evolution-plan/15-phase-3-spanish.md`) — now it fails the build, naming
+   * into the Slug and skipped without a word — now it fails the build, naming
    * the file.
    */
   it("fails a Post whose filename carries no recognised Locale", () => {
@@ -190,7 +189,7 @@ describe("contentRowFor — Drafts", () => {
   });
 
   /**
-   * Part 12's promise: a Draft passes every check a published document
+   * The promise a Draft makes: it passes every check a published document
    * passes. An undeclared Tag still fails the build, draft or not.
    */
   it("still fails a draft Post for every reason a published one would", () => {
@@ -269,11 +268,11 @@ describe("contentRowFor — Drafts", () => {
   });
 
   /**
-   * The round trip (Part 12's last rule): publishing inserted this row
-   * through `buildSeedSql`'s upsert; marking the same file a draft removes
-   * it from the rows the generator hands that function, so the existing
-   * prune — `DELETE FROM content WHERE … NOT IN (keyList)` — deletes it. No
-   * new mechanism, the same one every removed file already goes through.
+   * The round trip: publishing inserted this row through `buildSeedSql`'s
+   * upsert; marking the same file a draft removes it from the rows the
+   * generator hands that function, so the existing prune — `DELETE FROM
+   * content WHERE … NOT IN (keyList)` — deletes it. No new mechanism, the same
+   * one every removed file already goes through.
    */
   it("removes a previously published Post's row through the existing prune once it becomes a draft", () => {
     const published = contentRowFor("blog/a/a.en.md", post(), VOCABULARY) as ContentRow;
@@ -295,10 +294,10 @@ describe("contentRowFor — Drafts", () => {
   });
 
   /**
-   * `preview:drafts` (Part 3 of the field notes) — a Draft read as though it
-   * were published, so it can be seeded into the local stores without ever
-   * touching a tracked file. Both switch values are covered here, at the
-   * generator seam; the script's own wiring is verified by running it.
+   * `preview:drafts` — a Draft read as though it were published, so it can be
+   * seeded into the local stores without ever touching a tracked file. Both
+   * switch values are covered here, at the generator seam; the script's own
+   * wiring is verified by running it.
    */
   describe("includeDrafts", () => {
     it("emits a row for a draft Post instead of skipping it", () => {
@@ -401,7 +400,7 @@ describe("contentRowFor — Bookmarks", () => {
   });
 
   /**
-   * The two failures Part 1 introduces are told apart by their messages: a
+   * The two Locale failures are told apart by their messages: a
    * Locale-bearing tree missing one reads differently from a Bookmark
    * carrying one it should not.
    */
@@ -524,7 +523,7 @@ describe("contentRowFor — Parts of a Series", () => {
 /**
  * A Field Note is a Post whose Container is a Project — `PartPlacement`'s
  * sibling, `NotePlacement`, written from the Project manifest's flat list
- * rather than from an arc (Part 2 and Part 6 of the field notes).
+ * rather than from an arc.
  */
 describe("contentRowFor — Field Notes of a Project", () => {
   const notePath = "projects/chekalo/product-matching/product-matching.en.md";
@@ -555,8 +554,8 @@ describe("contentRowFor — Field Notes of a Project", () => {
   /**
    * A note listed in the manifest while it is a Draft is accepted — the
    * Container check above already passed, because reconciliation does not
-   * distinguish a Draft file from a published one (Part 9 of the field
-   * notes) — and only then does it produce nothing.
+   * distinguish a Draft file from a published one — and only then does it
+   * produce nothing.
    */
   it("skips a draft Field Note that is listed in its manifest, after the Container check passes", () => {
     const result = contentRowFor(notePath, post({ draft: true }), VOCABULARY, placement);

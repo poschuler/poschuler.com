@@ -1,4 +1,4 @@
--- Phase 1a: Projects get a table, and both kinds of document get Revisions.
+-- Projects get a table, and both kinds of document get Revisions.
 --
 -- No `IF NOT EXISTS` here, unlike the baseline. This runs exactly once against
 -- a database that does not have any of it, and a statement that quietly does

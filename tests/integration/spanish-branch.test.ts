@@ -22,10 +22,9 @@ import { loader as timelineLoader } from "~/routes/timeline/_timeline";
 import { openTestPlatform, routeArgs, type TestPlatform } from "../setup/platform";
 
 /**
- * What `/es` answers, held against the two rules Part 6 of
- * `evolution-plan/15-phase-3-spanish.md` exists to make safe: a document with
- * no Translation is a 404, and an index with nothing behind it answers 200 and
- * keeps itself out of the search index.
+ * What `/es` answers, held against the two rules that make a half-translated
+ * site safe: a document with no Translation is a 404, and an index with
+ * nothing behind it answers 200 and keeps itself out of the search index.
  *
  * **Nothing here names a document or counts a corpus.** The stores are filled
  * from the real content fixtures, so what is seeded moves every time a `.md` is
@@ -117,7 +116,7 @@ afterAll(async () => {
 });
 
 /**
- * A document with no Translation is a 404 — the leaf half of Part 6's split.
+ * A document with no Translation is a 404 — the leaf half of that pair.
  * Every fixture here is English-only, so the Spanish address of each is
  * exactly this case, not a stand-in for it.
  */
@@ -183,7 +182,7 @@ describe("a document with no Spanish Translation", () => {
     ).rejects.toMatchObject({ status: 404 });
   });
 
-  /** The precedent Part 6 generalises from, checked at the Locale that has nothing behind it. */
+  /** The precedent the empty-index rule generalises from, checked at the Locale that has nothing behind it. */
   it("404s a Tag some Post carries in English but not in Spanish", async () => {
     await expect(
       tagLoader(
@@ -195,7 +194,7 @@ describe("a document with no Spanish Translation", () => {
 
 /**
  * An index exists at both Locales whether or not it has anything to list — the
- * skeleton half of Part 6's split. It answers 200 with a list rather than a
+ * skeleton half of that same pair. It answers 200 with a list rather than a
  * 404, it shows nothing that belongs to the other branch, and its own `meta` is
  * what keeps it out of the search index while it has nothing to show.
  */
@@ -349,7 +348,7 @@ describe("a Spanish index, with or without anything behind it", () => {
   });
 
   /**
-   * Bookmarks belong to both Locales (Part 7): a Bookmark has no Locale, so
+   * Bookmarks belong to both Locales: a Bookmark has no Locale, so
    * `/es/bookmarks` and `/es/timeline` are full from day one and never reach
    * the empty branch above — checked here so a regression that broke the
    * `lang is null` filter would fail loudly rather than silently emptying the
@@ -369,8 +368,8 @@ describe("a Spanish index, with or without anything behind it", () => {
 
 /**
  * `findAllProjects` used to carry no Locale filter at all — invisible while
- * every Project was English, and exactly the defect Part 6's second rule
- * exists to catch: a Spanish address rendering an English Project verbatim,
+ * every Project was English, and exactly the defect those rules exist to
+ * catch: a Spanish address rendering an English Project verbatim,
  * on `/es/projects` and on the home page's flagship block alike.
  */
 describe("findAllProjects, now Locale-filtered", () => {

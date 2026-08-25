@@ -35,7 +35,7 @@ sections:
 - **`series_section` is a table with rows for Sections that hold nothing.** A planned Section is a row with a title and a summary and no Parts pointing at it, because the arc is the thing being published, not a by-product of the Posts that exist so far.
 - **The manifest is where a mistake is loud.** One file, in the order it renders, is a file a reader of the diff can check. That was the deciding argument over the distributed alternative: not that it is less typing, but that it is reviewable.
 
-## Amendment (Phase 1b): the manifest governs a second Container
+## Amendment: the manifest governs a second Container
 
 A Project declares which Field Notes it holds, and in what order, the same way a Series declares its Parts — a list in its own front matter, reconciled against the folder beneath it by the same two checks: a listed note with no file fails, a file the manifest does not list fails, and the same note listed twice fails. `seed/d1/manifest.ts` is that reconciliation pulled out of `series-sql.ts` into a function both Containers call, rather than copied — a check with two implementations has two chances to drift the day one of them is fixed and the other is not.
 

@@ -9,8 +9,7 @@
  *
  * The manifest is authorship; D1 is a projection of it (ADR 0001). What the
  * manifest declares that nothing else could is which notes the Project holds
- * and in what order — a flat list, not an arc (Part 8 of
- * `evolution-plan/14-phase-1b-field-notes.md`): a Series orders because it
+ * and in what order — a flat list, not an arc: a Series orders because it
  * promised a Destination, a Project accumulates because the problems turn up
  * when they turn up.
  */
@@ -50,8 +49,8 @@ export interface ProjectFrontMatter {
   updates?: unknown;
   /**
    * The Field Notes this Project holds, in the order the index renders them —
-   * curated, not chronological (Part 8). Absent means none yet, which is the
-   * state every Project shipped in before 1b.
+   * curated, not chronological. Absent means none yet, which is the
+   * state every Project shipped in before Field Notes existed.
    */
   notes?: unknown;
   /** `unknown` for the same reason as `updates` — see `draftError`. */

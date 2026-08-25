@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Renders every Draft into the local D1 and KV, so it can be read at its real
-# address in `dev` before it is published (Part 3 of the field notes).
+# address in `dev` before it is published.
 #
 # The same generators the committed fixtures come from, run with two extra
 # parameters — `--include-drafts`, and an output directory under `preview/`

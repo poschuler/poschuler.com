@@ -1,4 +1,4 @@
--- Phase 1b, expand half: the Project Container column arrives, and a rename
+-- Expand half: the Project Container column arrives, and a rename
 -- that cannot be atomic takes its first step.
 --
 -- No `IF NOT EXISTS`, following 0002 through 0005: this runs exactly once

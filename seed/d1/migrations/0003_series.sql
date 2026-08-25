@@ -1,4 +1,4 @@
--- Phase 2a: Series get two tables, and a Post gets a Container.
+-- Series get two tables, and a Post gets a Container.
 --
 -- No `IF NOT EXISTS`, following 0002: this runs exactly once against a database
 -- that has none of it, and a statement that quietly does nothing is the failure

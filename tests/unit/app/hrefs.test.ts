@@ -13,9 +13,8 @@ import {
  * Four lines with a test, because the rule they hold is the one that used to
  * live inline in `ContentItem` as `/blog/${item.slug}` — and the day a Part
  * moved under its Series, that line started producing a 404 from every list on
- * the site at once. 1b (`evolution-plan/14-phase-1b-field-notes.md`) adds the
- * third branch: a Field Note under its Project. Phase 3 (`evolution-plan/15`)
- * adds the Locale.
+ * the site at once. A Field Note under its Project is the third branch, and
+ * every branch takes a Locale as well.
  */
 
 describe("postHref", () => {

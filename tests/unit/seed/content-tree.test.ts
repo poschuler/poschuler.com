@@ -14,7 +14,7 @@ import {
 /**
  * The rule from ADR 0004: the tree a file sits in decides what it is, and the
  * `type` in its front matter is checked against that rather than believed.
- * Phase 2a adds the second half — how deep it sits decides whether it is the
+ * Depth is the second half — how deep it sits decides whether it is the
  * tree's own item or content inside a Container.
  *
  * Worth testing rather than reading, because the failure it replaces was
@@ -114,7 +114,7 @@ describe("placementOf — content inside a Container", () => {
   });
 
   /**
-   * 1b generalises the depth rule to `projects/`: depth 2 stays the Project
+   * The depth rule generalises to `projects/`: depth 2 stays the Project
    * itself, and depth 3 is a Field Note whose Container is the folder above —
    * the same rule a Part already follows under `series/`.
    */
@@ -204,9 +204,9 @@ describe("declaredTypeMatches", () => {
 });
 
 /**
- * Part 1 of `evolution-plan/15-phase-3-spanish.md`: the Locale vocabulary
- * moves out of a regular expression in `seed-sql.ts` and into `CONTENT_TREES`,
- * declared per tree the same way `item` and `nested` already are.
+ * The Locale vocabulary moves out of a regular expression in `seed-sql.ts` and
+ * into `CONTENT_TREES`, declared per tree the same way `item` and `nested`
+ * already are.
  */
 describe("CONTENT_TREES — the Locale rule per tree", () => {
   it("requires a Locale under every tree that holds a Translation", () => {

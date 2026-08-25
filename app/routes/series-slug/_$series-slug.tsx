@@ -61,9 +61,8 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     outOfScope: series.outOfScope,
     audience: series.audience,
     locale: series.lang,
-    // Read off the same row, via the correlated subquery `findSeriesBySlug`
-    // now carries (Part 10 of `evolution-plan/15-phase-3-spanish.md`) — the
-    // canonical's alternates, without a second round trip.
+    // Read off the same row, via the correlated subquery `findSeriesBySlug` now
+    // carries — the canonical's alternates, without a second round trip.
     existingLocales: series.locales,
     sections,
     html: body.html,

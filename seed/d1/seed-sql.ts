@@ -57,10 +57,9 @@ export interface PartPlacement {
 
 /**
  * Where a Field Note sits in its Project — `PartPlacement`'s sibling, with no
- * section: a Project's manifest is a flat list, not an arc (Part 8 of
- * `evolution-plan/14-phase-1b-field-notes.md`). A Project accumulates because
- * the problems turn up when they turn up; a Series orders because it promised
- * a Destination.
+ * section: a Project's manifest is a flat list, not an arc. A Project
+ * accumulates because the problems turn up when they turn up; a Series orders
+ * because it promised a Destination.
  */
 export interface NotePlacement {
   projectSlug: string;
@@ -167,10 +166,9 @@ export function parseContentFilename(
 }
 
 /**
- * `draft: true` in front matter (see `evolution-plan/14-phase-1b-field-notes.md`
- * Part 3) is the whole mechanism: a file declares itself a Draft, is read,
- * classified and checked exactly like a published one, and only at the very
- * end does it produce nothing.
+ * `draft: true` in front matter is the whole mechanism: a file declares itself
+ * a Draft, is read, classified and checked exactly like a published one, and
+ * only at the very end does it produce nothing.
  *
  * JavaScript's own truthiness is not trusted for the flag. `draft` is a YAML
  * field, so `draft: 'true'` or `draft: yes` must fail the build rather than
@@ -192,11 +190,11 @@ export function isDraft(draft: unknown): boolean {
 
 /**
  * The one switch every row builder in this file and its siblings takes, and
- * the whole of what `preview:drafts` (Part 3 of the field notes) adds to the
- * generators: with it unset or `false`, a Draft is skipped exactly as it is
- * today. Set, a Draft is read as though it were published — checked the same
- * way, emitted instead of skipped — which is what lets it render at its real
- * address without touching a tracked file.
+ * the whole of what `preview:drafts` adds to the generators: with it unset or
+ * `false`, a Draft is skipped exactly as it is today. Set, a Draft is read as
+ * though it were published — checked the same way, emitted instead of
+ * skipped — which is what lets it render at its real address without touching
+ * a tracked file.
  */
 export interface DraftOptions {
   includeDrafts?: boolean;
@@ -370,9 +368,8 @@ VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attrib
   // A Bookmark is a pointer to somebody else's document, not a Translation of
   // one, so a filename ending `.en.md` or `.es.md` is a mistake rather than a
   // value nobody reads: it would seed with `lang` set against the partial
-  // unique index that assumes a Bookmark has none (Part 1 of
-  // `evolution-plan/15-phase-3-spanish.md`). Ahead of every other check, the
-  // same way the equivalent check leads the Post branch.
+  // unique index that assumes a Bookmark has none. Ahead of every other check,
+  // the same way the equivalent check leads the Post branch.
   if (!localeMatchesTree(placed.tree, lang)) {
     return {
       error: `${relativePath} is a Bookmark and its filename carries a Locale suffix ('${lang}') — a Bookmark is a pointer and has no Locale to translate`,

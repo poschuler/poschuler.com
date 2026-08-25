@@ -30,8 +30,7 @@ interface NotePayload {
 }
 
 /**
- * A Field Note: a Post whose Container is a Project (Part 2 of
- * `evolution-plan/14-phase-1b-field-notes.md`).
+ * A Field Note: a Post whose Container is a Project.
  *
  * The body comes from the **`blog:` key space**, the same as any other Post —
  * the prefix says what kind of payload it is, not which URL serves it. What
@@ -52,10 +51,8 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 
   const [post, notes] = await Promise.all([
     findPostBySlug(env.POSCHULER_BD, params.noteSlug, project.lang),
-    // The sibling list at the foot (Part 11 of
-    // `evolution-plan/14-phase-1b-field-notes.md`). Read alongside the Post
-    // rather than after it: whether this Slug 404s does not change whose
-    // notes the Project holds.
+    // The sibling list at the foot. Read alongside the Post rather than after
+    // it: whether this Slug 404s does not change whose notes the Project holds.
     findProjectNotes(env.POSCHULER_BD, project.slug, project.lang),
   ]);
 
@@ -93,8 +90,8 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     datePublished: attributes.publishedAt,
     locale: post.lang,
     // Read off the same row `findPostBySlug` already fetched, via its
-    // correlated subquery (Part 10 of `evolution-plan/15-phase-3-spanish.md`)
-    // — the canonical's alternates, without a second round trip.
+    // correlated subquery — the canonical's alternates, without a second round
+    // trip.
     existingLocales: post.locales,
     repository: attributes.repository,
     html,
@@ -149,9 +146,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
         locale,
       }),
     },
-    // Home › Projects › the Project › this note — four levels, none of them
-    // a claim the site cannot back with a URL (Part 11 of
-    // `evolution-plan/14-phase-1b-field-notes.md`).
+    // Home › Projects › the Project › this note — four levels, none of them a
+    // claim the site cannot back with a URL.
     {
       "script:ld+json": breadcrumbList([
         indexCrumb("home", locale),
@@ -196,9 +192,8 @@ export default function ProjectNote() {
       />
 
       {/* No previous/next, ever: a Project promises no reading order. What
-        * is offered instead is the other notes and the way back to the
-        * Project (Part 11 of `evolution-plan/14-phase-1b-field-notes.md`) —
-        * `NoteSiblings` renders nothing when there is only one note, and
+        * is offered instead is the other notes and the way back to the Project
+        * — `NoteSiblings` renders nothing when there is only one note, and
         * carries its own layout so nothing renders around it either. */}
       <NoteSiblings
         projectSlug={projectSlug}

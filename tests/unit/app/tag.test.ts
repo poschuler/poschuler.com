@@ -66,7 +66,7 @@ describe("the Tag index's meta", () => {
     });
   });
 
-  /** The index is index-constant: both, always (Part 6), regardless of what a query would return. */
+  /** The index is index-constant: both, always, regardless of what a query would return. */
   it("declares itself canonical under /es for the Spanish branch", () => {
     expect(
       tagsMeta({ loaderData: { locale: "es", tags: [{ tag: "nodejs", posts: 3 }] } } as never),

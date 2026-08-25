@@ -1,4 +1,4 @@
--- Phase 2b, contract half: the JSON `tags` column on `content` goes.
+-- Contract half: the JSON `tags` column on `content` goes.
 --
 -- This is the third step of an expand-and-contract, and the order of the three
 -- is the whole point:

@@ -7,7 +7,7 @@
  * a Post filed under `bookmarks/` was seeded with no body rendered, and listed,
  * linked and indexed with an empty page while nothing failed.
  *
- * Phase 2a generalises it to trees that hold a Container. One tree can now hold
+ * It generalises to trees that hold a Container. One tree can now hold
  * two types — `series/` holds the manifest *and* the Posts that are its Parts —
  * and what tells them apart is already in the path:
  *
@@ -36,9 +36,8 @@ export type ContentType = "post" | "link" | "project" | "series";
  *
  * `"required"` is every tree with a Translation: a Post, a Project landing, a
  * Series manifest and its Parts all live at `(Slug, Locale)`. `"forbidden"` is
- * `bookmarks/` alone — a Bookmark is a pointer to somebody else's document,
- * not a document of its own, so it has nothing to translate and no Locale to
- * carry (Part 1 of `evolution-plan/15-phase-3-spanish.md`).
+ * `bookmarks/` alone — a Bookmark is a pointer to somebody else's document, not
+ * a document of its own, so it has nothing to translate and no Locale to carry.
  */
 export type LocaleRule = "required" | "forbidden";
 
@@ -50,9 +49,9 @@ export type LocaleRule = "required" | "forbidden";
  * `nested: null` means *nothing nests here*. A subfolder under `blog/` fails
  * the build rather than acquiring an invented meaning. `projects/` used to say
  * the same, before `project_slug` existed on `content` to make a nested Post
- * linkable — 1b (`evolution-plan/14-phase-1b-field-notes.md`) is the column's
- * arrival, and this line is the branch it was reserved for: depth 3 under a
- * Project is a Field Note, the same depth rule `series/` already generalised.
+ * linkable. That column arrived with Field Notes, and this line is the branch
+ * it was reserved for: depth 3 under a Project is a Field Note, the same depth
+ * rule `series/` already generalised.
  *
  * `locale` used to live nowhere: the vocabulary was two characters inside a
  * regular expression in `seed-sql.ts`, and a suffix it did not recognise was

@@ -6,9 +6,8 @@ import {
 } from "~/lib/seo/alternates";
 
 /**
- * The Locale switcher's destination, given the id of the deepest matched
- * route and that route's own loader data (Part 9 of
- * `evolution-plan/15-phase-3-spanish.md`).
+ * The Locale switcher's destination, given the id of the deepest matched route
+ * and that route's own loader data.
  *
  * The switcher lives in the shared layout (`routes/layouts/header.tsx`),
  * above the `Outlet` that decides which page this is — so it reaches the
@@ -89,11 +88,11 @@ function identityForRoute(
       return index("/tags");
     // A Tag's own Translation may not exist even when the Tag itself does —
     // the switcher always offers the Tags index, never the literal
-    // `/es/tags/:tag`, which the Tag itself might 404 at (Part 9).
+    // `/es/tags/:tag`, which the Tag itself might 404 at.
     case "tag":
       return index("/tags");
-    // The site's own 404 has no address of its own to translate — Part 9
-    // sends it to the home page in the other Locale.
+    // The site's own 404 has no address of its own to translate, so the
+    // switcher sends it to the home page in the other Locale.
     case "catchall":
       return index("/");
     // No loader (`resume/_resume.tsx`'s own note explains why), so `data`
