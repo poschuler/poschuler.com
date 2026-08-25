@@ -66,7 +66,7 @@ workspace "poschuler.com" "The personal site of Paul Osorio Schuler, modelled in
         zone -> site "Fronts every request, and challenges datacentre clients before one arrives" "Bot Fight Mode"
         zone -> crawlers "Serves a robots.txt merged with the origin's, and only when the origin answers 200" "AI Crawl Control"
 
-        reader -> site.worker "Reads a page" "HTTPS"
+        reader -> site.worker.fetchHandler "Reads a page" "HTTPS"
         reader -> site.assets "Loads the client bundle, the fonts and the images" "HTTPS"
         crawlers -> site.worker "Fetch /sitemap.xml, /robots.txt and every page's head" "HTTPS"
         zone -> site.worker "Fronts every request, and challenges datacentre clients before one arrives" "Bot Fight Mode"
@@ -99,6 +99,7 @@ workspace "poschuler.com" "The personal site of Paul Osorio Schuler, modelled in
         site.storeVerifier -> site.kv "Reads every payload back and compares it against the Markdown" "wrangler kv key get"
         site.fixtureVerifier -> site.fixtures "Runs both generators and asks whether git already holds their output" "git status --porcelain"
         site.deploymentVerifier -> site.worker "Reads back which version is live, and refuses anything but this run's at 100%" "Cloudflare API"
+
 
         site.worker.fetchHandler -> site.worker.redirects "Asks it first, because an address that no longer exists has no route to match and no loader to run" "resolveRedirect"
         site.worker.fetchHandler -> site.worker.locale "Derives the Locale once, and sets it on the request context" "deriveLocale"
@@ -137,6 +138,37 @@ workspace "poschuler.com" "The personal site of Paul Osorio Schuler, modelled in
         site.kvUploader -> site.kv "Replaces every payload in one pass, put before delete" "wrangler kv bulk"
         site.storeVerifier -> site.kvUploader "Shares the key rules and the payload listing, and nothing that builds a row (ADR 0012)" "Node"
         site.storeVerifier -> site.d1Generator.treeWalker "Shares the pure classification rules, and never a row builder (ADR 0012)" "Node"
+        production = deploymentEnvironment "Production" {
+
+            cloudflare = deploymentNode "Cloudflare global network" "Every colo that answers for this zone." "Cloudflare" {
+                zoneNode = deploymentNode "Zone poschuler.com" "Bot Fight Mode and AI Crawl Control's managed robots.txt both sit in front of the origin." "Cloudflare zone" {
+                    isolate = deploymentNode "Worker isolate" "workers_dev is off, so this zone is the only origin that answers." "Cloudflare Workers, compatibility date 2025-04-04, nodejs_compat" {
+                        containerInstance site.worker
+                        containerInstance site.assets
+                    }
+                    database = deploymentNode "POSCHULER_BD" "Bound read-only in practice: no request writes to it." "Cloudflare D1" {
+                        containerInstance site.d1
+                    }
+                    namespace = deploymentNode "BLOG_KV" "Bound read-only in practice, and read through the colo's own cache." "Cloudflare KV" {
+                        containerInstance site.kv
+                    }
+                }
+            }
+
+            runner = deploymentNode "GitHub-hosted runner" "Exists for the length of one Publication, and is the only place that can write to any of the above." "ubuntu-latest, Node 22, pnpm" {
+                productionEnv = deploymentNode "production environment" "Holds CLOUDFLARE_API_TOKEN, scoped to D1:Edit, Workers KV Storage:Edit and Workers Scripts:Edit, and nothing else." "GitHub Environment" {
+                    containerInstance site.publishJob
+                    containerInstance site.kvUploader
+                    containerInstance site.schemaVerifier
+                    containerInstance site.storeVerifier
+                    containerInstance site.deploymentVerifier
+                }
+            }
+
+            origin = deploymentNode "cdn.poschuler.dev" "Outside both, and the one file this site publishes without building it." "External origin" {
+                softwareSystemInstance cdn
+            }
+        }
     }
 
     views {
@@ -166,6 +198,38 @@ workspace "poschuler.com" "The personal site of Paul Osorio Schuler, modelled in
             include *
             include site.kvGenerator.payloadWriter site.kvGenerator.sanitiser site.kvGenerator.sitemapBuilder site.kvGenerator.sitemapRenderer
             include site.d1 site.kv site.kvUploader
+            autolayout lr
+        }
+
+        dynamic site.worker "dynamic-request" "A Spanish Post, because it exercises the branch an English one skips." {
+            reader -> site.worker.fetchHandler "Asks for a Post under /es"
+            site.worker.fetchHandler -> site.worker.redirects "Asks the table first, and misses"
+            site.worker.fetchHandler -> site.worker.locale "Derives es from the prefix, once"
+            site.worker.fetchHandler -> site.worker.routes "Hands over the request with the Locale and the nonce already set"
+            site.worker.routes -> site.worker.models "Asks for the Post by slug, in the derived Locale"
+            site.worker.models -> site.worker.db "One query, with the slug bound"
+            site.worker.db -> site.d1 "Returns the row, or the Container this Post 301s to instead"
+            site.worker.routes -> site.kv "Reads the body, keyed off the resolved row's own Locale rather than the request's"
+            site.worker.routes -> site.worker.addresses "Builds the canonical, the hreflang set and the JSON-LD from one set of addresses"
+            site.worker.fetchHandler -> site.worker.securityHeaders "Rebuilds the response around the nonce that signed its scripts"
+            autolayout lr
+        }
+
+        dynamic site "dynamic-publication" "The Publication, in the order the job runs it — and it has no rollback: if the deploy fails after the stores have moved, old code serves new content until someone merges a fix." {
+            github -> site.publishJob "Merges to main, which is the only trigger there is"
+            site.publishJob -> site.d1 "Applies any new migrations, the one write to production that precedes the seed"
+            site.publishJob -> site.schemaVerifier "Asks whether the deployed shape is the declared one, before any row is written"
+            site.publishJob -> site.d1 "Upserts seed.sql, and empties nothing first"
+            site.publishJob -> site.kvUploader "Replaces every payload, put before delete"
+            site.publishJob -> site.storeVerifier "Reads both stores back, before the code that serves them goes live"
+            site.publishJob -> site.worker "Builds and deploys, last of all"
+            site.publishJob -> site.deploymentVerifier "Asks whether the version just uploaded is the version serving — and there is nothing to undo if it is not"
+            autolayout lr
+        }
+
+        deployment site "Production" "deployment-production" "Where each process runs. The point is what the edge does not hold: no generator, no verifier, no Markdown." {
+            include *
+            exclude site.storeVerifier->site.kvUploader
             autolayout lr
         }
 
