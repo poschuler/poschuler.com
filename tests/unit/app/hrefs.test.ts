@@ -147,7 +147,7 @@ describe("withLocale", () => {
  * address and wrong for a link: React Router reads an empty relative path as
  * the current location, so the 404 page's only way out rendered
  * `href="/the-address-that-404ed"` — in English, where `withLocale` returns
- * `""`, and only there, which is how it survived a phase spent on Spanish.
+ * `""`, and only there, which is how a pass over the Spanish branch missed it.
  */
 describe("navHref", () => {
   it("sends the English home page to the root, not to the current location", () => {

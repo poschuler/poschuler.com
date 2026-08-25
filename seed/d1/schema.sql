@@ -171,8 +171,8 @@ CREATE TABLE series (
     status TEXT NOT NULL,
 
     -- The four halves of the contract, all required. A landing that omits one
-    -- of them is the failure this phase exists to prevent: a reader cannot tell
-    -- whether the series is for them.
+    -- of them is the failure these four columns exist to prevent: a reader
+    -- cannot tell whether the series is for them.
     starting_point TEXT NOT NULL,
     destination TEXT NOT NULL,
     out_of_scope TEXT NOT NULL, -- Store as JSON string (e.g., '["Microservices"]')

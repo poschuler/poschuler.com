@@ -352,7 +352,7 @@ describe("a Spanish index, with or without anything behind it", () => {
    * `/es/bookmarks` and `/es/timeline` are full from day one and never reach
    * the empty branch above — checked here so a regression that broke the
    * `lang is null` filter would fail loudly rather than silently emptying the
-   * one section this phase promised would never be.
+   * one section of the Spanish branch that can never legitimately be empty.
    */
   it("/es/bookmarks and /es/timeline stay full — a Bookmark has no Locale", async () => {
     const [{ bookmarks }, { contentItems }] = await Promise.all([

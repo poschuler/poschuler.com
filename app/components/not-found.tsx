@@ -33,9 +33,8 @@ export function NotFound() {
         * along with everywhere else worth going.
         *
         * Localised rather than a bare `"/"`: a lost visitor under `/es` who
-        * followed this link to the English root would be handed exactly the
-        * outcome this phase exists to prevent one click after the 404 that was
-        * supposed to prevent it.
+        * followed this link to the English root would be dropped out of their
+        * own Locale one click after the 404 that was there to keep them in it.
         *
         * `navHref` and not `withLocale`, which is what this was: the English
         * root is `""` there, and `<Link to="">` is the current location, so

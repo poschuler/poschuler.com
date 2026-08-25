@@ -11,8 +11,8 @@ import { meta as tagsMeta } from "~/routes/tags/_tags";
  * `noindex` already is.
  *
  * `follow` is the half that has to survive an edit: dropping it would leave the
- * page unindexed *and* uncrawled, which is the opposite of what the phase was
- * justified by.
+ * page unindexed *and* uncrawled, which is the opposite of what this page is
+ * for.
  */
 
 const metaArgs = (tag: string, posts: number) =>

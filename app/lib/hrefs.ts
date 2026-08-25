@@ -64,7 +64,8 @@ export function withLocale(path: string, locale: Locale): string {
  * location*. A 404 page's way out, written as `withLocale("/", locale)`, was
  * measured rendering `href="/the-address-that-404ed"`: the one link on the
  * page that promised to lead somewhere led back to where the reader already
- * was, in English only, which is why it survived a phase about Spanish.
+ * was, in English only, which is why a pass over the Spanish branch went
+ * straight past it.
  *
  * Every other path is identical in both functions, so navigation can call this
  * one for the whole of a list without the root being a special case at each

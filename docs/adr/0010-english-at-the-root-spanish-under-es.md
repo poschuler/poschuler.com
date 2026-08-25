@@ -2,7 +2,7 @@
 
 This site is published in two Locales. English is served at the root with no prefix, Spanish under `/es`, as two route branches mounted over the same route modules — and the path segment after the prefix is **the same string in both**, with one exception. The decision is recorded because URLs are permanent: every alternative below was reachable when this was decided and none of them is reachable afterwards without a redirect that never expires.
 
-Accepted before the code was written, because the reasoning that produced it lives in a planning document that is not part of this repository.
+Accepted before the code was written, because it is a decision the code has to be built against rather than one the code could discover.
 
 ```
 /            /es

@@ -4,7 +4,7 @@ The strings this site renders around its content — navigation, headings, the 4
 
 This is recorded because the opposite is the obvious path: a reader who finds a hand-rolled catalogue will reasonably assume nobody checked whether a library would do. It was checked, and it works.
 
-Accepted before the code was written, because the reasoning that produced it lives in a planning document that is not part of this repository.
+Accepted before the code was written, because it is a decision the code has to be built against rather than one the code could discover.
 
 ## Considered Options
 
