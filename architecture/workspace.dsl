@@ -238,11 +238,11 @@ workspace "poschuler.com" "The personal site of Paul Osorio Schuler, modelled in
             }
             element "Human" {
                 shape Person
-                background #1d3c5a
+                background #32669a
                 color #ffffff
             }
             element "Software System" {
-                background #2c6494
+                background #3476af
                 color #ffffff
             }
             element "Container" {
@@ -250,7 +250,7 @@ workspace "poschuler.com" "The personal site of Paul Osorio Schuler, modelled in
                 color #ffffff
             }
             element "Component" {
-                background #78aed6
+                background #5699cc
                 color #000000
             }
             element "External" {
@@ -258,11 +258,11 @@ workspace "poschuler.com" "The personal site of Paul Osorio Schuler, modelled in
                 color #ffffff
             }
             element "Runtime" {
-                background #2c6494
+                background #3476af
                 color #ffffff
             }
             element "Build" {
-                background #6c5091
+                background #7d5ea6
                 color #ffffff
             }
             element "Source of truth" {

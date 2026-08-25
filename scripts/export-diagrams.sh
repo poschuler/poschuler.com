@@ -55,7 +55,7 @@ if ! command -v jq >/dev/null; then
 	exit 1
 fi
 
-mkdir -p architecture/diagrams
+mkdir -p architecture/diagrams/light architecture/diagrams/dark
 
 # The workspace is never edited in place. The pinned copy is what gets mounted,
 # and it lives outside the repository so that a failed run cannot leave a
@@ -65,31 +65,41 @@ trap 'rm -rf "${STAGED}"' EXIT
 jq --arg d "${PINNED_DATE}" '.lastModifiedDate = $d' architecture/workspace.json >"${STAGED}/workspace.json"
 
 # A view renamed or deleted in the DSL would otherwise leave its old SVG behind,
-# and an orphan is worse than a missing file because it still renders. The path
-# is written out in full and the glob is narrowed to the one extension this
+# and an orphan is worse than a missing file because it still renders. Both paths
+# are written out in full and the glob is narrowed to the one extension this
 # script produces — never `rm -rf` on a directory, and never a path assembled
 # from a variable.
 echo "==> Emptying architecture/diagrams"
-rm -f architecture/diagrams/*.svg
+rm -f architecture/diagrams/light/*.svg
+rm -f architecture/diagrams/dark/*.svg
 
+# Both modes, into separate directories because the exporter names every file
+# after its view key and a second run into the same directory would overwrite
+# the first. `-mode dark` paints the canvas `#111111` and turns the arrows and
+# their labels light; it does not touch the element colours, which is why the
+# palette in `styles` has to clear 3:1 against white *and* against `#111111`
+# rather than against whichever one it was drawn on.
+#
 # `-u` is not optional, for the same reason `docker-compose.yml` carries
 # `user: "1000:1000"`: without it the SVGs arrive owned by root.
 #
 # No running Structurizr Lite is required — this renders headlessly from the
 # file — and the workspace is mounted read-only, so an export cannot disturb the
 # layout it is reading.
-echo "==> Exporting every view from architecture/workspace.json"
-docker run --rm -u "$(id -u):$(id -g)" \
-	-v "${STAGED}:/ws:ro" \
-	-v "${PWD}/architecture/diagrams:/out" \
-	"${IMAGE}" \
-	export -w /ws/workspace.json -f svg -o /out
+for MODE in light dark; do
+	echo "==> Exporting every view, ${MODE}"
+	docker run --rm -u "$(id -u):$(id -g)" \
+		-v "${STAGED}:/ws:ro" \
+		-v "${PWD}/architecture/diagrams/${MODE}:/out" \
+		"${IMAGE}" \
+		export -w /ws/workspace.json -f svg -mode "${MODE}" -o /out
+done
 
-# Two files per view: the diagram, and a `<key>-key.svg` legend beside it. The
-# legends are kept. The tag vocabulary is load-bearing in this workspace — the
-# two tenses are a colour, a Verifier is a hexagon, the source of truth is a
-# green folder and a derived store is a cylinder — and a reader who has not read
-# the DSL has nowhere else to learn any of that.
+# Two files per view per mode: the diagram, and a `<key>-key.svg` legend beside
+# it. The legends are kept. The tag vocabulary is load-bearing in this workspace
+# — the two tenses are a colour, a Verifier is a hexagon, the source of truth is
+# a green folder and a derived store is a cylinder — and a reader who has not
+# read the DSL has nowhere else to learn any of that.
 echo
-echo "==> $(ls architecture/diagrams/*.svg | wc -l) files in architecture/diagrams"
+echo "==> $(ls architecture/diagrams/light/*.svg architecture/diagrams/dark/*.svg | wc -l) files in architecture/diagrams"
 echo "==> These are committed and nothing checks them; commit what changed."
