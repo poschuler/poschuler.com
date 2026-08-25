@@ -185,7 +185,7 @@ workspace "poschuler.com" "The personal site of Paul Osorio Schuler, modelled in
         container site "containers-build" "Where the content actually comes from, and the order the stores are moved in." {
             include paul github site.content site.d1Generator site.kvGenerator site.fixtures site.kvUploader site.publishJob site.schemaVerifier site.storeVerifier site.fixtureVerifier site.deploymentVerifier site.d1 site.kv site.worker site.assets
             exclude site.worker->site.d1 site.worker->site.kv site.kvGenerator->site.worker
-            autolayout lr
+            autolayout tb
         }
 
         component site.worker "components-worker" "The request pipeline, and the algebra that decides what every address is." {
@@ -198,7 +198,7 @@ workspace "poschuler.com" "The personal site of Paul Osorio Schuler, modelled in
             include *
             include site.kvGenerator.payloadWriter site.kvGenerator.sanitiser site.kvGenerator.sitemapBuilder site.kvGenerator.sitemapRenderer
             include site.d1 site.kv site.kvUploader
-            autolayout lr
+            autolayout tb
         }
 
         dynamic site.worker "dynamic-request" "A Spanish Post, because it exercises the branch an English one skips." {
@@ -224,13 +224,12 @@ workspace "poschuler.com" "The personal site of Paul Osorio Schuler, modelled in
             site.publishJob -> site.storeVerifier "Reads both stores back, before the code that serves them goes live"
             site.publishJob -> site.worker "Builds and deploys, last of all"
             site.publishJob -> site.deploymentVerifier "Asks whether the version just uploaded is the version serving — and there is nothing to undo if it is not"
-            autolayout lr
         }
 
         deployment site "Production" "deployment-production" "Where each process runs. The point is what the edge does not hold: no generator, no verifier, no Markdown." {
             include *
             exclude site.storeVerifier->site.kvUploader
-            autolayout lr
+            autolayout tb
         }
 
         styles {
