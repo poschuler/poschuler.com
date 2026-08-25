@@ -1,0 +1,16 @@
+name: poschuler-dot-com
+
+services:
+  structurizr:
+    image: structurizr/structurizr:latest
+    command: local
+    # The image runs as the distroless "nonroot" user (UID 65532), which cannot
+    # write to a host directory owned by us. Run it as the host user instead, so
+    # Structurizr can auto-save workspace.json and the files it writes stay ours.
+    user: "1000:1000"
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./architecture:/usr/local/structurizr
+      
