@@ -368,6 +368,33 @@ The protection has edges. It covers concurrency-driven cancellation only — a m
 
 **What the order does not buy.** Seeding first means old code serves new data for the length of the deploy. If a commit changes the *shape* of a KV payload, that page is broken for those seconds. Only splitting such a change across two merges avoids it, and nothing here enforces that.
 
+## The architecture model
+
+`architecture/workspace.dsl` is the same system as a C4 model, and [ADR 0013](./adr/0013-the-model-is-the-dsl-the-diagrams-are-generated-never-drawn.md) records why the picture is source rather than drawings, and what that costs. What follows is the part neither the ADR nor the DSL can tell you: the traps, each one found by getting it wrong here.
+
+**Check a change with `validate`, never by opening Lite.** The CLI parses the DSL directly, names the offending line, exits non-zero and touches no file — it is the same command the `verify` job runs, so a green run locally is CI's green:
+
+```bash
+docker run --rm -u "$(id -u):$(id -g)" -v "$PWD/architecture:/ws:ro" \
+  structurizr/structurizr:2026.06.28 validate -w /ws/workspace.dsl
+```
+
+Deleting `workspace.json` to make a parse failure visible in the browser was the old recipe and it is now destructive: that file holds the eight hand-placed steps of the Publication view, and nothing regenerates them. Only taking a view off `autolayout` still needs the file gone.
+
+- **The `deploymentEnvironment` block goes last in `model`, after every relationship.** `containerInstance` replicates only the relationships declared *above* it and is silent about the rest. With the block sitting between the container relationships and the component ones, the deployed KV uploader had no arrow into KV — no parse error, no failed inspection, no log line, just a deployment view quietly missing the step it exists to show. The check is to count the view's relationships: fourteen before the move, sixteen after.
+
+- **The build view has to exclude the Worker's own reads.** `site.worker -> site.d1` and `site.worker -> site.kv` render inside `containers-build` because the Worker is in that view as the thing the job deploys. Both are excluded by hand, and any container added to that view that also has runtime relationships needs the same treatment.
+
+- **A view without `autolayout` crops to 2000x2000 unless it carries a `paperSize`**, and those coordinates are in the paper's own units — `A0_Landscape` renders the same diagram at 139 megapixels where `A2_Landscape` holds it comfortably. Today that is `dynamic-publication` alone, and its `A2_Landscape` lives in `workspace.json` rather than in the DSL, because it was set in Lite alongside the eight positions.
+
+- **`git status` lies about `workspace.json`; `git diff` does not.** After Lite saves, the path shows `M` because the stat cache noticed a new mtime, not because the content differs. `git diff --quiet` is the check that tells the truth.
+
+- **An empty `architecture/workspace.json` breaks Lite outright.** Lite prefers the JSON, cannot read zero bytes, and fails the whole load with `Could not read JSON` — a different failure from the silent fallback the CI step exists to catch, and the state the directory was in before the model was written.
+
+- **`STRUCTURIZR_WORKSPACE_PATH` is not how to point Lite at a subdirectory, and it fails destructively.** With `.:/usr/local/structurizr` mounted, the log echoes the path back and then Lite reads the data directory root anyway, finds no workspace, and **writes a fresh example one** — `workspace.dsl`, `workspace.json` and `.structurizr/` landed at the repository root, and the API served that example, two containers and zero decisions, with a cheerful 200. Nothing was lost only because the real file sits in a directory it never looked at. `docker-compose.yml` mounts `./architecture` alone for that reason.
+
+- **The D1 → KV arrow in the build view is a laptop constraint, not a step of the Publication.** The publish job never runs `kv:generate`; it uploads the committed payloads. `generate-kv-json.ts` runs `wrangler d1 execute --json` with no `--remote`, so the D1 it queries is the local one, and the ordering it depends on exists only where the payloads are generated.
+
 ## Known defects
 
 - **Nothing checks that production actually serves.** The publication proves the stores hold the right content and that the uploaded version is live, and the cold start proves the built Worker boots with nothing configured — but no step makes a request to `poschuler.com`. A missing secret, or a binding pointing at the wrong resource, would pass everything here. Closing it needs a request from somewhere Bot Fight Mode does not challenge, which means continuous monitoring by a client on Cloudflare's verified-bot list rather than a step in the run. Worth remembering that the two incidents this would have caught, the 1101 and the `robots.txt` 500, both lasted far longer than a deploy.
