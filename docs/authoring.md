@@ -57,7 +57,7 @@ the URL.
 type: 'post'
 title: 'Implementing Value Objects in Node.js'
 description: 'A practical guide to…'          # the SEO meta description
-tags: ['nodejs', 'typescript', 'ddd']         # optional, from tags.json
+tags: ['nodejs', 'typescript']                # optional, from tags.json
 publishedAt: '2025-11-02'
 repository: 'https://github.com/…'            # optional, renders a repo link
 updates:                                      # optional, newest first

@@ -40,6 +40,11 @@ export const PERMANENT_REDIRECTS: Record<string, string> = {
   // path are independent.
   "/resume": "/cv",
   "/resume.pdf": "/cv.pdf",
+
+  // A Tag is its own URL, so renaming one moves a page. `ddd` was an acronym
+  // that only resolves for a reader who already knows the subject, which is
+  // the opposite of what a Tag is for; the vocabulary now spells it out.
+  "/tags/ddd": "/tags/domain-driven-design",
 };
 
 /**
