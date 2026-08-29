@@ -427,3 +427,5 @@ Lookup with another instance: ten fifty
 ```
 
 ## Cierre
+
+Lorem ipsum ....
