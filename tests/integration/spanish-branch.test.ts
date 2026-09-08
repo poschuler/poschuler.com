@@ -6,7 +6,6 @@ import { breadcrumbList } from "~/lib/seo/structured-data";
 import { indexCrumb } from "~/lib/trail";
 
 import { loader as blogLoader, meta as blogMeta } from "~/routes/blog/_blog";
-import { loader as blogSlugLoader } from "~/routes/blog-slug/_$blog-slug";
 import { loader as bookmarksLoader } from "~/routes/bookmarks/_bookmarks";
 import { loader as homeLoader } from "~/routes/home/_home";
 import { loader as projectNoteLoader } from "~/routes/project-note/_$project-note";
@@ -36,8 +35,6 @@ import { openTestPlatform, routeArgs, type TestPlatform } from "../setup/platfor
  */
 
 let platform: TestPlatform;
-/** A Post that belongs to no Series or Project, and has no Spanish Translation. */
-let postSlug: string;
 /** A Part, and the Series it belongs to — a Series with no Spanish row. */
 let partSlug: string;
 let seriesSlug: string;
@@ -80,24 +77,17 @@ async function spanishKeys(sql: string): Promise<Set<string>> {
 beforeAll(async () => {
   platform = await openTestPlatform();
 
-  const [translatedDocuments, translatedProjects, translatedSeries, translatedTags] =
-    await Promise.all([
-      spanishKeys(SPANISH.documents),
-      spanishKeys(SPANISH.projects),
-      spanishKeys(SPANISH.series),
-      spanishKeys(SPANISH.tags),
-    ]);
+  const [translatedProjects, translatedSeries, translatedTags] = await Promise.all([
+    spanishKeys(SPANISH.projects),
+    spanishKeys(SPANISH.series),
+    spanishKeys(SPANISH.tags),
+  ]);
 
   const [{ contentItems }, { projects }, { tags }] = await Promise.all([
     timelineLoader(routeArgs<ArgsOf<typeof timelineLoader>>(platform, get("/timeline"))),
     projectsLoader(routeArgs<ArgsOf<typeof projectsLoader>>(platform, get("/projects"))),
     tagsLoader(routeArgs<ArgsOf<typeof tagsLoader>>(platform, get("/tags"))),
   ]);
-
-  postSlug = contentItems.find(
-    (item) =>
-      item.type === "post" && item.seriesSlug === null && !translatedDocuments.has(item.slug),
-  )!.slug;
 
   const part = contentItems.find(
     (item) =>
@@ -121,15 +111,12 @@ afterAll(async () => {
  * exactly this case, not a stand-in for it.
  */
 describe("a document with no Spanish Translation", () => {
-  it("404s a Post at its Spanish address", async () => {
-    await expect(
-      blogSlugLoader(
-        routeArgs<ArgsOf<typeof blogSlugLoader>>(platform, get(`/es/blog/${postSlug}`), {
-          blogSlug: postSlug,
-        }),
-      ),
-    ).rejects.toMatchObject({ status: 404 });
-  });
+  // There is no standalone Post left to assert this on. The blog holds one Post
+  // and it is translated, so the `find` that picked a subject threw in
+  // `beforeAll` and took the whole file down with it — which is what the `!`
+  // above is written to do. The rule itself is still covered: a Part is a Post,
+  // and `404s a Part at its Spanish address` runs it through the same loader
+  // chain. Bring the case back when a second English-only Post is written.
 
   it("404s a Project at its Spanish address", async () => {
     await expect(
@@ -362,7 +349,13 @@ describe("a Spanish index, with or without anything behind it", () => {
 
     expect(bookmarks.length).toBeGreaterThan(0);
     expect(contentItems.length).toBeGreaterThan(0);
-    expect(contentItems.every((item) => item.type === "link")).toBe(true);
+
+    // `some`, not `every`. This case is about the `lang is null` filter still
+    // letting Bookmarks through; `every` also said the Spanish timeline holds
+    // nothing else, which was a count of the corpus and went red the day a Post
+    // was first translated. What no English row may reach a Spanish index is
+    // asserted on its own, above.
+    expect(contentItems.some((item) => item.type === "link")).toBe(true);
   });
 });
 

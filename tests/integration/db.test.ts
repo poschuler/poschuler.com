@@ -39,19 +39,24 @@ describe("dbQuery", () => {
     expect(rows[0].slug).toBeTruthy();
   });
 
+  // Two values, not one, and that is the point: a Slug stopped identifying a
+  // row the day a Post was first translated, so the pair is what selects one.
+  // Asserting a single row against `where slug = ?` alone read as a test of the
+  // binding and was really a claim about the corpus — it went red on the first
+  // `.es.md`, having proved nothing about `dbQuery`.
   it("binds its values rather than interpolating them", async () => {
-    const [{ slug }] = await dbQuery<{ slug: string }>(
+    const [{ slug, lang }] = await dbQuery<{ slug: string; lang: string }>(
       platform.env.POSCHULER_BD,
-      "select slug from content limit 1",
+      "select slug, lang from content where lang is not null limit 1",
     );
 
-    const rows = await dbQuery<{ slug: string }>(
+    const rows = await dbQuery<{ slug: string; lang: string }>(
       platform.env.POSCHULER_BD,
-      "select slug from content where slug = ?",
-      [slug],
+      "select slug, lang from content where slug = ? and lang = ?",
+      [slug, lang],
     );
 
-    expect(rows).toEqual([{ slug }]);
+    expect(rows).toEqual([{ slug, lang }]);
   });
 
   it("returns an empty array rather than null when nothing matches", async () => {
