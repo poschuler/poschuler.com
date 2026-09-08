@@ -25,6 +25,20 @@ export const STRICT_TRANSPORT_SECURITY = "max-age=31536000; includeSubDomains";
  * the Open Graph card are both served from this origin now, so the only thing
  * that host could still authorise is an image nobody asked for.
  *
+ * It does name `raw.githubusercontent.com`, under `/poschuler/` and no wider.
+ * A Post's diagrams are generated in the repository they describe and belong
+ * there, not copied into this one — a decision about where an artefact lives,
+ * which is why the host is authorised rather than the files vendored. The path
+ * keeps it to repositories that are actually mine; a source expression whose
+ * path ends in `/` matches by prefix.
+ *
+ * Two things come with it, both accepted rather than overlooked. GitHub serves
+ * raw files with `max-age=300`, so a diagram is a third-party round trip every
+ * five minutes instead of an edge asset. And the URLs name `refs/heads/main`,
+ * so a published Post follows that repository's default branch: regenerate a
+ * diagram there and the Post changes with no revision entry behind it. Pinning
+ * a commit in the URL is what closes the second one, if it ever matters enough.
+ *
  * `style-src` and `font-src` no longer name `fonts.googleapis.com` and
  * `fonts.gstatic.com`. Inter and Intel One Mono are self-hosted from
  * `app/app.css`, so a third party can no longer inject a stylesheet or
@@ -48,7 +62,7 @@ export function contentSecurityPolicy(nonce: string): string {
     "form-action 'self'",
     "frame-ancestors 'none'",
     "object-src 'none'",
-    "img-src 'self' data:",
+    "img-src 'self' data: https://raw.githubusercontent.com/poschuler/",
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self'",
     `script-src 'self' 'nonce-${nonce}' https://static.cloudflareinsights.com`,
