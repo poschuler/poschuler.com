@@ -177,16 +177,21 @@ describe("the Content Security Policy", () => {
   });
 
   /**
-   * Every image the site renders — the portrait, the Open Graph card — is
-   * served from this origin, so no third-party image host is authorised at all.
-   * The GitHub avatar used to be, back when it was both the portrait and the
-   * `og:image`.
+   * The site's own images — the portrait, the Open Graph card — are served from
+   * this origin. The one host beyond it carries a Post's diagrams, which are
+   * generated in the repository they describe and read from there rather than
+   * copied here.
+   *
+   * The path is the assertion worth having. `raw.githubusercontent.com` alone
+   * would authorise an image out of anybody's repository on GitHub; with the
+   * trailing slash it is a prefix match, and only mine can answer.
    */
-  it("authorises no third-party image host", () => {
+  it("authorises one image host, and only my repositories on it", () => {
     const csp = contentSecurityPolicy("n0nce");
 
-    expect(csp).toContain("img-src 'self' data:");
+    expect(csp).toContain("img-src 'self' data: https://raw.githubusercontent.com/poschuler/");
     expect(csp).not.toContain("avatars.githubusercontent.com");
+    expect(csp).not.toContain("img-src 'self' data: https://raw.githubusercontent.com ");
   });
 
   it("falls back to 'self' for everything else", () => {
