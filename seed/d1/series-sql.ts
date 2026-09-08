@@ -197,8 +197,8 @@ function sectionsError(
  *
  * The emptiness check stays here, because the message it produces names the
  * section — `manifest.ts`'s shared `reconcileManifest` takes over once every
- * entry is known to be a real Slug, and is where 1b's Project manifest
- * reconciles the same way (Part 8 of the field notes).
+ * entry is known to be a real Slug, and is where a Project's manifest
+ * reconciles the same way.
  */
 function reconcileError(
   relativePath: string,

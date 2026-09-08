@@ -6,7 +6,6 @@ import { breadcrumbList } from "~/lib/seo/structured-data";
 import { indexCrumb } from "~/lib/trail";
 
 import { loader as blogLoader, meta as blogMeta } from "~/routes/blog/_blog";
-import { loader as blogSlugLoader } from "~/routes/blog-slug/_$blog-slug";
 import { loader as bookmarksLoader } from "~/routes/bookmarks/_bookmarks";
 import { loader as homeLoader } from "~/routes/home/_home";
 import { loader as projectNoteLoader } from "~/routes/project-note/_$project-note";
@@ -22,10 +21,9 @@ import { loader as timelineLoader } from "~/routes/timeline/_timeline";
 import { openTestPlatform, routeArgs, type TestPlatform } from "../setup/platform";
 
 /**
- * What `/es` answers, held against the two rules Part 6 of
- * `evolution-plan/15-phase-3-spanish.md` exists to make safe: a document with
- * no Translation is a 404, and an index with nothing behind it answers 200 and
- * keeps itself out of the search index.
+ * What `/es` answers, held against the two rules that make a half-translated
+ * site safe: a document with no Translation is a 404, and an index with
+ * nothing behind it answers 200 and keeps itself out of the search index.
  *
  * **Nothing here names a document or counts a corpus.** The stores are filled
  * from the real content fixtures, so what is seeded moves every time a `.md` is
@@ -37,8 +35,6 @@ import { openTestPlatform, routeArgs, type TestPlatform } from "../setup/platfor
  */
 
 let platform: TestPlatform;
-/** A Post that belongs to no Series or Project, and has no Spanish Translation. */
-let postSlug: string;
 /** A Part, and the Series it belongs to — a Series with no Spanish row. */
 let partSlug: string;
 let seriesSlug: string;
@@ -81,24 +77,17 @@ async function spanishKeys(sql: string): Promise<Set<string>> {
 beforeAll(async () => {
   platform = await openTestPlatform();
 
-  const [translatedDocuments, translatedProjects, translatedSeries, translatedTags] =
-    await Promise.all([
-      spanishKeys(SPANISH.documents),
-      spanishKeys(SPANISH.projects),
-      spanishKeys(SPANISH.series),
-      spanishKeys(SPANISH.tags),
-    ]);
+  const [translatedProjects, translatedSeries, translatedTags] = await Promise.all([
+    spanishKeys(SPANISH.projects),
+    spanishKeys(SPANISH.series),
+    spanishKeys(SPANISH.tags),
+  ]);
 
   const [{ contentItems }, { projects }, { tags }] = await Promise.all([
     timelineLoader(routeArgs<ArgsOf<typeof timelineLoader>>(platform, get("/timeline"))),
     projectsLoader(routeArgs<ArgsOf<typeof projectsLoader>>(platform, get("/projects"))),
     tagsLoader(routeArgs<ArgsOf<typeof tagsLoader>>(platform, get("/tags"))),
   ]);
-
-  postSlug = contentItems.find(
-    (item) =>
-      item.type === "post" && item.seriesSlug === null && !translatedDocuments.has(item.slug),
-  )!.slug;
 
   const part = contentItems.find(
     (item) =>
@@ -117,20 +106,17 @@ afterAll(async () => {
 });
 
 /**
- * A document with no Translation is a 404 — the leaf half of Part 6's split.
+ * A document with no Translation is a 404 — the leaf half of that pair.
  * Every fixture here is English-only, so the Spanish address of each is
  * exactly this case, not a stand-in for it.
  */
 describe("a document with no Spanish Translation", () => {
-  it("404s a Post at its Spanish address", async () => {
-    await expect(
-      blogSlugLoader(
-        routeArgs<ArgsOf<typeof blogSlugLoader>>(platform, get(`/es/blog/${postSlug}`), {
-          blogSlug: postSlug,
-        }),
-      ),
-    ).rejects.toMatchObject({ status: 404 });
-  });
+  // There is no standalone Post left to assert this on. The blog holds one Post
+  // and it is translated, so the `find` that picked a subject threw in
+  // `beforeAll` and took the whole file down with it — which is what the `!`
+  // above is written to do. The rule itself is still covered: a Part is a Post,
+  // and `404s a Part at its Spanish address` runs it through the same loader
+  // chain. Bring the case back when a second English-only Post is written.
 
   it("404s a Project at its Spanish address", async () => {
     await expect(
@@ -183,7 +169,7 @@ describe("a document with no Spanish Translation", () => {
     ).rejects.toMatchObject({ status: 404 });
   });
 
-  /** The precedent Part 6 generalises from, checked at the Locale that has nothing behind it. */
+  /** The precedent the empty-index rule generalises from, checked at the Locale that has nothing behind it. */
   it("404s a Tag some Post carries in English but not in Spanish", async () => {
     await expect(
       tagLoader(
@@ -195,7 +181,7 @@ describe("a document with no Spanish Translation", () => {
 
 /**
  * An index exists at both Locales whether or not it has anything to list — the
- * skeleton half of Part 6's split. It answers 200 with a list rather than a
+ * skeleton half of that same pair. It answers 200 with a list rather than a
  * 404, it shows nothing that belongs to the other branch, and its own `meta` is
  * what keeps it out of the search index while it has nothing to show.
  */
@@ -349,11 +335,11 @@ describe("a Spanish index, with or without anything behind it", () => {
   });
 
   /**
-   * Bookmarks belong to both Locales (Part 7): a Bookmark has no Locale, so
+   * Bookmarks belong to both Locales: a Bookmark has no Locale, so
    * `/es/bookmarks` and `/es/timeline` are full from day one and never reach
    * the empty branch above — checked here so a regression that broke the
    * `lang is null` filter would fail loudly rather than silently emptying the
-   * one section this phase promised would never be.
+   * one section of the Spanish branch that can never legitimately be empty.
    */
   it("/es/bookmarks and /es/timeline stay full — a Bookmark has no Locale", async () => {
     const [{ bookmarks }, { contentItems }] = await Promise.all([
@@ -363,14 +349,20 @@ describe("a Spanish index, with or without anything behind it", () => {
 
     expect(bookmarks.length).toBeGreaterThan(0);
     expect(contentItems.length).toBeGreaterThan(0);
-    expect(contentItems.every((item) => item.type === "link")).toBe(true);
+
+    // `some`, not `every`. This case is about the `lang is null` filter still
+    // letting Bookmarks through; `every` also said the Spanish timeline holds
+    // nothing else, which was a count of the corpus and went red the day a Post
+    // was first translated. What no English row may reach a Spanish index is
+    // asserted on its own, above.
+    expect(contentItems.some((item) => item.type === "link")).toBe(true);
   });
 });
 
 /**
  * `findAllProjects` used to carry no Locale filter at all — invisible while
- * every Project was English, and exactly the defect Part 6's second rule
- * exists to catch: a Spanish address rendering an English Project verbatim,
+ * every Project was English, and exactly the defect those rules exist to
+ * catch: a Spanish address rendering an English Project verbatim,
  * on `/es/projects` and on the home page's flagship block alike.
  */
 describe("findAllProjects, now Locale-filtered", () => {

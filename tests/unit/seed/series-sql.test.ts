@@ -325,7 +325,7 @@ describe("seriesRowsFor — the path decides what the file is", () => {
 });
 
 /**
- * `draft: true` on a Series manifest. Part 5's rule is stricter here
+ * `draft: true` on a Series manifest. The rule is stricter here
  * than on a Post — a Container may be a Draft only while it holds no
  * published content, checked below.
  */
@@ -350,7 +350,7 @@ describe("seriesRowsFor — Drafts", () => {
     expect(rowsFor().draft).toBe(false);
   });
 
-  /** Part 12's promise: a Draft passes every check a published one would. */
+  /** The promise a Draft makes: it passes every check a published one would. */
   it("still fails a draft manifest for every reason a published one would", () => {
     expect(errorFor(manifest({ draft: true, startingPoint: "  " }))).toMatch(/has no startingPoint/);
   });
@@ -387,11 +387,11 @@ describe("seriesRowsFor — Drafts", () => {
   });
 
   /**
-   * The round trip (Part 12's last rule): publishing inserted this Series's
-   * rows through `buildSeriesSeedSql`'s upsert; marking it a draft removes it
-   * from the rows the generator hands that function, so the existing prune —
-   * `DELETE FROM series WHERE … NOT IN (keyList)` — deletes it. A second,
-   * always-published Series keeps the row list non-empty throughout, the way
+   * The round trip: publishing inserted this Series's rows through
+   * `buildSeriesSeedSql`'s upsert; marking it a draft removes it from the rows
+   * the generator hands that function, so the existing prune — `DELETE FROM
+   * series WHERE … NOT IN (keyList)` — deletes it. A second, always-published
+   * Series keeps the row list non-empty throughout, the way
    * `buildSeriesSeedSql([], [])` is deliberately a no-op for the day nothing
    * has ever been written (see its own tests below).
    */

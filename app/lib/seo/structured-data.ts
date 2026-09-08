@@ -12,8 +12,7 @@ import { AUTHOR, SITE } from "./person";
  * These builders take the same values the page renders, so the two cannot say
  * different things.
  *
- * **This module builds no URL of its own** (Part 10 of
- * `evolution-plan/15-phase-3-spanish.md`). An article's own address arrives
+ * **This module builds no URL of its own**. An article's own address arrives
  * already made — the same `canonical` the page's `<head>` carries, out of
  * `app/lib/seo/alternates.ts` — and every other address here, a Container's or
  * a sibling Part's, comes from `~/lib/hrefs`, the one place a relative path is
@@ -119,12 +118,12 @@ export function seriesId(slug: string, locale: Locale): string {
 /**
  * The identifier a Field Note points at — the Project it is written about.
  *
- * The Project landing declares no JSON-LD of its own (out of scope for 1b/7),
- * so this is not a fragment like `seriesId`'s: a `#project` suffix would be an
- * `@id` nothing in the site's structured data graph ever defines, which is a
- * dangling reference for a crawler resolving it. The landing's own URL is a
- * real resource instead — the page a Field Note's `isPartOf` names is one that
- * exists, even without a JSON-LD node to greet it there yet.
+ * The Project landing declares no JSON-LD of its own — deliberately, not by
+ * omission — so this is not a fragment like `seriesId`'s: a `#project` suffix
+ * would be an `@id` nothing in the site's structured data graph ever defines,
+ * which is a dangling reference for a crawler resolving it. The landing's own
+ * URL is a real resource instead — the page a Field Note's `isPartOf` names is
+ * one that exists, even without a JSON-LD node to greet it there yet.
  */
 export function projectId(slug: string, locale: Locale): string {
   return `${SITE}${projectHref(slug, locale)}`;

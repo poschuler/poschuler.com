@@ -15,10 +15,9 @@ import {
  * so it has its own table and its own rules. What it shares with `content` is
  * the shape of the seed: upserts first, prune last, never a leading delete.
  *
- * 1b adds the manifest: which Field Notes a Project holds, and in what order
- * (Part 8 of `evolution-plan/14-phase-1b-field-notes.md`) — a flat list, not
- * an arc, reconciled against the notes on disk the same way a Series' Parts
- * are (`manifest.ts`, shared rather than copied).
+ * The manifest is what a Project adds: which Field Notes it holds, and in what order —
+ * a flat list, not an arc, reconciled against the notes on disk the same way a
+ * Series' Parts are (`manifest.ts`, shared rather than copied).
  */
 
 const MANIFEST = "projects/chekalo/chekalo.en.md";
@@ -137,7 +136,7 @@ describe("projectRowFor", () => {
 /**
  * The manifest declares which Field Notes the Project holds, and in what
  * order — a flat list, not an arc: no sections, no Destination, nothing that
- * checks contiguity (Part 8).
+ * checks contiguity.
  */
 describe("projectRowFor — the notes", () => {
   it("has no notes when the manifest declares none, which is a Project's state before its first one", () => {
@@ -179,7 +178,7 @@ describe("projectRowFor — the notes", () => {
    * A note listed in the manifest while it is a Draft is accepted, and does
    * not break reconciliation: `reconcileManifest` does not distinguish a
    * Draft file from a published one, so a Project with published notes can
-   * list a Draft alongside them and still hold its position (Part 9).
+   * list a Draft alongside them and still hold its position.
    */
   it("accepts a note listed in the manifest while it is a Draft, without breaking reconciliation", () => {
     const attributes = project({ notes: ["product-matching", "alias-flip"] });
@@ -226,7 +225,7 @@ describe("projectRowFor — manifest and disk must reconcile", () => {
 });
 
 /**
- * `draft: true` on a Project landing. Part 5's rule is stricter here than on a
+ * `draft: true` on a Project landing. The rule is stricter here than on a
  * Post — a Container may be a Draft only while it holds no published content.
  */
 describe("projectRowFor — Drafts", () => {
@@ -328,8 +327,8 @@ describe("buildProjectSeedSql", () => {
   });
 
   /**
-   * Unlike `content`, an empty list is a real state here: Phase 1a ships before
-   * any Project is written. It must not emit a prune that deletes everything on
+   * Unlike `content`, an empty list is a real state here: the table ships
+   * before any Project is written. It must not emit a prune that deletes everything on
    * the strength of an empty list.
    */
   it("emits nothing at all when there are no projects", () => {

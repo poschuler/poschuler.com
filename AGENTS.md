@@ -22,6 +22,20 @@ Two rules hold in every session:
 - **Write what was asked for, not the adjacent thing you found on the way.** Report the finding and let him scope it — that is what the top of that line is for.
 - **Commit when asked, never by default**, and never push without being told. `/implement` is the one exception, and only for the ticket it is implementing.
 
+## Plans
+
+Two directories hold planning material. `/plans/` holds one working document per piece of work Paul is about to do himself — the outline of a post he is writing, the shape of a change before it is a ticket. `/evolution-plan/` holds the long-form plan for where this site is going: positioning, content model, the phases. Both are scaffolding for the person, not a record of the repository.
+
+**Planning material is internal, and it stays internal.** Neither directory is versioned, and nothing that is versioned may reference either one — not a commit body, not a pull request, not an issue, not an ADR, not a docblock, not a test name, not a line of content. A plan is never cited, never quoted, never named. Read anywhere else, this repository gives no sign that one exists, and that is the point.
+
+**Two files break that rule so that it holds.** `.gitignore` names both directories because naming them there is what keeps them out, and this section names them because a rule that cannot say what it forbids is one nobody enforces twice: the next agent to find `/plans/` on disk, having read nothing that rules it out, cites it. Those two are the whole list. Everywhere else the prohibition is absolute.
+
+**An anchor is a ticket.** A commit body cites the issue it implements, never the phase document and part that produced it. Reasoning worth keeping outlives its plan by moving into an ADR, a docblock or the content itself, in its own words — a docblock that has to point at a plan to be understood is a docblock that has not said its piece yet.
+
+One file per unit of work in `/plans/`, named after what it plans — a post's plan takes that post's slug. No example is given here, because naming one would be the very thing this section forbids.
+
+The language rule at the top bends here and only here: a plan drafting Spanish content is written in Spanish, because what it holds is that draft.
+
 ## Branches, and what publishes
 
 `main` is production and `dev` is integration. Work forks from `dev` and returns to it by pull request; `dev` → `main` is a release.
@@ -44,7 +58,7 @@ Not `update sitemap`, not `add locale support`. It reads as a sentence about the
 
 The body, when there is one — and there usually is:
 
-1. **One line anchoring the work**: the ticket, or the phase document and part it implements. `Part 8 of evolution-plan/15-phase-3-spanish.md (#48).` That directory is planning material and is deliberately not versioned here, so a reference to it resolves on the author's machine and nowhere else — which is why the reasoning worth keeping ends up in an ADR instead.
+1. **One line anchoring the work**: the ticket it implements. `Implements #48.` Never the plan behind it — see **Plans** for why, and for where that reasoning goes instead.
 2. **A bullet per area touched**, saying what changed there and why, not restating the diff.
 3. **One line naming what was verified and what it said.** `Suite (615), typecheck and build all green.` If something was checked by hand — a Draft rendered at its real address, a page read in a production build — say that instead, and say what you saw.
 4. `Co-Authored-By:` as the trailer.
@@ -62,6 +76,15 @@ pnpm run kv:upload:local         # the committed KV payloads land in the local n
 pnpm run verify:stores:local     # both local stores hold what the Markdown says
 pnpm run smoke                   # builds, then boots it with no vars and no secrets
 ```
+
+If you touched anything under `architecture/`, add the check CI runs on it — it needs Docker, which nothing else in this list does, so it is not part of the block above:
+
+```bash
+docker run --rm -u "$(id -u):$(id -g)" -v "$PWD/architecture:/ws:ro" \
+  structurizr/structurizr:2026.06.28 validate -w /ws/workspace.dsl
+```
+
+It is silent on success. Do not check a broken workspace by opening Structurizr Lite: when the DSL stops parsing, Lite serves the last model it parsed successfully and says nothing.
 
 The order is the cheap checks first and the one needing a build last — `smoke` builds for you, which is why `pnpm build` is not a separate line here; CI splits the two because it has other reasons to want the build step named. The smoke test is the one catching what no unit test can: a module reading configuration at evaluation time, which took the whole site down once.
 

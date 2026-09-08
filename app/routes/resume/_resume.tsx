@@ -81,13 +81,12 @@ function localeFromMatches(matches: Parameters<MetaFunction>[0]["matches"]): Loc
 }
 
 /**
- * `/cv` is mounted in both Locales (ADR 0010) and, since Phase 3's Part 8
- * (`evolution-plan/15-phase-3-spanish.md`, #48), each branch now carries its
- * own text — so unlike before, this page canonicalises at whichever address it
- * was actually served from, `LOCALES` rather than `["en"]` for the same reason
- * every other index passes it: `/cv` cannot 404 for lacking a Translation
- * (`app/lib/seo/switcher.ts`'s own `resume` case), so both entries always
- * resolve.
+ * `/cv` is mounted in both Locales (ADR 0010) and, since #48, each branch now
+ * carries its own text — so unlike before, this page canonicalises at whichever
+ * address it was actually served from, `LOCALES` rather than `["en"]` for the
+ * same reason every other index passes it: `/cv` cannot 404 for lacking a
+ * Translation (`app/lib/seo/switcher.ts`'s own `resume` case), so both entries
+ * always resolve.
  */
 export const meta: MetaFunction = ({ matches }) => {
   const locale = localeFromMatches(matches);

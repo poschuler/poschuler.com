@@ -1,4 +1,4 @@
--- Phase 1b, expand half: the Project Container column arrives, and a rename
+-- Expand half: the Project Container column arrives, and a rename
 -- that cannot be atomic takes its first step.
 --
 -- No `IF NOT EXISTS`, following 0002 through 0005: this runs exactly once
@@ -11,7 +11,9 @@
 -- reason: a Field Note does not know where it is, the manifest says (ADR
 -- 0007). Nothing writes it yet; the walker and generator that read a
 -- Project's manifest are a later ticket. It lands here anyway because this is
--- the phase's one schema-changing migration — see the field notes.
+-- the one migration in this Publication that changes the shape of `content`,
+-- and a column whose shape is already settled costs less arriving beside a
+-- rename than as a migration of its own.
 ALTER TABLE content ADD COLUMN project_slug TEXT;
 
 -- `container_order` — the position its Container's list gave a Part or a

@@ -485,11 +485,11 @@ async function readTagVocabulary(): Promise<TagVocabulary> {
 /**
  * Reads `app/content`, writes `<outputDir>/seed.sql`.
  *
- * Two parameters, not a second pipeline (Part 3 of the field notes): called
- * with neither, this is byte-for-byte what it always was. `preview:drafts` is
- * the only caller that passes either — an output directory outside
- * `seed/d1/`, so nothing tracked is touched, and `includeDrafts`, so a Draft
- * is read like a published document instead of being skipped.
+ * Two parameters, not a second pipeline: called with neither, this is
+ * byte-for-byte what it always was. `preview:drafts` is the only caller that
+ * passes either — an output directory outside `seed/d1/`, so nothing tracked
+ * is touched, and `includeDrafts`, so a Draft is read like a published
+ * document instead of being skipped.
  */
 async function generateSqlSeed({
     outputDir = DEFAULT_OUTPUT_DIR,

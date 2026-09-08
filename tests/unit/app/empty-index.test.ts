@@ -6,10 +6,10 @@ import { meta as seriesMeta } from "~/routes/series/_series";
 import { meta as tagsMeta } from "~/routes/tags/_tags";
 
 /**
- * The robots directive an index's own `meta` adds when its list is empty
- * (Part 6 of `evolution-plan/15-phase-3-spanish.md`), pinned against synthetic
- * `loaderData` rather than a real query — `spanish-branch.test.ts` is where
- * this same rule is checked against D1 for real.
+ * The robots directive an index's own `meta` adds when its list is empty,
+ * pinned against synthetic `loaderData` rather than a real query —
+ * `spanish-branch.test.ts` is where this same rule is checked against D1 for
+ * real.
  *
  * Every index defaults to *indexable*: the directive is additive, only present
  * when the list is empty, so a query that starts returning rows again has to

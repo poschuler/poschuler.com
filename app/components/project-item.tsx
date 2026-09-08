@@ -6,8 +6,7 @@ import type { ProjectListingRowType } from "~/models/project.server";
 
 /**
  * One Project in a list — on `/blog`, where a Project with Field Notes is a
- * single entry among the loose Posts and each Series (Part 10 of
- * `evolution-plan/14-phase-1b-field-notes.md`).
+ * single entry among the loose Posts and each Series.
  *
  * The cardinality argument that collapsed a Series into one row is the same
  * one here: several notes about one Project would make the page describe the

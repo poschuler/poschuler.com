@@ -181,7 +181,14 @@ describe("the committed KV payloads match what the pipeline produces today", () 
       const { html } = JSON.parse(await fs.readFile(path.join(payloadDir, file), "utf-8")) as { html: string };
 
       expect(html, `${file} carries a script tag`).not.toMatch(/<script/i);
-      expect(html, `${file} carries an inline event handler`).not.toMatch(/\son[a-z]+\s*=/i);
+
+      // Anchored inside a tag, which is the only place an event handler can do
+      // anything. Unanchored it also read the rendered text, where `<` is
+      // escaped and prose is just prose: `const oneAndAHalf =` in a code block
+      // matched, because the `i` flag lets `[a-z]+` take the capitals too. That
+      // is a variable name, not an attribute.
+      expect(html, `${file} carries an inline event handler`).not.toMatch(/<[^>]*\son[a-z]+\s*=/i);
+
       expect(html, `${file} carries a javascript: URL`).not.toMatch(/javascript:/i);
     }
   });

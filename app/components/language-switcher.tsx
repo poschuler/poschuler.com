@@ -8,15 +8,15 @@ import { cn } from "~/lib/utils";
 /**
  * Whether the switcher renders at all.
  *
- * It shipped `false` for the whole of Phase 3
- * (`evolution-plan/15-phase-3-spanish.md` Part 9): the control was built,
- * tested and wired into both places `ModeToggle` occupies
+ * It shipped `false` for the whole of the Spanish build: the control was
+ * built, tested and wired into both places `ModeToggle` occupies
  * (`routes/layouts/header.tsx`), but nothing linked to it, which is what let
- * the phase be built and deployed without a word of Spanish being written.
+ * the entire Spanish branch be built and deployed without a word of Spanish
+ * being written.
  *
  * It is `true` now, and the Spanish branch is still empty. That is a
- * deliberate order, not an oversight: Part 6 gave every index a Locale of its
- * own unconditionally and an empty state to render — *"Todavía no se ha
+ * deliberate order, not an oversight: every index already exists in its own
+ * Locale unconditionally, with an empty state to render — *"Todavía no se ha
  * publicado nada aquí"* over a link back to the English one — under
  * `noindex, follow`. A reader who takes the switcher today reaches that
  * answer rather than a 404, and every Spanish document written from here
@@ -32,7 +32,7 @@ export const LANGUAGE_SWITCHER_REVEALED = true;
 
 /**
  * A single link to the other Locale — *Español* on an English page, *English*
- * on a Spanish one (Part 9 of `evolution-plan/15-phase-3-spanish.md`).
+ * on a Spanish one.
  *
  * Reads the current page through `useMatches()` rather than a prop: this
  * component lives in the shared layout (`routes/layouts/header.tsx`), above

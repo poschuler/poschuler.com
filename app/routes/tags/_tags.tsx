@@ -64,10 +64,10 @@ export const shouldRevalidate = skipRevalidationOnThemeChange;
  * one click away — and those pages are `noindex`.
  *
  * **The exception has its own exception.** No Tag exists until a Post carries
- * it, so an empty-content Locale closes this namespace too — `/es/tags` today
- * — and the same rule every other index follows applies here as well: an
- * index with nothing to say declares `noindex, follow` rather than entering
- * the index thin (Part 6 of `evolution-plan/15-phase-3-spanish.md`).
+ * it, so an empty-content Locale closes this namespace too — `/es/tags` today —
+ * and the same rule every other index follows applies here as well: an index
+ * with nothing to say declares `noindex, follow` rather than entering the index
+ * thin.
  */
 export const meta: Route.MetaFunction = ({ loaderData }) => {
   const addresses = documentAddresses({ kind: "index", path: "/tags" }, loaderData.locale, LOCALES);

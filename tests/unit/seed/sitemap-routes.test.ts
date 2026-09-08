@@ -13,10 +13,10 @@ import {
  * route missing here is a route search engines stop being told about until
  * someone re-seeds.
  *
- * Locale-aware since Part 10 of `evolution-plan/15-phase-3-spanish.md`: every
- * fixture below carries `lang`, defaulted to `"en"` so the pre-Phase-3
- * expectations read the same as before — one Locale, nothing translated.
- * `describe("a bilingual document …")` is what exercises the second one.
+ * Locale-aware: every fixture below carries `lang`, defaulted to `"en"` so the
+ * single-Locale expectations read the same as before — one Locale, nothing
+ * translated. `describe("a bilingual document …")` is what exercises the second
+ * one.
  */
 
 const item = (
@@ -219,7 +219,7 @@ describe("buildSitemapRoutes", () => {
   });
 
   /**
-   * Phase 1a ships the table before the first Project is written, and an index
+   * The table ships before the first Project is written, and an index
    * advertising nothing is worse than no index at all.
    */
   it("advertises no project routes at all when there are none", () => {
@@ -332,7 +332,7 @@ describe("a Series in the sitemap", () => {
 });
 
 /**
- * A Field Note is a Post whose Container is a Project (1b/7), served under it
+ * A Field Note is a Post whose Container is a Project, served under it
  * the same way a Part is served under its Series. A Draft never reaches this
  * seam at all — it produces no `content` row, so there is nothing here to
  * filter; what these assert is that a published note gets a URL, and that
@@ -485,7 +485,7 @@ describe("alternates", () => {
 });
 
 /**
- * A document translated into Spanish is the case Part 10 exists for: the
+ * A document translated into Spanish is the case this grouping exists for: the
  * *same* Slug, one row per Locale — never a second URL for what used to be one
  * duplicated address.
  */

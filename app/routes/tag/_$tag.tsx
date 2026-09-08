@@ -63,7 +63,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
  * This page exists for the reader and for internal linking, not to compete in
  * search with the Posts it points at — five of these hold a single Post, which
  * as an indexable document is one link arguing against the article it links to.
- * `follow` is the half that does the work the phase was justified by: every
+ * `follow` is the half that does the work this page was built for: every
  * link out of here is crawled and the authority reaches the Posts.
  *
  * One rule for every Tag page rather than a threshold on the count, which would

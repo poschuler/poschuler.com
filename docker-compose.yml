@@ -1,0 +1,13 @@
+name: poschuler-dot-com
+
+services:
+  structurizr:
+    image: structurizr/structurizr:2026.06.28
+    command: local
+    user: "1000:1000"
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./architecture:/usr/local/structurizr
+      

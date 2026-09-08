@@ -5,8 +5,7 @@ import { postHref } from "~/lib/hrefs";
 import type { ProjectNoteRowType } from "~/models/project.server";
 
 /**
- * One Field Note in a Project's index — the foot of the case study (Part 11 of
- * `evolution-plan/14-phase-1b-field-notes.md`).
+ * One Field Note in a Project's index — the foot of the case study.
  *
  * Shares `ListingRow` with `ContentItem` and `SeriesItem` rather than copying
  * its bordered block a fourth time. What it adds is the summary: a list of

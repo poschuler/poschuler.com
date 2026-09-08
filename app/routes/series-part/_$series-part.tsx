@@ -90,8 +90,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     datePublished: attributes.publishedAt,
     locale: series.lang,
     // Read off `orientation.part`, via the correlated subquery `findSeriesArc`
-    // now folds into the arc it already reads (Part 10 of
-    // `evolution-plan/15-phase-3-spanish.md`) — the canonical's alternates,
+    // now folds into the arc it already reads — the canonical's alternates,
     // without a second round trip. `?? []` only for the type: every row this
     // route reads is real, and carries one.
     existingLocales: orientation.part.locales ?? [],

@@ -13,9 +13,8 @@ import {
  * Four lines with a test, because the rule they hold is the one that used to
  * live inline in `ContentItem` as `/blog/${item.slug}` — and the day a Part
  * moved under its Series, that line started producing a 404 from every list on
- * the site at once. 1b (`evolution-plan/14-phase-1b-field-notes.md`) adds the
- * third branch: a Field Note under its Project. Phase 3 (`evolution-plan/15`)
- * adds the Locale.
+ * the site at once. A Field Note under its Project is the third branch, and
+ * every branch takes a Locale as well.
  */
 
 describe("postHref", () => {
@@ -148,7 +147,7 @@ describe("withLocale", () => {
  * address and wrong for a link: React Router reads an empty relative path as
  * the current location, so the 404 page's only way out rendered
  * `href="/the-address-that-404ed"` — in English, where `withLocale` returns
- * `""`, and only there, which is how it survived a phase spent on Spanish.
+ * `""`, and only there, which is how a pass over the Spanish branch missed it.
  */
 describe("navHref", () => {
   it("sends the English home page to the root, not to the current location", () => {

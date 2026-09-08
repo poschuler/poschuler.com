@@ -11,7 +11,7 @@
  * verifier exists to doubt.
  *
  * Until this module existed, the rule was `attributes.type` — the front
- * matter dispatch ADR 0004 removed from the generators three phases ago,
+ * matter dispatch ADR 0004 removed from the generators long before, still
  * alive in the one place whose job was catching it. `attributes.type` is not
  * read here, at all: a Document's identity is read off its path, the same way
  * the generators decide it.

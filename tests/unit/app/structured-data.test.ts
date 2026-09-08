@@ -92,7 +92,7 @@ describe("blogPosting", () => {
     expect(blogPosting({ ...PART, seriesSlug: undefined })).not.toHaveProperty("isPartOf");
   });
 
-  /** A Field Note's Container is a Project, not a Series (Part 11 of the field notes). */
+  /** A Field Note's Container is a Project, not a Series. */
   it("attaches a Field Note to its Project by the identifier the landing declares", () => {
     const article = blogPosting(NOTE);
 
@@ -104,7 +104,7 @@ describe("blogPosting", () => {
     expect(blogPosting({ ...NOTE, projectSlug: undefined })).not.toHaveProperty("isPartOf");
   });
 
-  /** Part 10 of `evolution-plan/15-phase-3-spanish.md`: the claim follows the article, not the default. */
+  /** The claim follows the article, not the default. */
   it("states its own Locale rather than always English", () => {
     expect(blogPosting(PART).inLanguage).toBe("en");
     expect(blogPosting({ ...PART, locale: "es" }).inLanguage).toBe("es");
@@ -173,7 +173,7 @@ describe("creativeWorkSeries", () => {
     expect(series.hasPart).toEqual([]);
   });
 
-  /** Part 10 of `evolution-plan/15-phase-3-spanish.md`: the claim follows the landing, not the default. */
+  /** The claim follows the landing, not the default. */
   it("states its own Locale rather than always English", () => {
     expect(creativeWorkSeries(SERIES).inLanguage).toBe("en");
     expect(creativeWorkSeries({ ...SERIES, locale: "es" }).inLanguage).toBe("es");

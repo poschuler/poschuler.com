@@ -1,4 +1,4 @@
--- Phase 2a: Series get two tables, and a Post gets a Container.
+-- Series get two tables, and a Post gets a Container.
 --
 -- No `IF NOT EXISTS`, following 0002: this runs exactly once against a database
 -- that has none of it, and a statement that quietly does nothing is the failure
@@ -34,8 +34,8 @@ CREATE TABLE series (
     status TEXT NOT NULL,
 
     -- The four halves of the contract, all required. A landing that omits one
-    -- of them is the failure this phase exists to prevent: a reader cannot tell
-    -- whether the series is for them.
+    -- of them is the failure these four columns exist to prevent: a reader
+    -- cannot tell whether the series is for them.
     starting_point TEXT NOT NULL,
     destination TEXT NOT NULL,
     out_of_scope TEXT NOT NULL, -- Store as JSON string (e.g., '["Microservices"]')

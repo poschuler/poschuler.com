@@ -266,7 +266,9 @@ Neither is required to boot. `SESSION_THEME_SECRET` throws only when the cookie 
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs on every push to `main` or `dev` and on every pull request into `main`: install, `pnpm typecheck`, `pnpm test`, `pnpm run verify:schema:local`, `scripts/check-generated-fixtures.sh`, `pnpm run kv:upload:local`, `pnpm run verify:stores:local`, `pnpm build`, then `scripts/smoke-test.sh`. A push to `main` adds a second job, `publish`, which is the only thing that changes anything deployed — see Publishing below.
+`.github/workflows/ci.yml` runs on every push to `main` or `dev` and on every pull request into `main`: install, `pnpm typecheck`, `pnpm test`, `pnpm run verify:schema:local`, `scripts/check-generated-fixtures.sh`, `pnpm run kv:upload:local`, `pnpm run verify:stores:local`, `pnpm build`, `scripts/smoke-test.sh`, and finally a parse of `architecture/workspace.dsl`. A push to `main` adds a second job, `publish`, which is the only thing that changes anything deployed — see Publishing below.
+
+**The workspace check is last on purpose**, because it is the only step there whose failure does not mean the site is broken, and it should not stand between a push and a typecheck result. It is also the only step that reaches for Docker: `structurizr/structurizr` parses the DSL, names the offending line and exits non-zero. It earns its place because the failure it catches is silent everywhere else — Structurizr Lite rewrites `architecture/workspace.json` after every successful parse, and when the DSL *later* stops parsing it falls back to that file without a word: 200 from the page and from the API, the last-good model served as if nothing were wrong, nothing in its log. That is the same shape of defect `check:fixtures` exists to catch one directory over — an artefact that reads correctly and no longer matches the source it came from. The SVGs exported from the model are deliberately *not* checked here: rendering needs a browser, which is a 3.49 GB image against 431 MB for parsing, and the source is where a broken model can originate.
 
 **The smoke test is the part that earns its keep.** It serves the built Worker with no secrets and no `.dev.vars`, asserts that a route from each namespace answers 200 and actually carries content — in **both** Locales, because the Spanish branch derives a Locale before the router runs and renders an empty index against the string catalogue, neither of which an English request evaluates — then posts to `/set-theme` without the signing secret and checks the site is *still* serving. That is the outage, written down as a test: a module read `process.env` at evaluation time and threw on a missing value, taking every route down to protect a theme preference, and it survived review because the machine it was written on had a `.dev.vars` holding the value. Nothing about the code looked wrong; only the empty environment showed it. Reintroducing that bug turns every route red here.
 
@@ -365,6 +367,33 @@ One sharp edge worth knowing: `wrangler kv key get` does not fail on a missing k
 The protection has edges. It covers concurrency-driven cancellation only — a manual cancel from the UI, or an expired `timeout-minutes`, still lands wherever it lands, with about ten seconds of grace and a hard kill at five minutes. Hence the job's generous timeout. And if the deploy fails after the stores have moved, there is no rollback: the run goes red and old code serves new content until someone merges a fix. [`runbook.md`](./runbook.md) has that case, and what each step of the sequence leaves behind when it is the one that fails.
 
 **What the order does not buy.** Seeding first means old code serves new data for the length of the deploy. If a commit changes the *shape* of a KV payload, that page is broken for those seconds. Only splitting such a change across two merges avoids it, and nothing here enforces that.
+
+## The architecture model
+
+`architecture/workspace.dsl` is the same system as a C4 model, and [ADR 0013](./adr/0013-the-model-is-the-dsl-the-diagrams-are-generated-never-drawn.md) records why the picture is source rather than drawings, and what that costs. What follows is the part neither the ADR nor the DSL can tell you: the traps, each one found by getting it wrong here.
+
+**Check a change with `validate`, never by opening Lite.** The CLI parses the DSL directly, names the offending line, exits non-zero and touches no file — it is the same command the `verify` job runs, so a green run locally is CI's green:
+
+```bash
+docker run --rm -u "$(id -u):$(id -g)" -v "$PWD/architecture:/ws:ro" \
+  structurizr/structurizr:2026.06.28 validate -w /ws/workspace.dsl
+```
+
+Deleting `workspace.json` to make a parse failure visible in the browser was the old recipe and it is now destructive: that file holds the eight hand-placed steps of the Publication view, and nothing regenerates them. Only taking a view off `autolayout` still needs the file gone.
+
+- **The `deploymentEnvironment` block goes last in `model`, after every relationship.** `containerInstance` replicates only the relationships declared *above* it and is silent about the rest. With the block sitting between the container relationships and the component ones, the deployed KV uploader had no arrow into KV — no parse error, no failed inspection, no log line, just a deployment view quietly missing the step it exists to show. The check is to count the view's relationships: fourteen before the move, sixteen after.
+
+- **The build view has to exclude the Worker's own reads.** `site.worker -> site.d1` and `site.worker -> site.kv` render inside `containers-build` because the Worker is in that view as the thing the job deploys. Both are excluded by hand, and any container added to that view that also has runtime relationships needs the same treatment.
+
+- **A view without `autolayout` crops to 2000x2000 unless it carries a `paperSize`**, and those coordinates are in the paper's own units — `A0_Landscape` renders the same diagram at 139 megapixels where `A2_Landscape` holds it comfortably. Today that is `dynamic-publication` alone, and its `A2_Landscape` lives in `workspace.json` rather than in the DSL, because it was set in Lite alongside the eight positions.
+
+- **`git status` lies about `workspace.json`; `git diff` does not.** After Lite saves, the path shows `M` because the stat cache noticed a new mtime, not because the content differs. `git diff --quiet` is the check that tells the truth.
+
+- **An empty `architecture/workspace.json` breaks Lite outright.** Lite prefers the JSON, cannot read zero bytes, and fails the whole load with `Could not read JSON` — a different failure from the silent fallback the CI step exists to catch, and the state the directory was in before the model was written.
+
+- **`STRUCTURIZR_WORKSPACE_PATH` is not how to point Lite at a subdirectory, and it fails destructively.** With `.:/usr/local/structurizr` mounted, the log echoes the path back and then Lite reads the data directory root anyway, finds no workspace, and **writes a fresh example one** — `workspace.dsl`, `workspace.json` and `.structurizr/` landed at the repository root, and the API served that example, two containers and zero decisions, with a cheerful 200. Nothing was lost only because the real file sits in a directory it never looked at. `docker-compose.yml` mounts `./architecture` alone for that reason.
+
+- **The D1 → KV arrow in the build view is a laptop constraint, not a step of the Publication.** The publish job never runs `kv:generate`; it uploads the committed payloads. `generate-kv-json.ts` runs `wrangler d1 execute --json` with no `--remote`, so the D1 it queries is the local one, and the ordering it depends on exists only where the payloads are generated.
 
 ## Known defects
 

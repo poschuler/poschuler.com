@@ -2,14 +2,13 @@ import { type RouteConfig, layout, prefix, route } from "@react-router/dev/route
 import { ES_PREFIX } from "./context";
 
 /**
- * The site's pages, called once per Locale (ADR 0010, `evolution-plan/15-phase-3-spanish.md`
- * Part 2 and Part 4). English is mounted at the root with no prefix; Spanish is
- * the same function mounted under `/es`. The path segment after the prefix is
- * the same string in both branches, with one exception: `resume` is the third
- * person singular of *resumir*, so `/es/resume` would read as a conjugated verb
- * rather than as a CV — it is `cv` in both Locales, and the visible navigation
- * label stays *resume* in English, because the label and the path are
- * independent.
+ * The site's pages, called once per Locale (ADR 0010). English is mounted at
+ * the root with no prefix; Spanish is the same function mounted under `/es`.
+ * The path segment after the prefix is the same string in both branches, with
+ * one exception: `resume` is the third person singular of *resumir*, so
+ * `/es/resume` would read as a conjugated verb rather than as a CV — it is
+ * `cv` in both Locales, and the visible navigation label stays *resume* in
+ * English, because the label and the path are independent.
  *
  * `suffix` gives every route an explicit id, because the default id is the
  * file path and a module cannot be mounted twice without one. The apparent

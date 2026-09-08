@@ -3,8 +3,7 @@ import { useLocale } from "~/context";
 import { useStrings } from "~/lib/catalog";
 
 /**
- * What an index renders when its list is empty, rather than the list itself
- * (Part 6 of `evolution-plan/15-phase-3-spanish.md`).
+ * What an index renders when its list is empty, rather than the list itself.
  *
  * An index is skeleton, not leaf: it is in the navigation, and a navigation of
  * dead links is worse than an empty page. So it stays at its address and
@@ -13,8 +12,9 @@ import { useStrings } from "~/lib/catalog";
  * nothing at all.
  *
  * `englishHref` is the literal English address, not derived through
- * `withLocale`: the one Locale this can point at is fixed by Part 6 itself —
- * "links to the English version" — so there is no Locale to pass in.
+ * `withLocale`: the one Locale this can point at is fixed by the rule this
+ * renders under — an empty index links to the English version — so there is
+ * no Locale to pass in.
  *
  * **The link is Spanish-only.** Every route that renders this today can only
  * be empty in Spanish — there is no `.en.md` yet, and English never runs out.

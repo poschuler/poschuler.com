@@ -457,7 +457,7 @@ describe("isEmptyContentExpectation", () => {
 /**
  * The floor #58 refuses to generalise: a Project, a Series and a Series
  * Section may legitimately be absent — the schema ships before the first one
- * is written, and that was the normal state until two phases ago. Claiming a
+ * is written, and this repository ran that way for a long time. Claiming a
  * floor there would be a false alarm waiting for someone to delete content on
  * purpose.
  */

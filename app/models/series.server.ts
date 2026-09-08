@@ -127,7 +127,7 @@ export async function findAllSeries(db: D1Database, locale: Locale) {
  *
  * `locales` rides along as a correlated subquery — every Locale this Slug's
  * Series exists in — so the landing can build its own `hreflang` alternates
- * without a second round trip (Part 10 of `evolution-plan/15-phase-3-spanish.md`).
+ * without a second round trip.
  */
 export async function findSeriesBySlug(db: D1Database, slug: string, locale: Locale) {
   const rows = await dbQuery<StoredSeriesRow & { locales: string | null }>(
@@ -179,8 +179,7 @@ type ArcJoinRow = {
  * `partLocales` rides along as a correlated subquery — the same shape
  * `findPostBySlug` and `findProjectBySlug` use — so a Part's own page can build
  * its `hreflang` alternates from the arc this route already reads, rather than
- * a second query for a fact this one already has the Slug to answer (Part 10 of
- * `evolution-plan/15-phase-3-spanish.md`).
+ * a second query for a fact this one already has the Slug to answer.
  */
 export async function findSeriesArc(
   db: D1Database,

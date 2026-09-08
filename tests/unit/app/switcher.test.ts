@@ -3,13 +3,12 @@ import { describe, expect, it } from "vitest";
 import { switcherDestinationForRoute } from "~/lib/seo/switcher";
 
 /**
- * `switcherDestinationForRoute` is the route-id half of Part 9
- * (`evolution-plan/15-phase-3-spanish.md`) — the pure identity-to-destination
- * rule itself is `switcherDestination`, pinned in `alternates.test.ts`. What
- * matters here is that every route id `app/routes.ts` mounts resolves to the
- * right `DocumentIdentity`, reading the same `existingLocales` field each
- * route's own `meta()` already reads off its loader data — never a second
- * computation.
+ * `switcherDestinationForRoute` is the route-id half of the switcher — the pure
+ * identity-to-destination rule itself is `switcherDestination`, pinned in
+ * `alternates.test.ts`. What matters here is that every route id
+ * `app/routes.ts` mounts resolves to the right `DocumentIdentity`, reading the
+ * same `existingLocales` field each route's own `meta()` already reads off its
+ * loader data — never a second computation.
  */
 
 describe("switcherDestinationForRoute — the index pages", () => {

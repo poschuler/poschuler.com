@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PERMANENT_REDIRECTS } from "~/lib/redirects";
 import { findPostBySlug } from "~/models/content.server";
 import { findSeriesArc, findSeriesBySlug } from "~/models/series.server";
+import { findPostsByTag } from "~/models/tag.server";
 
 import { openTestPlatform, type TestPlatform } from "../setup/platform";
 
@@ -56,6 +57,14 @@ async function destinationExists(db: D1Database, path: string): Promise<boolean>
     const sections = await findSeriesArc(db, segments[1], "en");
 
     return sections.some((section) => section.parts.some((part) => part.slug === segments[2]));
+  }
+
+  // A Tag page is not a row of its own: it exists for exactly as long as some
+  // Post carries the Tag, and is a 404 the moment none does (ADR 0008). So the
+  // question a renamed Tag has to answer is whether the new name reaches
+  // anything, not whether the vocabulary declares it.
+  if (segments[0] === "tags" && segments.length === 2) {
+    return (await findPostsByTag(db, segments[1], "en")).length > 0;
   }
 
   throw new Error(

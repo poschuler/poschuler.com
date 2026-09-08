@@ -5,10 +5,10 @@ import routes from "~/routes";
 import { ES_PREFIX } from "~/context";
 
 /**
- * Two branches over one route list (ADR 0010, `evolution-plan/15-phase-3-spanish.md`
- * Part 2 and Part 4). This is the test both promise: a page added to one call
- * of `contentRoutes()` and forgotten in the other is a failing assertion here,
- * rather than a page silently published in one Locale only.
+ * Two branches over one route list (ADR 0010). This is the
+ * test both promise: a page added to one call of `contentRoutes()` and
+ * forgotten in the other is a failing assertion here, rather than a page
+ * silently published in one Locale only.
  *
  * `path` is compared by segment rather than by string. `prefix()` joins the
  * home route's `/` onto `es` as the literal string `"es/"` — a trailing slash
@@ -121,11 +121,10 @@ describe("the unpublished /en namespace", () => {
 });
 
 /**
- * `/cv` itself is a page, mounted in both branches like every other
- * (`resume` above). Its PDF is not: `routes/resume-pdf/_resume-pdf.tsx`'s own
- * docblock records why (Part 8 of `evolution-plan/15-phase-3-spanish.md`,
- * #48) — it proxies one hand-produced file from a CDN rather than rendering
- * `resume.json`, so there is no `/es/cv.pdf` to mount.
+ * `/cv` itself is a page, mounted in both branches like every other (`resume`
+ * above). Its PDF is not: `routes/resume-pdf/_resume-pdf.tsx`'s own docblock
+ * records why (#48) — it proxies one hand-produced file from a CDN rather than
+ * rendering `resume.json`, so there is no `/es/cv.pdf` to mount.
  */
 describe("/cv.pdf", () => {
   it("is mounted exactly once, with no Spanish form", () => {

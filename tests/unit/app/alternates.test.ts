@@ -109,7 +109,7 @@ describe("documentAddresses — a Project landing", () => {
 
 describe("documentAddresses — an index", () => {
   /**
-   * Both, always (Part 6): an index page exists in every Locale regardless of
+   * Both, always: an index page exists in every Locale regardless of
    * what has been translated, because it is the route that has no content of
    * its own to be missing.
    */
@@ -212,10 +212,9 @@ describe("alternateLinks", () => {
 
 /**
  * The one directive `/blog`, `/projects`, `/series` and `/tags` all add to
- * their own `meta` when their own list is empty (Part 6 of
- * `evolution-plan/15-phase-3-spanish.md`) — shared here so the four route
- * files spread the same array rather than typing the same conditional out
- * four times.
+ * their own `meta` when their own list is empty — shared here so the four route
+ * files spread the same array rather than typing the same conditional out four
+ * times.
  */
 describe("emptyIndexRobots", () => {
   it("adds noindex, follow when the list is empty", () => {
@@ -228,9 +227,8 @@ describe("emptyIndexRobots", () => {
 });
 
 /**
- * The language switcher's own destination (Part 9 of
- * `evolution-plan/15-phase-3-spanish.md`), for every page kind the table
- * there names. `existingLocales` is always the same value a caller's own
+ * The language switcher's own destination, for every page kind the table there
+ * names. `existingLocales` is always the same value a caller's own
  * `documentAddresses` call already received — never a second query — which is
  * what these tests hand it too.
  */

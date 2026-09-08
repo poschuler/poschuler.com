@@ -310,7 +310,7 @@ async function verify(mode: string): Promise<boolean> {
     // `kv-bulk-upload.ts` prunes with. This used to list `blog:` alone and
     // compare its length against every payload but the sitemap — which counted
     // the Projects under `project:` and failed on a namespace that was correct
-    // the moment Phase 1a added a second prefix. A hardcoded `"blog:"` was the
+    // the moment a second prefix arrived. A hardcoded `"blog:"` was the
     // last copy of a layout `kv-keys.ts` exists to hold once.
     //
     // Names rather than counts: two wrong keys cancel out in a total, and the

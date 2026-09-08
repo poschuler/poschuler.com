@@ -11,8 +11,7 @@ import { SITE } from "./person.ts";
 
 /**
  * A document's canonical, its reciprocal alternates and the default — one
- * module answering the question the page head and the sitemap both ask (Part
- * 10 of `evolution-plan/15-phase-3-spanish.md`).
+ * module answering the question the page head and the sitemap both ask.
  *
  * The rule for what address a document has used to be written four times:
  * `app/lib/hrefs.ts`, `seed/kv/sitemap-routes.ts`, `app/lib/seo/structured-data.ts`
@@ -132,9 +131,8 @@ function relativePath(identity: DocumentIdentity, locale: Locale): string {
 
 /**
  * The section a document belongs to, for the one case `switcherDestination`
- * below needs it: a document with no Translation, which sends a reader to
- * that section's index rather than to a 404 (Part 6 and Part 9 of
- * `evolution-plan/15-phase-3-spanish.md`). Typed over the three kinds that can
+ * below needs it: a document with no Translation, which sends a reader to that
+ * section's index rather than to a 404. Typed over the three kinds that can
  * lack a Translation — an `index` never can, so `switcherDestination` never
  * calls this for one.
  */
@@ -168,16 +166,15 @@ export type SwitcherDestination = {
 };
 
 /**
- * Where the language switcher sends a reader, and what to call the trip (Part
- * 9 of `evolution-plan/15-phase-3-spanish.md`).
+ * Where the language switcher sends a reader, and what to call the trip.
  *
  * Reads the exact `existingLocales` a route's own `documentAddresses` call
  * already computed — never queried again here — so the switcher and the
  * `hreflang` cannot disagree about which Locales exist for one document. An
- * `index` never reads it at all: Part 6 makes every index exist in every
- * Locale unconditionally, which is a fact about the route rather than
- * something a query could contradict — `/cv` included, mounted in both
- * branches (ADR 0010) before Part 8 gives it Spanish text of its own.
+ * `index` never reads it at all: every index exists in every Locale
+ * unconditionally, which is a fact about the route rather than something a
+ * query could contradict — `/cv` included, mounted in both branches
+ * (ADR 0010) before it carried Spanish text of its own.
  *
  * Not a pair and not a dropdown: with two Locales this is the whole switcher,
  * one link to whichever Locale the caller is not currently reading.
@@ -200,9 +197,8 @@ export function switcherDestination(
 
 /**
  * The one `<meta name="robots">` descriptor an empty index adds to its own
- * `meta()` (Part 6 of `evolution-plan/15-phase-3-spanish.md`): nothing thin
- * enters the index, and `follow` still lets the crawler walk on to wherever
- * the index's own empty state points.
+ * `meta()`: nothing thin enters the index, and `follow` still lets the crawler
+ * walk on to wherever the index's own empty state points.
  *
  * An empty array when the list is not empty, so `...emptyIndexRobots(...)`
  * composes into every index's `meta` array without an `if` at the call site —
@@ -218,7 +214,7 @@ export function emptyIndexRobots(isEmpty: boolean): { name: "robots"; content: s
  * Locales that exist for it.
  *
  * `existingLocales` is never queried here — it is the fact a caller already
- * has in hand: constant for an index (both, always, Part 6), or read off a
+ * has in hand: constant for an index (both, always), or read off a
  * correlated subquery beside a document's own row. This module only composes
  * an address out of it.
  */
