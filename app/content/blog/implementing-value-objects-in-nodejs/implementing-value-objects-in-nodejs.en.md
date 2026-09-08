@@ -218,7 +218,7 @@ console.log(`emailA.equals(emailC): ${emailA.equals(emailC)}`); // -> false
 
 ```
 
-  ![Email Value Object](https://raw.githubusercontent.com/poschuler/nodejs-ddd-value-objects/refs/heads/main/architecture/diagrams/Email-Value-Object.svg)
+  ![Email Value Object](https://raw.githubusercontent.com/poschuler/nodejs-ddd-value-objects/refs/heads/main/architecture/diagrams/dark/Email-Value-Object.svg)
 
 B. Example 2: `Money`
 
@@ -378,7 +378,7 @@ export class Money extends ValueObject {
 
 - Immutability: The `add()` method always creates and returns a `new Amount()`, never modifying its own state.
 
-  ![Money Value Object](https://raw.githubusercontent.com/poschuler/nodejs-ddd-value-objects/refs/heads/main/architecture/diagrams/Money-Value-Object.svg)
+  ![Money Value Object](https://raw.githubusercontent.com/poschuler/nodejs-ddd-value-objects/refs/heads/main/architecture/diagrams/dark/Money-Value-Object.svg)
 
 ## V. Final Thoughts
 
