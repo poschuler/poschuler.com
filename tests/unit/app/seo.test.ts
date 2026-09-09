@@ -83,6 +83,31 @@ describe("generateSitemap", () => {
     expect(xml).toContain("<loc>https://poschuler.com/blog</loc>");
   });
 
+  /**
+   * The home page is the one address whose path is empty, and the sitemap used
+   * to be the only place that said so with a trailing slash — while the page
+   * itself, `SITE` and both of its own alternates said the bare origin. A
+   * `hreflang` is paired by URL, so the `<loc>` has to be the same string its
+   * own alternates are.
+   */
+  it("leaves the empty path empty, so the home page reads as the bare origin", () => {
+    const xml = generateSitemap({
+      domain: "https://poschuler.com",
+      routes: [
+        {
+          url: "",
+          alternates: [
+            { hreflang: "en", href: "https://poschuler.com" },
+            { hreflang: "x-default", href: "https://poschuler.com" },
+          ],
+        },
+      ],
+    });
+
+    expect(xml).toContain("<loc>https://poschuler.com</loc>");
+    expect(xml).not.toContain("<loc>https://poschuler.com/</loc>");
+  });
+
   it("emits the optional tags only when they are given", () => {
     const full = generateSitemap({
       domain: "https://poschuler.com",
