@@ -17,6 +17,7 @@
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",
 		"typecheck": "pnpm run cf-typegen && react-router typegen && tsc -b && tsc -p tsconfig.test.json",
+		"sitemap:show": "node ./scripts/show-sitemap.ts",
 		"kv:generate": "node ./seed/kv/generate-kv-json.ts",
 		"kv:upload:local": "node ./seed/kv/kv-bulk-upload.ts local",
 		"kv:upload:remote": "node ./seed/kv/kv-bulk-upload.ts remote",

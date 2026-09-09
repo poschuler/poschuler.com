@@ -73,8 +73,33 @@ function renderAlternate(alternate: SitemapAlternate): string {
   return `<xhtml:link rel="alternate" hreflang="${escapeXml(alternate.hreflang)}" href="${escapeXml(alternate.href)}"/>`;
 }
 
+/**
+ * The path a `<loc>` carries, normalised — with one address exempt from the
+ * normalisation.
+ *
+ * A caller handing over `blog` means `/blog`, so a missing leading slash is
+ * added. The empty string is not that case: it is the English home page, and
+ * `withLocale` returns `""` for it deliberately (`app/lib/hrefs.ts`) so that
+ * `${SITE}${path}` in `app/lib/seo/alternates.ts` lands on the bare origin —
+ * which is what `SITE` is, what the page's own `<link rel="canonical">` says,
+ * and what its `hreflang="en"` and `x-default` both name.
+ *
+ * Slashing it here made the sitemap the one voice disagreeing: a `<loc>` of
+ * `https://poschuler.com/` inside a `<url>` whose own alternates said
+ * `https://poschuler.com`. A crawler pairs `hreflang` by URL, so a
+ * self-reference that does not match its own `<loc>` is the shape that gets
+ * reported as a declaration with no return.
+ */
+function locPath(url: string): string {
+  if (url === "" || url.startsWith("/")) {
+    return url;
+  }
+
+  return `/${url}`;
+}
+
 function renderUrl(domain: string, route: SitemapRoute): string {
-  const path = route.url.startsWith("/") ? route.url : `/${route.url}`;
+  const path = locPath(route.url);
   const tags = [`<loc>${escapeXml(domain + path)}</loc>`];
 
   if (route.lastmod) {
