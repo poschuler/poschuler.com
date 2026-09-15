@@ -101,32 +101,30 @@ describe("mergeTimeline", () => {
 });
 
 /**
- * The fixtures carry no Spanish Post — `seed/d1/seed.sql` is generated from
- * `app/content/`, which is English only today — so the Locale filter these
- * three queries gained is exercised by inserting a Translation directly, the
- * way `content.test.ts` already inserts rows to exercise a constraint, and
- * removing it again in `afterAll`.
+ * The fixtures carry real Spanish Posts — every English Post under
+ * `app/content/` is translated today — so the Locale filter these three
+ * queries gained is exercised against one of them, rather than against a row
+ * inserted for the occasion and deleted afterwards as it used to be.
+ *
+ * The subject is found at run time and never named: which Slug happens to be
+ * translated is a fact about the writing, not about the code.
  */
 describe("with a Spanish Translation present", () => {
-  /** An existing English Post's Slug, translated — `(Slug, Locale)` allows it. */
+  /** A Slug that exists in both Locales — `(Slug, Locale)` is what allows it. */
   let translatedSlug: string;
 
   beforeAll(async () => {
-    const [enPost] = await findAllPosts(platform.env.POSCHULER_BD, "en");
-    translatedSlug = enPost.slug;
+    const [enPosts, esPosts] = await Promise.all([
+      findAllPosts(platform.env.POSCHULER_BD, "en"),
+      findAllPosts(platform.env.POSCHULER_BD, "es"),
+    ]);
 
-    await platform.env.POSCHULER_BD.prepare(
-      `insert into content (slug, lang, type, title, published_at)
-        values (?, 'es', 'post', 'Traducción de prueba', '2026-01-01')`,
-    )
-      .bind(translatedSlug)
-      .run();
-  });
+    const enSlugs = new Set(enPosts.map((post) => post.slug));
 
-  afterAll(async () => {
-    await platform.env.POSCHULER_BD.prepare("delete from content where slug = ? and lang = 'es'")
-      .bind(translatedSlug)
-      .run();
+    // The `!` is deliberate, for the reason `spanish-branch.test.ts` gives for
+    // its own: if nothing is translated this throws here and names the file,
+    // which beats three cases quietly asserting nothing.
+    translatedSlug = esPosts.find((post) => enSlugs.has(post.slug))!.slug;
   });
 
   it("lists the Translation once in its own Locale's Posts, and not in the other's", async () => {
