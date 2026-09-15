@@ -11,10 +11,7 @@ import { loader as homeLoader } from "~/routes/home/_home";
 import { loader as projectNoteLoader } from "~/routes/project-note/_$project-note";
 import { loader as projectLoader } from "~/routes/project-slug/_$project-slug";
 import { loader as projectsLoader, meta as projectsMeta } from "~/routes/projects/_projects";
-import { loader as seriesPartLoader } from "~/routes/series-part/_$series-part";
-import { loader as seriesLandingLoader } from "~/routes/series-slug/_$series-slug";
 import { loader as seriesLoader, meta as seriesMeta } from "~/routes/series/_series";
-import { loader as tagLoader } from "~/routes/tag/_$tag";
 import { loader as tagsLoader, meta as tagsMeta } from "~/routes/tags/_tags";
 import { loader as timelineLoader } from "~/routes/timeline/_timeline";
 
@@ -35,12 +32,8 @@ import { openTestPlatform, routeArgs, type TestPlatform } from "../setup/platfor
  */
 
 let platform: TestPlatform;
-/** A Part, and the Series it belongs to — a Series with no Spanish row. */
-let partSlug: string;
-let seriesSlug: string;
-/** A Project with no Spanish row, and a Tag no Spanish Post carries. */
+/** A Project with no Spanish row. */
 let projectSlug: string;
-let tagName: string;
 
 type ArgsOf<Loader> = Loader extends (args: infer A) => unknown ? A : never;
 
@@ -77,28 +70,13 @@ async function spanishKeys(sql: string): Promise<Set<string>> {
 beforeAll(async () => {
   platform = await openTestPlatform();
 
-  const [translatedProjects, translatedSeries, translatedTags] = await Promise.all([
-    spanishKeys(SPANISH.projects),
-    spanishKeys(SPANISH.series),
-    spanishKeys(SPANISH.tags),
-  ]);
+  const translatedProjects = await spanishKeys(SPANISH.projects);
 
-  const [{ contentItems }, { projects }, { tags }] = await Promise.all([
-    timelineLoader(routeArgs<ArgsOf<typeof timelineLoader>>(platform, get("/timeline"))),
-    projectsLoader(routeArgs<ArgsOf<typeof projectsLoader>>(platform, get("/projects"))),
-    tagsLoader(routeArgs<ArgsOf<typeof tagsLoader>>(platform, get("/tags"))),
-  ]);
-
-  const part = contentItems.find(
-    (item) =>
-      item.type === "post" && item.seriesSlug !== null && !translatedSeries.has(item.seriesSlug),
-  )!;
-
-  partSlug = part.slug;
-  seriesSlug = part.seriesSlug!;
+  const { projects } = await projectsLoader(
+    routeArgs<ArgsOf<typeof projectsLoader>>(platform, get("/projects")),
+  );
 
   projectSlug = projects.find((project) => !translatedProjects.has(project.slug))!.slug;
-  tagName = tags.find((one) => !translatedTags.has(one.tag))!.tag;
 });
 
 afterAll(async () => {
@@ -111,12 +89,22 @@ afterAll(async () => {
  * exactly this case, not a stand-in for it.
  */
 describe("a document with no Spanish Translation", () => {
-  // There is no standalone Post left to assert this on. The blog holds one Post
-  // and it is translated, so the `find` that picked a subject threw in
-  // `beforeAll` and took the whole file down with it — which is what the `!`
-  // above is written to do. The rule itself is still covered: a Part is a Post,
-  // and `404s a Part at its Spanish address` runs it through the same loader
-  // chain. Bring the case back when a second English-only Post is written.
+  // Only the Project half of this rule still has a subject. Every English Post
+  // is translated, `pragmatic-nodejs-api` is the only Series and its manifest
+  // and all three Parts are translated too, and with the Posts went the last
+  // Tag no Spanish Post carries. Each `find` that picked one of those subjects
+  // threw in `beforeAll` and took the whole file down with it — which is what
+  // the `!` above is written to do.
+  //
+  // So the standalone Post, Series landing, Part and Tag cases are all gone,
+  // and nothing covers their 404 now. The argument that retired the Post case
+  // first — a Part is a Post, and the Part case runs the rule through the same
+  // loader chain — died with the Part case itself. What still runs the rule is
+  // Project and Field Note.
+  //
+  // These are not broken cases: their subjects stopped existing. Bring them
+  // back the day a second English-only Post or Series is written, which the
+  // second volume will be for months before anyone translates it.
 
   it("404s a Project at its Spanish address", async () => {
     await expect(
@@ -124,29 +112,6 @@ describe("a document with no Spanish Translation", () => {
         routeArgs<ArgsOf<typeof projectLoader>>(platform, get(`/es/projects/${projectSlug}`), {
           projectSlug,
         }),
-      ),
-    ).rejects.toMatchObject({ status: 404 });
-  });
-
-  it("404s a Series landing at its Spanish address", async () => {
-    await expect(
-      seriesLandingLoader(
-        routeArgs<ArgsOf<typeof seriesLandingLoader>>(platform, get(`/es/series/${seriesSlug}`), {
-          seriesSlug,
-        }),
-      ),
-    ).rejects.toMatchObject({ status: 404 });
-  });
-
-  /** The arc lookup 404s before the Part is ever checked — the Series itself has no Spanish row. */
-  it("404s a Part at its Spanish address", async () => {
-    await expect(
-      seriesPartLoader(
-        routeArgs<ArgsOf<typeof seriesPartLoader>>(
-          platform,
-          get(`/es/series/${seriesSlug}/${partSlug}`),
-          { seriesSlug, partSlug },
-        ),
       ),
     ).rejects.toMatchObject({ status: 404 });
   });
@@ -169,14 +134,6 @@ describe("a document with no Spanish Translation", () => {
     ).rejects.toMatchObject({ status: 404 });
   });
 
-  /** The precedent the empty-index rule generalises from, checked at the Locale that has nothing behind it. */
-  it("404s a Tag some Post carries in English but not in Spanish", async () => {
-    await expect(
-      tagLoader(
-        routeArgs<ArgsOf<typeof tagLoader>>(platform, get(`/es/tags/${tagName}`), { tag: tagName }),
-      ),
-    ).rejects.toMatchObject({ status: 404 });
-  });
 });
 
 /**
