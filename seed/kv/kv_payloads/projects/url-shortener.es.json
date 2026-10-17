@@ -1,0 +1,26 @@
+{
+  "attributes": {
+    "type": "project",
+    "title": "URL Shortener",
+    "summary": "Códigos cortos que no se pueden adivinar, generados sin ir a la base de datos en cada escritura, y una lectura que escala por separado y sigue respondiendo si Redis se cae.",
+    "description": "Acortador de URLs en Node.js y TypeScript con Fastify, PostgreSQL y Redis: códigos que no se pueden adivinar, lectura y escritura separadas, decisiones en ADRs.",
+    "tier": "supporting",
+    "status": "active",
+    "stack": [
+      "TypeScript",
+      "Node.js",
+      "Fastify",
+      "PostgreSQL",
+      "Redis"
+    ],
+    "repoUrl": "https://github.com/poschuler/url-shortener",
+    "sortOrder": 4,
+    "updates": [
+      {
+        "date": "2026-10-16",
+        "note": "Primera publicación."
+      }
+    ]
+  },
+  "html": "<p>Un acortador de URLs en Node.js y TypeScript. Expone dos endpoints: uno de escritura, que recibe una URL de destino y devuelve un código corto, y uno de lectura, que recibe ese código como parámetro de la ruta y redirige a la URL de destino.</p>\n<p>Es un monolito modular que corre como dos procesos, uno de lectura y otro de escritura. Se separaron porque las lecturas suelen superar por mucho a las escrituras, y con instancias separadas cada lado escala de forma independiente. La lectura, además, usa Redis como caché para mejorar el tiempo de respuesta.</p>\n<p>Hay más detalles sobre las decisiones de diseño en <a href=\"/es/blog/designing-a-url-shortener\">Diseñando un URL shortener</a>.</p>\n<h2>Decisiones de diseño</h2>\n<ul>\n<li><strong>Códigos que no se pueden adivinar.</strong> Cada enlace recibe un ID secuencial que pasa por una red de Feistel con clave antes de convertirse en código, así que conocer un código no sirve para llegar a los demás (<code>short-code-permutation.ts</code>, ADR-0004).</li>\n<li><strong>IDs reservados por bloques.</strong> Cada proceso reserva bloques de mil IDs de una secuencia de Postgres y los reparte desde memoria, así que crear un enlace no necesita una consulta para obtener su ID (<code>ranged-number-sequence.ts</code>, ADR-0010 y ADR-0011).</li>\n<li><strong>Una lectura que no depende de Redis.</strong> Si Redis se cae, la lectura sigue respondiendo desde Postgres, más lenta pero sin errores (<code>redis-link-cache.ts</code>, ADR-0017).</li>\n</ul>\n<h2>Alcance</h2>\n<ul>\n<li><strong>Pensado para producción.</strong> Arquitectura hexagonal con una capa mínima de DDD, límites entre capas verificados con dependency-cruiser, tests de contrato y una prueba de carga con k6 sobre la lectura. Cada pieza tiene un ADR que explica por qué está ahí.</li>\n<li><strong>Fuera del alcance.</strong> No hay autenticación, los enlaces no se pueden editar ni borrar, y no se registran las visitas.</li>\n</ul>\n<h2>Arquitectura</h2>\n<p><img src=\"https://raw.githubusercontent.com/poschuler/url-shortener/refs/tags/v1.0.0/architecture/diagrams/dark/containers.svg\" alt=\"Diagrama de contenedores del URL shortener\"></p>\n<p>El código, los ADR y los tres niveles del modelo C4 están en el <a href=\"https://github.com/poschuler/url-shortener\">repositorio</a>, junto con los pasos para correrlo en local.</p>\n"
+}
