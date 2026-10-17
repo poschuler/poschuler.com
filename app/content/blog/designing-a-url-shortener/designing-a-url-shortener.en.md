@@ -5,7 +5,6 @@ description: 'System design of a URL shortener: how to generate unique codes nob
 tags: ['system-design', 'software-architecture', 'backend']
 publishedAt: '2026-10-16'
 repository: 'https://github.com/poschuler/url-shortener/tree/v1.0.0'
-draft: true
 ---
 
 We design a URL shortener and go through the decisions that matter: how to generate the code, how many characters to use and which ones, and how to handle scale. Grab the code for an implementation in Node.js and TypeScript, built with hexagonal architecture, from the [repository](https://github.com/poschuler/url-shortener/tree/v1.0.0).

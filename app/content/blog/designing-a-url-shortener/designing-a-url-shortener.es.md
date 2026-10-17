@@ -5,7 +5,6 @@ description: 'System design de un acortador de URLs: cómo generar códigos úni
 tags: ['system-design', 'software-architecture', 'backend']
 publishedAt: '2026-10-16'
 repository: 'https://github.com/poschuler/url-shortener/tree/v1.0.0'
-draft: true
 ---
 
 Diseñamos un URL shortener y revisamos las decisiones relevantes: cómo generar el código, cuántos y qué caracteres usar, y cómo manejar el escalamiento. Obtén el código de una implementación en Node.js y TypeScript, con arquitectura hexagonal, en el [repositorio](https://github.com/poschuler/url-shortener/tree/v1.0.0).
