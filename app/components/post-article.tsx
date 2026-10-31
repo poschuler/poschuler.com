@@ -42,10 +42,10 @@ function TagChips({ tags }: { tags: string[] }) {
 /**
  * A Post, rendered.
  *
- * The same article whether it is served from `/blog` or as a Part of a Series:
- * a Part is an ordinary Post that happens to have a Container, and nothing
- * about the writing changes because of it. What changes is what surrounds the
- * article, and that stays in the routes.
+ * The same article whether it is served from `/blog` or as a Field Note of a
+ * Project: a Field Note is an ordinary Post that happens to have a Container,
+ * and nothing about the writing changes because of it. What changes is what
+ * surrounds the article, and that stays in the routes.
  *
  * `html` reaches here as text out of KV and goes straight into
  * `dangerouslySetInnerHTML`. It is sanitised once, at build time, by
@@ -64,9 +64,8 @@ export function PostArticle({
   publishedAt: string;
   /**
    * The subjects this Post covers, from the front matter that travels in KV.
-   * Both Post routes have that payload in hand already — the Series Part route
-   * never fetches the content row at all, so reading them from D1 there would
-   * mean a new query for something the reader has already been sent.
+   * Both Post routes have that payload in hand already, so reading them from
+   * D1 would mean a new query for something the reader has already been sent.
    */
   tags: string[];
   repository?: string;
@@ -98,11 +97,9 @@ export function PostArticle({
         * date is metadata of time, so they read as one line of metadata rather
         * than as two things stacked.
         *
-        * Not below the body, where the general argument would put them: three of
-        * the site's four Posts are Parts of a Series, and below a Part sit its
-        * revision history and the link to the next Part. Losing a reader to a
-        * Tag before they have read anything is the risk; competing with the arc
-        * on the majority of the site's pages is the larger one.
+        * Not below the body, where the general argument would put them: below a
+        * Post sits its revision history, and losing a reader to a Tag before
+        * they have read anything is the risk.
         *
         * Aligned on the baseline rather than centred, because *beside the date*
         * has to keep meaning that. The revision line is one line only while no

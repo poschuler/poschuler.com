@@ -7,8 +7,8 @@ import type { ProjectNoteRowType } from "~/models/project.server";
 /**
  * One Field Note in a Project's index — the foot of the case study.
  *
- * Shares `ListingRow` with `ContentItem` and `SeriesItem` rather than copying
- * its bordered block a fourth time. What it adds is the summary: a list of
+ * Shares `ListingRow` with `ContentItem` rather than copying
+ * its bordered block again. What it adds is the summary: a list of
  * technical notes does not let a reader choose between them on the title
  * alone, so it goes on the extra line `ListingRow` already supports.
  */
@@ -24,7 +24,7 @@ export function ProjectNoteItem({
   return (
     <ListingRow
       title={note.title}
-      href={postHref({ slug: note.slug, seriesSlug: null, projectSlug }, locale)}
+      href={postHref({ slug: note.slug, projectSlug }, locale)}
       icon={PenLine}
       meta={<time dateTime={note.publishedStringDate}>{note.publishedStringDate}</time>}
     >

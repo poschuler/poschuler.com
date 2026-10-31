@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import fm from "front-matter";
@@ -15,11 +15,6 @@ import {
   projectRowFor,
   type ProjectFrontMatter,
 } from "../../../seed/d1/project-sql";
-import {
-  seriesRowsFor,
-  type SeriesFrontMatter,
-  type SeriesPartFile,
-} from "../../../seed/d1/series-sql";
 import { tagVocabularyFrom, type TagVocabulary } from "../../../seed/d1/tag-vocabulary";
 
 /**
@@ -78,12 +73,6 @@ describe("docs/templates/post.en.md", () => {
 });
 
 describe("docs/templates/field-note.en.md", () => {
-  /**
-   * Both, from one template, because that is what the template claims: a Part
-   * and a Field Note carry the same front matter and differ only in which
-   * manifest lists them. If that ever stops being true, one of these two goes
-   * red and the template needs splitting.
-   */
   it("seeds a Field Note when copied under a Project", () => {
     const { attributes } = templateAt("field-note.en.md");
 
@@ -97,19 +86,20 @@ describe("docs/templates/field-note.en.md", () => {
     expect(isInvalid(result) ? result.error : null).toBeNull();
     expect(isSkipped(result)).toBe(false);
   });
+});
 
-  it("seeds a Part when copied under a Series", () => {
-    const { attributes } = templateAt("field-note.en.md");
+describe("docs/templates", () => {
+  it("holds no template for a Series, which the site no longer publishes", () => {
+    expect(existsSync(path.join(REPO_ROOT, "docs/templates/series.en.md"))).toBe(false);
+  });
 
-    const result = contentRowFor(
-      "series/a-series/a-part/a-part.en.md",
-      attributes as FrontMatterAttributes,
-      VOCABULARY,
-      { seriesSlug: "a-series", section: "a-section", order: 0 },
+  it("tells a Field Note's author nothing about a Part", () => {
+    const source = readFileSync(
+      path.join(REPO_ROOT, "docs/templates/field-note.en.md"),
+      "utf8",
     );
 
-    expect(isInvalid(result) ? result.error : null).toBeNull();
-    expect(isSkipped(result)).toBe(false);
+    expect(source).not.toMatch(/\bParts?\b/);
   });
 });
 
@@ -157,40 +147,5 @@ describe("docs/templates/project.en.md", () => {
     );
 
     expect(isInvalidProject(result) ? result.error : null).toBeNull();
-  });
-});
-
-describe("docs/templates/series.en.md", () => {
-  it("seeds a Series when copied to series/<slug>/<slug>.en.md", () => {
-    const { attributes, body } = templateAt("series.en.md");
-    const manifest = attributes as SeriesFrontMatter;
-
-    /**
-     * The Part files are derived from the manifest's own lists rather than
-     * hardcoded, so this stays true if the template's example slugs change.
-     * What is under test here is that the manifest is internally valid — the
-     * contract fields, the section rules, the body — not the reconciliation
-     * between a manifest and a directory, which `series-sql.test.ts` owns.
-     */
-    const partFiles: SeriesPartFile[] = (
-      manifest.sections as { parts?: string[] }[]
-    ).flatMap((section) =>
-      (section.parts ?? []).map((slug) => ({
-        slug,
-        lang: "en",
-        folder: slug,
-        relativePath: `series/a-series/${slug}/${slug}.en.md`,
-        draft: false,
-      })),
-    );
-
-    const result = seriesRowsFor(
-      "series/a-series/a-series.en.md",
-      manifest,
-      body,
-      partFiles,
-    );
-
-    expect("error" in result ? result.error : null).toBeNull();
   });
 });

@@ -66,8 +66,7 @@ function parseStack(stored: string): string[] {
 }
 
 /**
- * Generic over `T`, the shape `series.server.ts`'s own `hydrate` uses: a row
- * can carry more than `StoredProjectRow`'s columns — `findProjectsWithNotes`
+ * Generic over `T`: a row can carry more than `StoredProjectRow`'s columns — `findProjectsWithNotes`
  * adds `publishedAt` — and a fixed return type would silently drop it.
  */
 function hydrate<T extends StoredProjectRow>(
@@ -177,8 +176,7 @@ export async function findProjectNotes(
  * A Project in a list, dated by the fact `/blog` needs — when it last had
  * something new. A Project carries no Published At of its own (`project`
  * holds a case study, not an editorial timestamp), so this is the most recent
- * of its published Field Notes', the same reasoning `SeriesListingRowType`
- * already applies to a Series' most recent Part.
+ * of its published Field Notes'.
  */
 export type ProjectListingRowType = ProjectRowType & {
   publishedAt: string;
@@ -189,10 +187,8 @@ export type ProjectListingRowType = ProjectRowType & {
  * Every Project with at least one published Field Note, most recently advanced
  * first.
  *
- * The `join` — not a `left join` — is what excludes a Project with none: unlike
- * `findAllSeries`, which lists an announced-but-unwritten Series on `/series`
- * and lets `/blog` filter it out on its own terms, `/blog` is the only reader
- * of this query and it never wants a Project with nothing written about it.
+ * The `join` — not a `left join` — is what excludes a Project with none: `/blog` is the
+ * only reader of this query and it never wants a Project with nothing written about it.
  */
 export async function findProjectsWithNotes(db: D1Database, locale: Locale) {
   const rows = await dbQuery<StoredProjectRow & { publishedAt: string }>(
@@ -211,7 +207,7 @@ export async function findProjectsWithNotes(db: D1Database, locale: Locale) {
 
   return rows.map((row): ProjectListingRowType => ({
     ...hydrate(row),
-    // See `findAllSeries`: `max()` cannot be wrapped by `strftime` and
+    // `max()` cannot be wrapped by `strftime` and
     // grouped in the same select without repeating the aggregate, and the
     // column is already a `YYYY-MM-DD …` string.
     publishedStringDate: row.publishedAt.slice(0, 10),

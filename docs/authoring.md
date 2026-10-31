@@ -10,7 +10,7 @@ repository's business.
 
 ## The model, in one page
 
-Everything published lives under `app/content/`, in one of four trees, and
+Everything published lives under `app/content/`, in one of three trees, and
 **the path is what says what a file is** — the front matter is checked against
 it rather than believed (ADR 0004).
 
@@ -21,24 +21,21 @@ app/content/
   bookmarks/<slug>.md                       a Bookmark
   projects/<project>/<project>.en.md        a Project
   projects/<project>/<note>/<note>.en.md    a Field Note — a Post in that Project
-  series/<series>/<series>.en.md            a Series manifest
-  series/<series>/<part>/<part>.en.md       a Part — a Post in that Series
 ```
 
 Three rules follow from that shape, and each of them fails the build rather than
 guessing:
 
 - **The file named after its folder *is* that folder; a subfolder is content
-  living inside it.** That is the whole of how a Series manifest is told apart
-  from its Parts, and a Project from its Field Notes.
-- **Only `series/` and `projects/` hold anything nested, and what nests is a
-  Post.** A subfolder under `blog/` or `bookmarks/` fails rather than acquiring
+  living inside it.** That is the whole of how a Project is told apart
+  from its Field Notes.
+- **Only `projects/` holds anything nested, and what nests is a Post.** A subfolder under `blog/` or `bookmarks/` fails rather than acquiring
   an invented meaning, and so does a fourth level anywhere.
 - **The filename carries the Locale under every tree except `bookmarks/`**,
   where it is forbidden. A Bookmark is a pointer to somebody else's document,
   so it has nothing to translate.
 
-The four trees are declared in `seed/d1/content-tree.ts`. A fifth directory
+The three trees are declared in `seed/d1/content-tree.ts`. A fourth directory
 under `app/content/` is not a new kind of content — it is a directory no
 generator walks, which is why the build refuses it by name.
 
@@ -77,14 +74,6 @@ utility, which covers headings, paragraphs, lists, links, inline code, fenced
 blocks, quotes, images and rules — **an element outside that set renders
 unstyled on purpose** (`design.md`), and raw HTML in the body is escaped rather
 than passed through, so there is no embedding a video.
-
-### A Part
-
-An ordinary Post one level deeper: `app/content/series/<series>/<part>/<part>.en.md`,
-with exactly the front matter above. **It declares nothing about the Series.**
-Its Container is the folder it sits in, and its position is wherever the
-manifest lists it (ADR 0007) — there is no `series:` field and no `order:` to
-write.
 
 ### A Field Note
 
@@ -146,48 +135,6 @@ Project accumulates what happened; it does not promise where it is going.
 **Reconciliation is bidirectional.** A listed note with no file fails, a note
 file the manifest does not list fails, and the same slug listed twice fails.
 
-### A Series manifest
-
-`app/content/series/<series>/<series>.en.md`. It declares the whole arc, and it
-is the only place the arc exists.
-
-```yaml
----
-type: 'series'
-title: 'Pragmatic Node.js API'
-description: 'The SEO meta description.'
-status: 'ongoing'                             # ongoing | complete
-startingPoint: 'What the reader is assumed to already be able to do.'
-destination: 'What they end up with. Immutable once the first Part ships.'
-outOfScope: ['Microservices', 'Event sourcing']   # at least one
-audience: 'Who this is for, and who it is not for.'
-sections:
-  - slug: 'fundamentals'
-    title: 'Fundamentals'
-    summary: 'One or two sentences. This is what the landing renders.'
-    status: 'complete'                        # optional, and 'complete' is the only value
-    parts:                                    # omit entirely for a section not started
-      - 'project-setup'
-      - 'schema-validation-and-error-handling'
----
-
-The prose saying why this series exists and what problem it came out of.
-```
-
-Four things about it are load-bearing:
-
-- **The Destination is immutable once the first Part ships.** Everything else
-  may change — the number of Parts, their order, where the section boundaries
-  fall. That may not: it is the promise the reader signed up for.
-- **`outOfScope` cannot be empty.** What a series refuses to cover is half of
-  what it promises.
-- **Only `complete` is ever declared on a section**, and only with Parts in it.
-  A section with no Parts is planned and a section with Parts is in progress —
-  both are read from what the section holds, so writing them down would be a
-  second source for a fact the list already carries.
-- **A manifest needs a body.** A landing with a contract and no voice fails the
-  build.
-
 ## Tags
 
 `app/content/tags.json` is the closed vocabulary: every Tag this site may use,
@@ -224,7 +171,7 @@ What travels unchanged, and what is written again:
 | `publishedAt` | **Identical.** It is the same document, in another language |
 | `type`, `repository`, `liveUrl`, `repoUrl`, `stack`, `tier`, `status`, `sortOrder` | **Identical.** None of them is prose |
 | `title`, `description`, `summary` | Written again, in Spanish |
-| `updates[].note`, and a Series' contract fields | Written again, in Spanish |
+| `updates[].note` | Written again, in Spanish |
 | The body | Written again, in Spanish |
 
 Only the first row is enforced: the Slug is identical because it is the folder
@@ -233,17 +180,11 @@ Translation carrying different Tags, or a different `publishedAt`, seeds without
 complaint and produces two documents that disagree about what they are — which
 is why the rule is written down here rather than left to be noticed.
 
-**A Container is translated before anything inside it.** A Part in a Locale its
-Series has no manifest for fails the build, and the message names both:
-
-```
-… is in 'es' and pragmatic-nodejs-api has no manifest in that Locale
-```
-
-So a Spanish Series starts with `<series>.es.md` — the whole contract and the
-whole arc — and only then can its Parts follow. The same holds for a Project and
-its Field Notes. This is the one ordering constraint in the whole of translation,
-and it is the one that is easy to discover the hard way.
+**A Container is translated before anything inside it.** A Field Note in a
+Locale its Project has no landing for fails the build. So a Spanish Project
+starts with `<project>.es.md`, and only then can its Field Notes follow. This is
+the one ordering constraint in the whole of translation, and it is the one that
+is easy to discover the hard way.
 
 **Nothing falls back.** A Spanish address with no Translation behind it is a
 404, never the English document at a Spanish URL. An index whose list is empty
@@ -269,7 +210,7 @@ is empty on that day**.
 ## Drafts
 
 Any document under `app/content/` may carry `draft: true` — a loose Post, a
-Part, a Field Note, a Project or a Series landing.
+Field Note or a Project.
 
 **A Draft is checked exactly as strictly as a published document**: its type
 against its placement, its Locale suffix, its Tags against the vocabulary, its
@@ -367,20 +308,15 @@ once, because each one names the file responsible.
 
 | What you did | What you get |
 |---|---|
-| Put a file outside the four trees | `… is not under a content tree — nothing would read it and nothing would say so` |
+| Put a file outside the three trees | `… is not under a content tree — nothing would read it and nothing would say so` |
 | Nested a folder under `blog/` or `bookmarks/` | `… is nested inside a post, and nothing nests under blog` |
-| Declared a `type` the path disagrees with | `… declares type 'post' but its position in the series tree says 'series'` |
+| Declared a `type` the path disagrees with | `… declares type 'link' but its position in the blog tree says 'post'` |
 | Left off the Locale suffix, or mistyped it | `… carries no recognised Locale — a file under blog/ must end in .en.md or .es.md` |
 | Gave a Bookmark a Locale suffix | `… is a Bookmark and its filename carries a Locale suffix ('en') — a Bookmark is a pointer and has no Locale to translate` |
-| Wrote a Part the manifest does not list | `… is not listed in the pragmatic-nodejs-api manifest — a Part nothing indexes cannot be reached or ordered` |
-| Translated a Part before its manifest | `… is in 'es' and pragmatic-nodejs-api has no manifest in that Locale` |
-| Added Parts with no manifest at all | `app/content/series/<slug> holds Parts and no manifest — nothing would order them or say what the series is for` |
 | Used a Tag `tags.json` does not declare | `… carries the Tag 'foo', which app/content/tags.json does not declare — declare it there, or use the Tag this site already has for that subject` |
 | Wrote a Tag that is not a slug | `… carries the Tag "Foo Bar", which is not a slug — a Tag is written in lower-case kebab-case, and that same string is its URL` |
 | Wrote `draft: 'true'` | `… declares draft: "true" — draft must be true or false, nothing else` |
 | Gave a Project no revision | `… declares no updates — a Project needs at least one, the day its page went up` |
-| Left a Series manifest with no body | `… has no body — the landing would render a contract and no voice` |
-| Declared a section `status` other than complete | `… section 'x' declares status 'y' — the only declarable value is 'complete'; planned and in-progress are read from whether it has Parts` |
 
 Two failures arrive from further away. A missing `title` or `publishedAt` is
 rejected by SQLite when the seed is applied, not by the generator, because those

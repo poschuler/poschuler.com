@@ -10,9 +10,7 @@ import { indexHref } from "~/lib/trail";
  *
  * A reader arriving at a note from a search engine has never seen the home
  * page and would otherwise start reading without knowing what system this is
- * about. `SeriesBreadcrumb` in `series-part/orientation.tsx` is the same idea
- * for a Part; this is its Project sibling, with no section to name because a
- * Project has none.
+ * about.
  */
 
 const linkClassName = "transition-colors duration-200 hover:text-default";
@@ -47,10 +45,8 @@ export function ProjectBreadcrumb({
 }
 
 /**
- * The way onward, at the foot of a note. `SectionIndex` in
- * `series-part/orientation.tsx` is the same idea for a Part's neighbours inside
- * its section; this is its Project sibling — a flat list rather than one
- * grouped by section, because a Project declares no sections.
+ * The way onward, at the foot of a note — a flat list, because a Project
+ * declares no sections.
  *
  * `notes` is the Project's whole manifest order; the current note is filtered
  * out here rather than by the caller, so the "only one note" rule — do not
@@ -90,7 +86,7 @@ export function NoteSiblings({
         {siblings.map((note) => (
           <li key={note.slug}>
             <Link
-              to={postHref({ slug: note.slug, seriesSlug: null, projectSlug }, locale)}
+              to={postHref({ slug: note.slug, projectSlug }, locale)}
               className={`text-low ${linkClassName}`}
             >
               {note.title}

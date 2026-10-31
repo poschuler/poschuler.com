@@ -6,6 +6,10 @@
  * published, which never do. Removing one in two years as tidying breaks
  * whatever still points at it, and nothing will report that it happened.
  *
+ * One exception, and it is the only one: **an entry leaves when its
+ * destination is retired**, because a redirect to a retired address is worse
+ * than none. Three entries left the table that way, when the pages they pointed at were retired.
+ *
  * Two rules the table has to keep, both checked in `redirects.test.ts`:
  *
  * - **Straight to the final destination, never chained.** A redirect aimed at
@@ -15,24 +19,8 @@
  *   redirect at all — the reader gets nothing and the engine drops the URL
  *   rather than moving it. That one crosses this map and the database, so it is
  *   asserted in `tests/integration/redirects.test.ts`.
- *
- * This is not where a Part's short Slug is resolved. `/blog/project-setup`
- * never existed publicly; it is answered in the `/blog/:blogSlug` loader,
- * derived from the row's Container, because that is a fact about the content
- * rather than a fact about history.
  */
 export const PERMANENT_REDIRECTS: Record<string, string> = {
-  // The three Parts of Pragmatic Node.js API were published under
-  // `/blog` with the Series name written by hand into each Slug, because
-  // nothing yet read the directory a file sat in. They now live under their
-  // Container, and the Slug says only what the Part is about.
-  "/blog/pragmatic-nodejs-api-setup-nodejs-express-typescript-project":
-    "/series/pragmatic-nodejs-api/project-setup",
-  "/blog/pragmatic-nodejs-api-schema-validation-and-global-error-handling":
-    "/series/pragmatic-nodejs-api/schema-validation-and-error-handling",
-  "/blog/pragmatic-nodejs-api-vertical-slices-and-domain-logic":
-    "/series/pragmatic-nodejs-api/vertical-slices-and-domain-logic",
-
   // `resume` is a Spanish word — the third person singular of
   // *resumir* — so `/es/resume` would read as a conjugated verb rather than
   // as a CV. The route moved to `/cv` in both Locales (ADR 0010); the visible

@@ -18,8 +18,18 @@ const at = (path: string) => resolveRedirect(new URL(`https://poschuler.com${pat
 describe("resolveRedirect", () => {
   it("leaves a URL that still exists alone", () => {
     expect(at("/blog/implementing-value-objects-in-nodejs")).toBeNull();
-    expect(at("/series/pragmatic-nodejs-api")).toBeNull();
     expect(at("/")).toBeNull();
+  });
+
+  /**
+   * An address that was retired is not an address that moved: a redirect to a
+   * retired destination is worse than none (see `redirects.ts`), so the three
+   * original Part addresses fall through to the router's 404.
+   */
+  it("leaves a retired address alone", () => {
+    expect(at("/blog/pragmatic-nodejs-api-setup-nodejs-express-typescript-project")).toBeNull();
+    expect(at("/blog/pragmatic-nodejs-api-schema-validation-and-global-error-handling")).toBeNull();
+    expect(at("/blog/pragmatic-nodejs-api-vertical-slices-and-domain-logic")).toBeNull();
   });
 
   /**
@@ -39,10 +49,8 @@ describe("resolveRedirect", () => {
     }
   });
 
-  it("moves the three Series Parts to their new home", () => {
-    expect(at("/blog/pragmatic-nodejs-api-setup-nodejs-express-typescript-project")).toBe(
-      "/series/pragmatic-nodejs-api/project-setup",
-    );
+  it("moves a renamed Tag to its new address", () => {
+    expect(at("/tags/ddd")).toBe("/tags/domain-driven-design");
   });
 
   /**
@@ -50,9 +58,7 @@ describe("resolveRedirect", () => {
    * traffic at all. Dropping it makes the move invisible in analytics.
    */
   it("carries the query string to the destination", () => {
-    expect(
-      at("/blog/pragmatic-nodejs-api-setup-nodejs-express-typescript-project?utm_source=linkedin"),
-    ).toBe("/series/pragmatic-nodejs-api/project-setup?utm_source=linkedin");
+    expect(at("/resume?utm_source=linkedin")).toBe("/cv?utm_source=linkedin");
   });
 
   /**
@@ -60,9 +66,7 @@ describe("resolveRedirect", () => {
    * document either way, and answering 404 to it would waste the redirect.
    */
   it("matches a path that arrived with a trailing slash", () => {
-    expect(at("/blog/pragmatic-nodejs-api-vertical-slices-and-domain-logic/")).toBe(
-      "/series/pragmatic-nodejs-api/vertical-slices-and-domain-logic",
-    );
+    expect(at("/tags/ddd/")).toBe("/tags/domain-driven-design");
   });
 });
 

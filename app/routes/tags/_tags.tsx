@@ -21,10 +21,9 @@ const TAGS_DESCRIPTION =
  *
  * It also closes the namespace. Without it the bare path is a 404 in the middle
  * of a live address space — the first place a crawler goes after a Tag page, and
- * the only place a reader can ask *what else is there*. The precedent is
- * `/series`, built for a namespace holding one entry on the same grounds: an
- * index earns its place by closing the namespace, and the alternative was a
- * redirect with an expiry date nobody would remember.
+ * the only place a reader can ask *what else is there*. An index earns its
+ * place by closing the namespace, and the alternative was a redirect with an
+ * expiry date nobody would remember.
  *
  * **Every entry goes somewhere real.** The list is what the content carries, not
  * what `app/content/tags.json` declares — twelve of the declared Tags sit on
@@ -59,7 +58,7 @@ export const shouldRevalidate = skipRevalidationOnThemeChange;
  * URL the sitemap advertises, and a sitemap must not advertise a page that
  * asks not to be indexed.
  *
- * A trail and nothing more, as on `/series`: an `ItemList` of the Tags here
+ * A trail and nothing more: an `ItemList` of the Tags here
  * would be a second description of pages that each already describe themselves
  * one click away — and those pages are `noindex`.
  *

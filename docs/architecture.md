@@ -19,7 +19,7 @@ Cloudflare Worker  (workers/app.ts → createRequestHandler)
 
 `workers/app.ts` is the only entry point. Per request it consults `app/lib/redirects.ts`, builds a `RouterContextProvider`, sets the `cloudflareContext` declared in `app/context.ts`, and hands it to the request handler; loaders then read bindings with `const { env } = context.get(cloudflareContext)`. There is no module-level singleton holding a binding — the Workers runtime forbids capturing request-scoped state across requests.
 
-The redirects come first because a URL this site no longer serves has no route to match and no loader to run. The table and the matching are a separate module for the same reason the security headers are: this one cannot be imported by a test. Every entry is a permanent 301 with no expiry — it exists for links already published, which never update — and a test walks the map against D1, because a 301 pointing at a 404 is worse than no redirect at all.
+The redirects come first because a URL this site no longer serves has no route to match and no loader to run. The table and the matching are a separate module for the same reason the security headers are: this one cannot be imported by a test. Every entry is a permanent 301 with no expiry — it exists for links already published, which never update — with one exception: an entry leaves when its destination is retired, as three did when the pages they pointed at were retired (ADR 0014). A test walks the map against D1, because a 301 pointing at a 404 is worse than no redirect at all.
 
 **No exceptions, and one of them was paid for.** `app/color-scheme-cookie.ts` briefly built its cookie at module scope from `process.env`, throwing on a missing value. It took production down: the module is evaluated on the way to serving *any* request, so a missing var meant error 1101 on every route — the whole site off to protect a theme preference. The cookie is now built per request from the `env` in `cloudflareContext`, like everything else.
 
@@ -38,17 +38,14 @@ app/content/<tree>/**/*.md                ← source of truth, versioned in git
    ├─ front matter ──▶ seed/d1/generate-seed-sql.ts ──▶ seed/d1/seed.sql ──▶ D1 `content`
    │                     (front-matter)                   (committed)          `content_tag`
    │                     (app/content/tags.json)                               `project`
-   │                                                                           `series`
-   │                                                                           `series_section`
    │
    └─ body ──────────▶ seed/kv/generate-kv-json.ts ──▶ seed/kv/kv_payloads/<kind>/*.json ──▶ KV
                          (seed/kv/markdown.ts)                              `blog:<slug>:<locale>`
                          (app/lib/seo/sitemap.ts)                           `project:<slug>:<locale>`
-                                                                            `series:<slug>:<locale>`
                                                                             `sitemap`
 ```
 
-The trees are `blog/`, `bookmarks/`, `projects/` and `series/`. Each generator
+The trees are `blog/`, `bookmarks/` and `projects/`. Each generator
 walks only its own, and the `type` in the front matter is checked against the
 tree rather than believed — a mismatch, or a top-level directory no generator
 walks, fails the build. Payload directories follow the same rule: the directory
@@ -56,19 +53,17 @@ a payload sits in decides its key prefix.
 
 Inside a tree, **depth decides what a file is**: the file named after its folder
 *is* that folder, and a subfolder is content living inside it. So
-`series/<series>/<series>.en.md` is the Series,
-`series/<series>/<part>/<part>.en.md` is a Post (a Part) whose container it is,
-and `projects/<project>/<note>/<note>.en.md` is a Post (a Field Note) whose
+`projects/<project>/<project>.en.md` is the Project, and
+`projects/<project>/<note>/<note>.en.md` is a Post (a Field Note) whose
 container is the Project above it — one tree, two types, told apart by the path
 (ADR 0004, amended). What each tree allows to nest is declared in
 `CONTENT_TREES`; `blog/` and `bookmarks/` allow nothing, so a stray subfolder
-there fails rather than acquiring a meaning. `series/` and `projects/` each
-allow one nested type — `post` — which is what makes a Part and a Field Note
-possible in the first place.
+there fails rather than acquiring a meaning. `projects/` allows one nested
+type — `post` — which is what makes a Field Note possible in the first place.
 
 `CONTENT_TREES` also declares whether a tree's files carry a Locale. A
 recognised suffix — `<slug>.en.md` or `<slug>.es.md` — is required under
-`blog/`, `projects/` and `series/`, and forbidden under `bookmarks/`: a
+`blog/` and `projects/`, and forbidden under `bookmarks/`: a
 Bookmark is a pointer to somebody else's document, not a Translation of one,
 and would seed with `lang` set against the partial unique index that assumes
 it has none. Before this was declared, the vocabulary lived in a regular
@@ -77,22 +72,21 @@ expression alone, and a suffix it did not recognise — a typo, or the
 into the Slug and skipped without a word (ADR 0004). Both mistakes now fail
 the build, each with a message of its own.
 
-The arc itself — which sections a Series has, in what order, and which Parts sit
-in each — is declared once in the Series manifest and nowhere else. A Project's
-manifest is the same idea without an arc: a flat `notes:` list, in the order its
-Field Notes should be indexed, with no Sections, no Destination and no reading
-order to promise (ADR 0007, amended). Neither a Part's nor a Field Note's own
-front matter says anything about where it is.
+A Project's manifest is a flat `notes:` list, in the order its Field Notes
+should be indexed, with no arc, no Sections and no reading order to promise
+(ADR 0007, amended). A Field Note's own front matter says nothing about where it
+is.
 
-A Post's Container is recorded on `content` as `series_slug` + `series_section`
-for a Series, or `project_slug` for a Project — never both — plus
-`container_order` for its position in whichever list holds it. `schema.sql`
-carries the reasoning for why that is two specific columns rather than one
-generic pair, and for `container_order` having replaced `section_order` — a
-rename that could not be one statement, so it took two publications: `0006`
-added the new column and `0007` dropped the old one, once the Worker reading
-the new name was the one serving (ADR 0006, amended). `section_order` survives
-only on `series_section`, where it means a section's position within the arc.
+A Post's Container is recorded on `content` as `project_slug` — or nothing, for
+a loose Post — plus `container_order` for its position in the list that holds
+it. `schema.sql` carries the reasoning for why that is specific columns rather
+than one generic pair, and for `container_order` having replaced `section_order`
+— a rename that could not be one statement, so it took two publications: `0006`
+added the new column and `0007` dropped the old one, once the Worker reading the
+new name was the one serving (ADR 0006, amended).
+
+The D1 generators and verifiers still carry Series wording, and still write its
+tables, until the second Publication removes them (ADR 0014).
 
 A document under any tree may declare itself a Draft (`draft: true`) rather
 than being placed outside it — checked exactly as strictly as a published one,
@@ -158,12 +152,11 @@ Read-only at runtime, written only by the seed pipeline.
 | ----------------------- | ---------------------------------------------------------- |
 | `blog:<slug>:<locale>`    | `{ attributes, html }` — front matter plus rendered Post HTML |
 | `project:<slug>:<locale>` | `{ attributes, html }` — the same shape, for a Project body   |
-| `series:<slug>:<locale>`  | `{ attributes, html }` — a Series landing's prose             |
 | `sitemap`                 | `{ sitemap }` — the full sitemap XML as a string              |
 
 A Post body is one KV read. Missing key → 404, which is also how an unpublished or misspelled slug behaves.
 
-**The prefix says what kind of payload it is, not which URL serves it.** A Part of a Series, or a Field Note of a Project, is an ordinary Post with a container, so its body sits under `blog:` and is served at `/series/<series>/<part>` or `/projects/<project>/<note>` respectively. A Series or a Project landing takes its own prefix because it is not a Post — a different kind of document.
+**The prefix says what kind of payload it is, not which URL serves it.** A Field Note of a Project is an ordinary Post with a container, so its body sits under `blog:` and is served at `/projects/<project>/<note>`. A Project landing takes its own prefix because it is not a Post — a different kind of document.
 
 ## Routes
 
@@ -172,13 +165,10 @@ Routes are declared explicitly in `app/routes.ts` (config-based, not file-system
 | Route            | Store  | Cache-Control  | Notes                                       |
 | ---------------- | ------ | -------------- | ------------------------------------------- |
 | `/`              | D1     | none           | landing page — three newest Posts, plus the flagship Project |
-| `/blog`          | D1     | none           | a Post with no Container, or a Container that holds Posts — loose Posts, Series and Projects-with-Field-Notes, one entry each, merged by date |
+| `/blog`          | D1     | none           | a Post with no Container, or a Container that holds Posts — loose Posts and Projects-with-Field-Notes, one entry each, merged by date |
 | `/bookmarks`     | D1     | none           | `findAllBookmarks`                          |
 | `/timeline`      | D1     | none           | Timeline — this Locale's `findAllPosts` merged with every `findAllBookmarks`, via `mergeTimeline` |
 | `/blog/:blogSlug`| D1 + KV | none          | the row first, Locale-aware: a Post with a container 301s to it. The KV body fetch is keyed off the resolved row's own Locale |
-| `/series`        | D1     | none           | `findAllSeries` — every Series, including one with nothing published |
-| `/series/:seriesSlug` | D1 + KV | none      | the contract and the arc from D1, the prose from `series:` |
-| `/series/:seriesSlug/:partSlug` | D1 + KV | none | position derived from the arc; a Part the arc does not hold is a 404 |
 | `/tags`          | D1     | none           | `findTagsWithPostCounts` — every Tag some Post carries, by count then alphabetically; indexed, and the only `/tags` URL in the sitemap |
 | `/tags/:tag`     | D1     | none           | `findPostsByTag` — Posts only, newest first; a Tag no Post carries is a 404. `noindex, follow`, and absent from the sitemap |
 | `/projects`      | D1     | none           | `findAllProjects` — flagship first, supporting in a grid |
@@ -205,9 +195,9 @@ The site is published in two Locales, English and Spanish (`Locale` in `app/cont
 
 **The model layer takes the Locale as a required, typed argument**, not a default parameter — a deliberate compile break across every call site when it landed, which is what turned *a query forgot the Locale* from a runtime defect into one the compiler finds. One finder is the deliberate exception, and it is an exception to the *argument* rather than to the filter: `findAllBookmarks` takes no Locale and narrows on none, because a Bookmark carries none and an equality test would have nothing to match and would drop every row. The Timeline is not a third query at all — `mergeTimeline` is pure, interleaving this Locale's Posts with every Bookmark, so the narrowing has already happened in the two finders it composes. The glossary's definition of the Timeline is what forces both (`CONTEXT.md`).
 
-**One module answers what address a document has.** `app/lib/hrefs.ts` stays the only place a *relative* path is built — `withLocale` and the per-kind helpers (`postHref`, `projectHref`, `seriesHref`) all funnel through `ES_PREFIX`, so the two branches cannot disagree about what marks the Spanish one. `app/lib/seo/alternates.ts` is the one place a path is made absolute and given its siblings: `documentAddresses` takes a document's identity, its own Locale and the set of Locales that exist for it, and returns the canonical, the reciprocal `hreflang` alternates and the `x-default` (the English address). Every route's `<head>` reads it, the structured data builds its `@id`s on the same addresses, and the sitemap reads it too — nothing reconstructs the rule a second time, which is what makes reciprocity a property of the system rather than of whoever last edited a route. **The `hreflang` set has one definition, `hreflangEntries`**, and both halves of a pair emit exactly it: thirteen routes spread `alternateLinks` into their own `meta` array, the sitemap turns the same list into `<xhtml:link>` elements. It was composed twice for one publication and only the sitemap's half was ever written, so the XML advertised pairs no page confirmed — the one shape of `hreflang` a crawler discards outright. A document that exists in a single Locale still declares that Locale and an `x-default`, which is what makes the pair reciprocal the day the other side is written. The same module's `switcherDestination` computes where the language switcher sends a reader — the counterpart document when a Translation exists, the section index when it does not — from the identical `existingLocales` a route's own `documentAddresses` call already computed, so the switcher and the `hreflang` set cannot drift apart.
+**One module answers what address a document has.** `app/lib/hrefs.ts` stays the only place a *relative* path is built — `withLocale` and the per-kind helpers (`postHref`, `projectHref`) all funnel through `ES_PREFIX`, so the two branches cannot disagree about what marks the Spanish one. `app/lib/seo/alternates.ts` is the one place a path is made absolute and given its siblings: `documentAddresses` takes a document's identity, its own Locale and the set of Locales that exist for it, and returns the canonical, the reciprocal `hreflang` alternates and the `x-default` (the English address). Every route's `<head>` reads it, the structured data builds its `@id`s on the same addresses, and the sitemap reads it too — nothing reconstructs the rule a second time, which is what makes reciprocity a property of the system rather than of whoever last edited a route. **The `hreflang` set has one definition, `hreflangEntries`**, and both halves of a pair emit exactly it: thirteen routes spread `alternateLinks` into their own `meta` array, the sitemap turns the same list into `<xhtml:link>` elements. It was composed twice for one publication and only the sitemap's half was ever written, so the XML advertised pairs no page confirmed — the one shape of `hreflang` a crawler discards outright. A document that exists in a single Locale still declares that Locale and an `x-default`, which is what makes the pair reciprocal the day the other side is written. The same module's `switcherDestination` computes where the language switcher sends a reader — the counterpart document when a Translation exists, the section index when it does not — from the identical `existingLocales` a route's own `documentAddresses` call already computed, so the switcher and the `hreflang` set cannot drift apart.
 
-**A trail belongs to the branch that emits it, in both of its emissions.** The fixed upper levels of every `BreadcrumbList`, and of the visible trail above a document, come from `indexCrumb` and `indexHref` (`app/lib/trail.ts`), which address through `withLocale` and `navHref` respectively and name each Index with the same heading that page already renders, read from `STRINGS[locale]` rather than `useStrings()` because `meta()` is not a component. It was a constant, `HOME_CRUMB`, and the two indexes reachable in Spanish today published the English trail verbatim: on `/es/tags`, *Home* and *Tags* pointing at `poschuler.com` and `/tags`, three lines under a canonical that said `/es/tags`. Not one step of that list was the page emitting it. The steps below the index are the document's own and each route builds those from `postHref` / `seriesHref` / `projectHref`, which have taken a Locale all along.
+**A trail belongs to the branch that emits it, in both of its emissions.** The fixed upper levels of every `BreadcrumbList`, and of the visible trail above a document, come from `indexCrumb` and `indexHref` (`app/lib/trail.ts`), which address through `withLocale` and `navHref` respectively and name each Index with the same heading that page already renders, read from `STRINGS[locale]` rather than `useStrings()` because `meta()` is not a component. It was a constant, `HOME_CRUMB`, and the two indexes reachable in Spanish today published the English trail verbatim: on `/es/tags`, *Home* and *Tags* pointing at `poschuler.com` and `/tags`, three lines under a canonical that said `/es/tags`. Not one step of that list was the page emitting it. The steps below the index are the document's own and each route builds those from `postHref` / `projectHref`, which have taken a Locale all along.
 
 **An index is skeleton, a document is a leaf.** A Spanish address with no Translation behind it is a 404 — the switcher never offers it, and `hreflang` never declares it. An index whose list is empty still answers 200, in the navigation, with `noindex, follow` and `EmptyIndex` (`app/components/empty-index.tsx`) explaining why and linking back to English; nothing serves English content at a Spanish address as a fallback.
 
@@ -278,7 +268,7 @@ Run it locally with `pnpm run smoke`. It moves `.dev.vars` aside for the duratio
 
 Three conditions the script enforces on itself, each one learned by getting it wrong first: it refuses to start if something is already listening on the port, because a stale preview from an earlier run answers every check happily while serving an older build; it holds each response in a variable instead of piping it into `grep -q`, because under `pipefail` grep exits on the first match, curl dies of SIGPIPE and the pipeline fails exactly when the check passes; and it derives the Post Slug it requests from the payload files rather than hardcoding one.
 
-**The four Spanish addresses are the one block that is hardcoded, and deliberately.** `/es`, `/es/blog`, `/es/timeline` and `/es/cv` need no Spanish document to exist: an index exists in every Locale whether or not its list has anything in it, the home page is one, and `/es/cv` renders from `resume.json`, which carries both. The routes that *do* need a Translation — a Post, a Series, a Project — answer 404 in Spanish today and correctly so, which is why none of them is probed. One of them asserts `lang="es"` in the response rather than a status code, because a Spanish address answering 200 in English is what a broken `deriveLocale` looks like from the outside, and every status check would pass through it.
+**The four Spanish addresses are the one block that is hardcoded, and deliberately.** `/es`, `/es/blog`, `/es/timeline` and `/es/cv` need no Spanish document to exist: an index exists in every Locale whether or not its list has anything in it, the home page is one, and `/es/cv` renders from `resume.json`, which carries both. The routes that *do* need a Translation — a Post, a Project — answer 404 in Spanish today and correctly so, which is why none of them is probed. One of them asserts `lang="es"` in the response rather than a status code, because a Spanish address answering 200 in English is what a broken `deriveLocale` looks like from the outside, and every status check would pass through it.
 
 ### Tests
 

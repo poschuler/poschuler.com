@@ -49,3 +49,7 @@ Two supporting consequences:
 
 - **A note listed in the manifest while it is a Draft reconciles normally and renders nothing** — Draft is an orthogonal state (ADR 0009), and the manifest lists a note the day it is declared, not the day it is finished, so a Draft's presence in the list is not a special case the reconciliation has to know about.
 - **The Container-contradiction check (ADR 0009) applies identically to both Containers** — a Project marked as a Draft while one of its notes is published fails the build exactly as a Series landing would, through the same `containerContradictionError`.
+
+## Amendment: the Series arc is retired
+
+The Series this ADR was written for no longer exists on the site: its manifest, its Parts and its routes are gone, and ADR 0014 records why and what it cost. Everything above about a Series' arc, its Sections and their derived status is the record of a decision that was in force and is not any longer. What stands is the first amendment — a Project's manifest and its flat `notes:` list.

@@ -391,9 +391,8 @@ describe("seriesRowsFor — Drafts", () => {
    * `buildSeriesSeedSql`'s upsert; marking it a draft removes it from the rows
    * the generator hands that function, so the existing prune — `DELETE FROM
    * series WHERE … NOT IN (keyList)` — deletes it. A second, always-published
-   * Series keeps the row list non-empty throughout, the way
-   * `buildSeriesSeedSql([], [])` is deliberately a no-op for the day nothing
-   * has ever been written (see its own tests below).
+   * Series keeps the row list non-empty throughout; the empty list has its own
+   * test below.
    */
   it("removes a previously published Series's rows through the existing prune once it becomes a draft", () => {
     const otherFiles = [
@@ -459,23 +458,19 @@ describe("buildSeriesSeedSql", () => {
   });
 
   /**
-   * A repository with no Series is an ordinary state. A prune built from an
-   * empty list would delete every row on the strength of finding nothing.
+   * A repository with no Series is the state production is cleaned by: with
+   * nothing on disk the generator still has to say so, because a seed that
+   * emits nothing leaves the previously published rows live in D1 forever.
+   * SQLite reads an empty `NOT IN ()` as true for every row, so the prune
+   * removes all of them.
    */
-  it("emits nothing at all when there are no Series", () => {
-    expect(buildSeriesSeedSql([], [] as SeededRow[])).toBe("");
-  });
+  it("empties both Series tables when there is no Series at all", () => {
+    const sql = buildSeriesSeedSql([], [] as SeededRow[]);
 
-  /**
-   * The bug an empty list alone cannot rule out: the site's one Series going
-   * draft looks identical, from `seriesRows.length`, to no Series ever having
-   * been written — unless the caller says otherwise. Without `anyFilesFound`,
-   * this would leave a previously published Series's rows live in D1 forever.
-   */
-  it("prunes everything when every Series the walk found is a draft", () => {
-    const sql = buildSeriesSeedSql([], [] as SeededRow[], { anyFilesFound: true });
-
-    expect(sql).toContain("DELETE FROM series WHERE slug || ':' || lang NOT IN ()");
-    expect(sql).toContain("DELETE FROM series_section WHERE series_slug || ':' || lang || ':' || slug NOT IN ()");
+    expect(sql).toContain("DELETE FROM series WHERE slug || ':' || lang NOT IN ();");
+    expect(sql).toContain(
+      "DELETE FROM series_section WHERE series_slug || ':' || lang || ':' || slug NOT IN ();",
+    );
+    expect(sql).not.toContain("INSERT");
   });
 });

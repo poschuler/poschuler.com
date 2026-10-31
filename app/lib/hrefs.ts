@@ -1,15 +1,14 @@
 /**
  * Where a Content Item is served from.
  *
- * A Part lives under its Series, a Field Note under its Project, a loose Post
- * under `/blog`, and what tells them apart is a column each — `series_slug`
- * and `project_slug` — rather than anything the file declares (ADR 0007). Every
- * list on the site interleaves the three: `/timeline`, the home page's recent
- * writing, and `/blog` itself.
+ * A Field Note lives under its Project and a loose Post under `/blog`, and what
+ * tells them apart is a column — `project_slug` — rather than anything the file
+ * declares (ADR 0007). Every list on the site interleaves the two: `/timeline`,
+ * the home page's recent writing, and `/blog` itself.
  *
  * One function rather than a conditional at each call site. `ContentItem`
  * hardcoded `` `/blog/${item.slug}` ``, and that single line is what the columns
- * exist to feed — a second copy of the rule is a Part or a Field Note linking
+ * exist to feed — a second copy of the rule is a Field Note linking
  * to a 404 from whichever list nobody checked.
  *
  * Every function here now takes a Locale too, and stays the one place a
@@ -75,38 +74,6 @@ export function navHref(path: string, locale: Locale): string {
   return withLocale(path, locale) || "/";
 }
 
-/**
- * A Post's Container, derived from the two columns that can each hold one —
- * `content.series_slug` and `content.project_slug`, never both (`schema.sql`).
- * Modelled as a discriminated union rather than read as a pair of nullable
- * strings, so a caller reasons about *which one, if any* rather than checking
- * two independent nullables that happen to agree.
- */
-export type Container =
-  | { kind: "series"; slug: string }
-  | { kind: "project"; slug: string }
-  | null;
-
-function containerOf(post: {
-  seriesSlug: string | null;
-  projectSlug: string | null;
-}): Container {
-  if (post.seriesSlug) {
-    return { kind: "series", slug: post.seriesSlug };
-  }
-
-  if (post.projectSlug) {
-    return { kind: "project", slug: post.projectSlug };
-  }
-
-  return null;
-}
-
-/** The Series landing — the page that holds the contract and the whole arc. */
-export function seriesHref(seriesSlug: string, locale: Locale): string {
-  return withLocale(`/series/${seriesSlug}`, locale);
-}
-
 /** The Project landing — the case study a Field Note is framed by. */
 export function projectHref(projectSlug: string, locale: Locale): string {
   return withLocale(`/projects/${projectSlug}`, locale);
@@ -123,29 +90,20 @@ export function tagHref(tag: string, locale: Locale): string {
 }
 
 /**
- * A Post, wherever it is served: a Part under its Series, a Field Note under
- * its Project, or `/blog`.
+ * A Post, wherever it is served: a Field Note under its Project, or `/blog`.
  *
- * `projectSlug` is optional — most callers only ever hand this a Post inside
- * a Series' own arc, where a Field Note cannot appear, and repeating `null`
- * at every one of them would say nothing a default does not already say.
+ * `projectSlug` is optional — a loose Post has none, and repeating `null` at
+ * every caller would say nothing a default does not already say.
  */
 export function postHref(
   post: {
     slug: string;
-    seriesSlug: string | null;
     projectSlug?: string | null;
   },
   locale: Locale,
 ): string {
-  const container = containerOf({ seriesSlug: post.seriesSlug, projectSlug: post.projectSlug ?? null });
-
-  if (container?.kind === "series") {
-    return `${seriesHref(container.slug, locale)}/${post.slug}`;
-  }
-
-  if (container?.kind === "project") {
-    return `${projectHref(container.slug, locale)}/${post.slug}`;
+  if (post.projectSlug) {
+    return `${projectHref(post.projectSlug, locale)}/${post.slug}`;
   }
 
   return withLocale(`/blog/${post.slug}`, locale);

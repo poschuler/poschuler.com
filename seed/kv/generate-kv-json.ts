@@ -8,7 +8,6 @@ import {
     buildSitemapRoutes,
     type SitemapContentItem,
     type SitemapProject,
-    type SitemapSeries,
     type SitemapTag,
 } from "./sitemap-routes.ts";
 import resume from "../../app/routes/resume/resume.json" with { type: "json" };
@@ -24,7 +23,6 @@ import resume from "../../app/routes/resume/resume.json" with { type: "json" };
 
 const CONTENT_DIR = path.join(process.cwd(), "app", "content", "blog");
 const PROJECT_CONTENT_DIR = path.join(process.cwd(), "app", "content", "projects");
-const SERIES_CONTENT_DIR = path.join(process.cwd(), "app", "content", "series");
 const DEFAULT_OUTPUT_DIR = path.join(process.cwd(), "seed", "kv", "kv_payloads");
 const D1_BINDING_NAME = "poschuler";
 const PUBLIC_HOST = "https://poschuler.com";
@@ -33,7 +31,7 @@ const PUBLIC_HOST = "https://poschuler.com";
  * One rendered document: its front matter, verbatim, and its body as HTML.
  *
  * `attributes` is deliberately untyped. Three kinds of document go through this
- * — a Post, a Project and a Series landing — and the payload carries whatever
+ * — a Post and a Project — and the payload carries whatever
  * the file declared; what each route reads out of it is the route's business.
  */
 interface RenderedDocument { attributes: Record<string, unknown>; html: string; }
@@ -49,14 +47,10 @@ type ContentRowType = SitemapContentItem & {
     source: string;
     /**
      * The Container, when the Post has one. It is what says where the Markdown
-     * is: a Part lives under its Series, a Field Note under its Project,
-     * neither under `blog/`.
+     * is: a Field Note lives under its Project, not under `blog/`.
      */
-    seriesSlug: string | null;
     projectSlug: string | null;
 };
-
-type SeriesRowType = SitemapSeries;
 
 /** Runs one read against the local D1 and returns its rows. */
 function queryD1<Row>(sql: string): Row[] {
@@ -97,7 +91,7 @@ function fetchAll(): ContentRowType[] {
     // these rows by Slug and reads `lang` off each one to build the correct
     // address per Locale.
     const rows = queryD1<ContentRowType>(
-        `select id_content as "idContent", slug as "slug", lang as "lang", type as "type", title as "title", published_at as "publishedAt", strftime('%Y-%m-%d', published_at) AS "publishedStringDate", description as "description", external_url as "externalUrl", source as "source", updates as "updates", series_slug as "seriesSlug", project_slug as "projectSlug" from content order by published_at desc`,
+        `select id_content as "idContent", slug as "slug", lang as "lang", type as "type", title as "title", published_at as "publishedAt", strftime('%Y-%m-%d', published_at) AS "publishedStringDate", description as "description", external_url as "externalUrl", source as "source", updates as "updates", project_slug as "projectSlug" from content order by published_at desc`,
     );
 
     if (!rows.length) {
@@ -120,18 +114,6 @@ function fetchAllProjects(): ProjectRowType[] {
 }
 
 /**
- * The Series landings, whose bodies are rendered like any other document's.
- *
- * A Series has no date of its own — what changes on its landing is that a Part
- * arrived — so there is nothing here to order by but the Slug.
- */
-function fetchAllSeries(): SeriesRowType[] {
-    return queryD1<SeriesRowType>(
-        `select slug as "slug", lang as "lang" from series order by slug asc`,
-    );
-}
-
-/**
  * The Tags that reach a page — the entries the index at `/tags` lists.
  *
  * Read from `content_tag`, which is where a Tag lives. `content` carried a JSON
@@ -150,7 +132,7 @@ function fetchAllSeries(): SeriesRowType[] {
  * index reading *ddd · 3 posts* over three English articles would be a lie, so
  * `/es/tags` counts Spanish Posts only. Selecting `lang` here is what lets
  * `buildSitemapRoutes` decide, per Locale, whether `/tags` or `/es/tags` has
- * anything to advertise, the same way it already does for Projects and Series.
+ * anything to advertise, the same way it already does for Projects.
  */
 function fetchTaggedPostTags(): SitemapTag[] {
     return queryD1<SitemapTag>(
@@ -210,41 +192,27 @@ async function generateKvJsonFiles(outputDir: string = DEFAULT_OUTPUT_DIR) {
     const allContentItems = fetchAll();
     const posts = allContentItems.filter((item) => item.type === "post");
     const projects = fetchAllProjects();
-    const series = fetchAllSeries();
     const tags = fetchTaggedPostTags();
 
     await fs.rm(outputDir, { recursive: true, force: true });
     await fs.mkdir(outputDir, { recursive: true });
 
-    console.log(`\n2. 📄 Found ${posts.length} posts, ${projects.length} projects and ${series.length} series. Writing JSON files to ${outputDir}...`);
+    console.log(`\n2. 📄 Found ${posts.length} posts and ${projects.length} projects. Writing JSON files to ${outputDir}...`);
 
     for (const post of posts) {
-        const { slug, lang, seriesSlug, projectSlug } = post;
+        const { slug, lang, projectSlug } = post;
 
-        // Where the Markdown is, which is not where the payload goes: a Part
-        // lives under its Series on disk, a Field Note under its Project, and
-        // both under `blog:` in KV — the prefix says what kind of payload it
-        // is, not which URL serves it.
-        const sourcePath = seriesSlug
-            ? path.join(SERIES_CONTENT_DIR, seriesSlug, slug, `${slug}.${lang}.md`)
-            : projectSlug
-                ? path.join(PROJECT_CONTENT_DIR, projectSlug, slug, `${slug}.${lang}.md`)
-                : path.join(CONTENT_DIR, slug, `${slug}.${lang}.md`);
+        // Where the Markdown is, which is not where the payload goes: a Field
+        // Note lives under its Project on disk, and both are under `blog:` in
+        // KV — the prefix says what kind of payload it is, not which URL serves
+        // it.
+        const sourcePath = projectSlug
+            ? path.join(PROJECT_CONTENT_DIR, projectSlug, slug, `${slug}.${lang}.md`)
+            : path.join(CONTENT_DIR, slug, `${slug}.${lang}.md`);
 
         await writePayload(sourcePath, path.join(outputDir, "blog"), slug, lang);
 
         console.log(`   -> ✅ JSON written for key: blog:${slug}:${lang}`);
-    }
-
-    for (const { slug, lang } of series) {
-        await writePayload(
-            path.join(SERIES_CONTENT_DIR, slug, `${slug}.${lang}.md`),
-            path.join(outputDir, "series"),
-            slug,
-            lang,
-        );
-
-        console.log(`   -> ✅ JSON written for key: series:${slug}:${lang}`);
     }
 
     for (const project of projects) {
@@ -273,7 +241,7 @@ async function generateKvJsonFiles(outputDir: string = DEFAULT_OUTPUT_DIR) {
         routes: buildSitemapRoutes(
             allContentItems,
             { fallbackLastmod, resumeLastmod: resume.meta.lastModified },
-            { projects, series, tags },
+            { projects, tags },
         ),
     });
 

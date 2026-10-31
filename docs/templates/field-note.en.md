@@ -14,6 +14,3 @@ Copy this to `app/content/projects/<project>/<note>/<note>.en.md`, then **list
 `<note>` in that Project's `notes:`**, in the order it should be indexed. A note
 the manifest does not list fails the build, and so does a listed note with no
 file — the reconciliation runs both ways.
-
-A Part of a Series uses this same front matter; what differs is where it sits
-and which manifest lists it.

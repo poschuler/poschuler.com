@@ -20,7 +20,6 @@ describe("documentAddresses — a Post", () => {
   const post = {
     kind: "post" as const,
     slug: "implementing-value-objects",
-    seriesSlug: null,
   };
 
   it("canonicalises the page at its own Locale", () => {
@@ -61,41 +60,16 @@ describe("documentAddresses — a Post", () => {
     expect(canonical).toBe("https://poschuler.com/es/blog/implementing-value-objects");
   });
 
-  it("carries a Part's address through its Series", () => {
-    const part = {
-      kind: "post" as const,
-      slug: "project-setup",
-      seriesSlug: "pragmatic-nodejs-api",
-    };
-
-    expect(documentAddresses(part, "en", ["en"]).canonical).toBe(
-      "https://poschuler.com/series/pragmatic-nodejs-api/project-setup",
-    );
-  });
-
   it("carries a Field Note's address through its Project", () => {
     const note = {
       kind: "post" as const,
       slug: "product-matching",
-      seriesSlug: null,
-      projectSlug: "chekalo",
+        projectSlug: "chekalo",
     };
 
     expect(documentAddresses(note, "en", ["en"]).canonical).toBe(
       "https://poschuler.com/projects/chekalo/product-matching",
     );
-  });
-});
-
-describe("documentAddresses — a Series landing", () => {
-  it("canonicalises at the landing's own address", () => {
-    const { canonical } = documentAddresses(
-      { kind: "series", slug: "pragmatic-nodejs-api" },
-      "en",
-      ["en"],
-    );
-
-    expect(canonical).toBe("https://poschuler.com/series/pragmatic-nodejs-api");
   });
 });
 
@@ -143,7 +117,7 @@ describe("documentAddresses — an index", () => {
  * `sitemap-routes.test.ts` checks the XML side reads this same function.
  */
 describe("hreflangEntries", () => {
-  const post = { kind: "post" as const, slug: "implementing-value-objects", seriesSlug: null };
+  const post = { kind: "post" as const, slug: "implementing-value-objects" };
 
   it("declares the one Locale that exists, plus x-default naming the same address", () => {
     expect(hreflangEntries(documentAddresses(post, "en", ["en"]))).toEqual([
@@ -211,7 +185,7 @@ describe("alternateLinks", () => {
 });
 
 /**
- * The one directive `/blog`, `/projects`, `/series` and `/tags` all add to
+ * The one directive `/blog`, `/projects` and `/tags` all add to
  * their own `meta` when their own list is empty — shared here so the four route
  * files spread the same array rather than typing the same conditional out four
  * times.
@@ -233,7 +207,7 @@ describe("emptyIndexRobots", () => {
  * what these tests hand it too.
  */
 describe("switcherDestination — a document with a Translation", () => {
-  const post = { kind: "post" as const, slug: "implementing-value-objects", seriesSlug: null };
+  const post = { kind: "post" as const, slug: "implementing-value-objects" };
 
   it("goes to that document, in the other Locale", () => {
     expect(switcherDestination(post, "en", ["en", "es"])).toEqual({
@@ -251,32 +225,15 @@ describe("switcherDestination — a document with a Translation", () => {
     });
   });
 
-  it("carries a Part's destination through its Series", () => {
-    const part = { kind: "post" as const, slug: "project-setup", seriesSlug: "pragmatic-nodejs-api" };
-
-    expect(switcherDestination(part, "en", ["en", "es"]).href).toBe(
-      "/es/series/pragmatic-nodejs-api/project-setup",
-    );
-  });
-
   it("carries a Field Note's destination through its Project", () => {
     const note = {
       kind: "post" as const,
       slug: "product-matching",
-      seriesSlug: null,
-      projectSlug: "chekalo",
+        projectSlug: "chekalo",
     };
 
     expect(switcherDestination(note, "en", ["en", "es"]).href).toBe(
       "/es/projects/chekalo/product-matching",
-    );
-  });
-
-  it("carries a Series landing's destination", () => {
-    const series = { kind: "series" as const, slug: "pragmatic-nodejs-api" };
-
-    expect(switcherDestination(series, "en", ["en", "es"]).href).toBe(
-      "/es/series/pragmatic-nodejs-api",
     );
   });
 
@@ -289,28 +246,12 @@ describe("switcherDestination — a document with a Translation", () => {
 
 describe("switcherDestination — a document without one", () => {
   it("sends a Post to /blog rather than to a 404", () => {
-    const post = { kind: "post" as const, slug: "implementing-value-objects", seriesSlug: null };
+    const post = { kind: "post" as const, slug: "implementing-value-objects" };
 
     expect(switcherDestination(post, "en", ["en"])).toEqual({
       href: "/es/blog",
       locale: "es",
       section: "blog",
-    });
-  });
-
-  it("sends a Part to /blog too — the same Post-shaped fallback, through its Series address", () => {
-    const part = { kind: "post" as const, slug: "project-setup", seriesSlug: "pragmatic-nodejs-api" };
-
-    expect(switcherDestination(part, "en", ["en"]).href).toBe("/es/blog");
-  });
-
-  it("sends a Series landing to /series", () => {
-    const series = { kind: "series" as const, slug: "pragmatic-nodejs-api" };
-
-    expect(switcherDestination(series, "en", ["en"])).toEqual({
-      href: "/es/series",
-      locale: "es",
-      section: "series",
     });
   });
 
@@ -325,7 +266,7 @@ describe("switcherDestination — a document without one", () => {
   });
 
   it("falls back the other way too, from Spanish to the English section index", () => {
-    const post = { kind: "post" as const, slug: "una-nota", seriesSlug: null };
+    const post = { kind: "post" as const, slug: "una-nota" };
 
     expect(switcherDestination(post, "es", ["es"])).toEqual({
       href: "/blog",

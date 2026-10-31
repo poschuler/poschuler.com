@@ -7,7 +7,7 @@ The personal site of Paul Osorio Schuler: what he writes, what he reads, and who
 ### Content
 
 **Document**:
-One Markdown file under `app/content/`, published or not. The widest noun this site has: every Content Item is a Document, but so are a Series manifest and a Project landing, which are not Content Items at all. What makes them one kind is that the pipeline holds all of them to the same rules — where the file sits decides what it is, its front matter is checked against that, its Tags against the vocabulary, its Locale against its tree — and a Draft is a Document that passes every one of those and then produces nothing. So *Document* is what a rule is written about when the rule does not care whether the thing has a Published At.
+One Markdown file under `app/content/`, published or not. The widest noun this site has: every Content Item is a Document, but so is a Project landing, which is not a Content Item at all. What makes them one kind is that the pipeline holds all of them to the same rules — where the file sits decides what it is, its front matter is checked against that, its Tags against the vocabulary, its Locale against its tree — and a Draft is a Document that passes every one of those and then produces nothing. So *Document* is what a rule is written about when the rule does not care whether the thing has a Published At.
 _Avoid_: file, markdown, content file, entry
 
 **Content Item**:
@@ -50,31 +50,15 @@ _Avoid_: release, deploy, ship, seed
 A document under `app/content/` marked `draft: true` in its front matter. It is checked exactly like a published document — its type against its placement, its Tags against the vocabulary, its Container against the manifest that lists it — and then produces no row, no payload and no address: absent from the Timeline, every index and the sitemap. Not privacy: the repository is public and its history is permanent, so a Draft is out of the site, not out of view. Publishing is deleting one line.
 _Avoid_: unpublished, hidden, private, wip
 
-### Series
-
 **Container**:
-What a Post belongs to, and what decides the address it is served at. A Post has at most one — a Series, a Project, or none. It is read from the directory the Markdown sits in, never declared in the front matter.
+The Project a Post belongs to, when it has one. It decides the address the Post is served at, and it is read from the directory the Markdown sits in, never from the front matter. The term stays general so another kind can join it.
 _Avoid_: parent, group, bucket, collection
 
-**Series**:
-An ordered set of Posts that develop one subject across several instalments, divided into Series Sections and governed by a Destination it commits to reaching. It has a Slug and a landing page, but it is not a Content Item: it has no Published At of its own and never appears in the Timeline. It is revised in place as Parts are added, so the only date it carries is the newest date among its Parts.
-_Avoid_: course, collection, sequence, track
-
-**Series Section**:
-A named stage of a Series — *Fundamentals*, *Persistence*. Not a Content Item, and it has no page of its own: it appears on the landing and as context above a Part. A Section with no Parts is planned and a Section with Parts is in progress; only *complete* is ever declared, because the other two are answered by what the Section holds.
-_Avoid_: chapter, module, phase, unit
-
-**Part**:
-A Post whose Container is a Series. It is an ordinary Post in every other respect — same Timeline, same tags, same body in the same key space — and it does not know where in the Series it sits: the arc is declared once, in the Series manifest.
-_Avoid_: chapter, episode, instalment, entry
-
 **Field Note**:
-A Post whose Container is a Project. It is an ordinary Post in every other respect — same Timeline, same Tags, same body in the same key space — served at `/projects/:project/:note`. Unlike a Part, it carries no arc: a Project's manifest declares which notes it holds and in what order, never a Destination or a reading order, so each note stands on its own and is read on its own.
+A Post whose Container is a Project. It is an ordinary Post in every other respect — same Timeline, same Tags, same body in the same key space — served at `/projects/:project/:note`. A Project's manifest declares which notes it holds and in what order, never a reading order, so each note stands on its own and is read on its own.
 _Avoid_: article, entry, case study, page
 
-**Destination**:
-What a Series commits to having built by its end, stated on the landing before any index. **Immutable once the first Part ships.** Everything else about a Series may change — how many Parts, their ordering, the Section boundaries, the pace. This may not: changing it breaks the promise the reader signed up for, and a Series is finished when it reaches its Destination, not when it reaches a number of Parts.
-_Avoid_: goal, outcome, endpoint, target
+The Series is retired: the site publishes standalone Posts (ADR 0014).
 
 ### Identity and language
 
@@ -101,7 +85,7 @@ The sequence of steps that leads to a page, emitted twice — once visibly above
 _Avoid_: breadcrumb, path, navigation trail
 
 **Index**:
-The page that lists everything of one kind — Posts, Bookmarks, Series, Tags. Not *Section*: that term already names a stage of a Series, a different thing with no page of its own.
+The page that lists everything of one kind — Posts, Bookmarks, Tags. Not *Section*: a section is a part of a page, not a page.
 _Avoid_: section, listing, archive
 
 ### Professional profile

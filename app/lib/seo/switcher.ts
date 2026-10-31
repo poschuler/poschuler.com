@@ -82,8 +82,6 @@ function identityForRoute(
       return index("/blog");
     case "projects":
       return index("/projects");
-    case "series":
-      return index("/series");
     case "tags":
       return index("/tags");
     // A Tag's own Translation may not exist even when the Tag itself does —
@@ -102,7 +100,7 @@ function identityForRoute(
       return index("/cv");
     case "blog-slug": {
       const doc = documentData(data);
-      return doc && { identity: { kind: "post", slug: doc.slug, seriesSlug: null }, existingLocales: doc.existingLocales };
+      return doc && { identity: { kind: "post", slug: doc.slug }, existingLocales: doc.existingLocales };
     }
     case "project-slug": {
       const doc = documentData(data);
@@ -112,20 +110,7 @@ function identityForRoute(
       const doc = documentData<{ projectSlug: string }>(data);
       return (
         doc && {
-          identity: { kind: "post", slug: doc.slug, seriesSlug: null, projectSlug: doc.projectSlug },
-          existingLocales: doc.existingLocales,
-        }
-      );
-    }
-    case "series-slug": {
-      const doc = documentData(data);
-      return doc && { identity: { kind: "series", slug: doc.slug }, existingLocales: doc.existingLocales };
-    }
-    case "series-part": {
-      const doc = documentData<{ seriesSlug: string }>(data);
-      return (
-        doc && {
-          identity: { kind: "post", slug: doc.slug, seriesSlug: doc.seriesSlug },
+          identity: { kind: "post", slug: doc.slug, projectSlug: doc.projectSlug },
           existingLocales: doc.existingLocales,
         }
       );

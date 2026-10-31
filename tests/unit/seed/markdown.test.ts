@@ -139,9 +139,9 @@ describe("the committed KV payloads match what the pipeline produces today", () 
   /**
    * Every Markdown file in the repository, by filename.
    *
-   * A payload under `blog/` no longer says where its source is: a Part's body
-   * belongs to the `blog:` key space, because that is what kind of payload it
-   * is, while the file itself lives under its Series. Looking the filename up
+   * A payload under `blog/` no longer says where its source is: a Field Note's
+   * body belongs to the `blog:` key space, because that is what kind of payload
+   * it is, while the file itself lives under its Project. Looking the filename up
    * keeps this test out of the business of rebuilding content paths, which is
    * `generate-kv-json.ts`'s job and only needs doing once.
    */
