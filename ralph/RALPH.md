@@ -402,7 +402,7 @@ the review's report and the fixer's account of what it applied and refused.
 | `RALPH_BASE_REF`        | `dev`               | Branch the run branch forks from, and the PR target.             |
 | `RALPH_REQUIRE_LABEL`   | `ready-for-agent`   | Only work issues with this label (`""` = no gate).               |
 | `RALPH_OPEN_PR`         | `1`                 | Open a draft PR when the list finishes.                          |
-| `RALPH_MODEL`           | `claude-sonnet-5`   | Model for the implementation session.                            |
+| `RALPH_MODEL`           | `claude-sonnet-5-5` | Model for the implementation session.                            |
 | `RALPH_REVIEW`          | `1`                 | Run the isolated code-review session after each closed issue. `0` = implement only. |
 | `RALPH_FIX`             | `1`                 | Run the fix session when the review's verdict counts something fixable. Needs `RALPH_REVIEW=1`. |
 | `RALPH_REVIEW_MODEL`    | *(= `RALPH_MODEL`)* | Model for the review session, when you want it to differ.        |

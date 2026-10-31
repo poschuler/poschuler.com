@@ -28,7 +28,7 @@ Everything downstream is synthesis of what was settled here, so a rushed session
 
 Tickets here are written for a machine to pick up alone, so three constraints hold on every one of them:
 
-- **A vertical slice that can be verified**, and sized so that **one independent Sonnet session can finish it** — not an Opus one. That is not a guess about capability: `ralph/RALPH.md` sets `RALPH_MODEL` to `claude-sonnet-5`, so Sonnet is what actually executes these. A ticket too large for one such session is two tickets.
+- **A vertical slice that can be verified**, and sized so that **one independent Sonnet session can finish it** — not an Opus one. That is not a guess about capability: `ralph/RALPH.md` sets `RALPH_MODEL` to `claude-sonnet-5-5`, so Sonnet is what actually executes these. A ticket too large for one such session is two tickets.
 - **Strictly sequential, never parallelisable.** Each one blocks the next, in a single line — no fan-out, no "these three can go at once". A publication is one ordered sequence and so is the work that leads to it; two agents landing on `dev` at once is a merge conflict nobody asked for.
 - **No human decision left inside it.** ralph implements these headless, with no one to ask, so anything requiring judgement is either settled up front in the grilling or pulled out into a separate piece of work. A ticket that says *decide whether…* is not a ticket; it is a question that belongs one step earlier. What Paul writes himself is a `ready-for-human` issue, which is the other way of pulling it out.
 

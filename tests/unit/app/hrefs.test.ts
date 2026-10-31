@@ -110,7 +110,7 @@ describe("navHref", () => {
   });
 
   it("is withLocale for every other path", () => {
-    for (const path of ["/blog", "/series", "/tags", "/cv"]) {
+    for (const path of ["/blog", "/projects", "/tags", "/cv"]) {
       for (const locale of ["en", "es"] as const) {
         expect(navHref(path, locale)).toBe(withLocale(path, locale));
       }
