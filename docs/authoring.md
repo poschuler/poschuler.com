@@ -35,7 +35,7 @@ guessing:
   where it is forbidden. A Bookmark is a pointer to somebody else's document,
   so it has nothing to translate.
 
-The three trees are declared in `seed/d1/content-tree.ts`. A fifth directory
+The three trees are declared in `seed/d1/content-tree.ts`. A fourth directory
 under `app/content/` is not a new kind of content — it is a directory no
 generator walks, which is why the build refuses it by name.
 
