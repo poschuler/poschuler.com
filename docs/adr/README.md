@@ -12,13 +12,14 @@ The decisions worth recording, and why — each one written when it was made, an
 | [0004](./0004-the-content-tree-classifies-the-front-matter-is-checked-against-it.md) | The content tree classifies; the front matter is checked against it | **Amended**: depth classifies inside a tree |
 | [0005](./0005-revisions-are-a-curated-list-in-the-content.md) | Revisions are a curated list in the content, not a timestamp | Stands |
 | [0006](./0006-migrations-for-the-deployed-database-schema-sql-for-the-shape.md) | Migrations for the deployed database, `schema.sql` for the shape | **Amended twice**: a drop, then a rename |
-| [0007](./0007-the-manifest-declares-the-arc-a-part-does-not-know-where-it-is.md) | The manifest declares the arc; a Part does not know where it is | **Amended**: a second Container |
+| [0007](./0007-the-manifest-declares-the-arc-a-part-does-not-know-where-it-is.md) | The manifest declares the arc; a Part does not know where it is | **Half superseded by 0014**: the Series arc is retired; the Project manifest stands |
 | [0008](./0008-a-tag-is-its-slug-and-the-vocabulary-is-declared.md) | A Tag is its Slug, and the vocabulary is declared | Stands |
 | [0009](./0009-a-draft-is-a-document-the-build-validates-and-refuses-to-publish.md) | A Draft is a document the build validates and refuses to publish | Stands |
 | [0010](./0010-english-at-the-root-spanish-under-es.md) | English at the root, Spanish under `/es`, one path map for both | Stands |
 | [0011](./0011-the-interface-language-is-a-typed-catalogue.md) | The interface language is a typed catalogue, not an i18n library | Stands |
 | [0012](./0012-the-verifier-shares-the-rules-never-the-rows.md) | The verifier shares the rules, never the rows | Stands |
 | [0013](./0013-the-model-is-the-dsl-the-diagrams-are-generated-never-drawn.md) | The model is the DSL, and the diagrams are generated from it, never drawn | Stands |
+| [0014](./0014-the-series-is-retired-not-moved-and-the-site-publishes-standalone-posts.md) | The Series is retired, not moved, and the site publishes standalone Posts | Stands |
 
 ## What changed after the fact
 
@@ -30,8 +31,10 @@ The decisions worth recording, and why — each one written when it was made, an
 
 **0007 was extended to a second Container.** The original describes a Series manifest declaring an arc. The amendment adds a Project's, which declares a flat `notes:` list and no arc at all — a Series orders because it promised a Destination, a Project accumulates because the problems turn up when they turn up.
 
+**0007 is half superseded by 0014.** The Series arc it was written for is retired, and the amendment at its foot says so; the Project manifest it was extended to stands. The Series mentions in ADRs 0004, 0008, 0009, 0010 and 0012 are historical and are left as written.
+
 ## Writing a new one
 
-Number it sequentially and name the file after the decision rather than the area, in the same voice as the title inside it — `0008-a-tag-is-its-slug-and-the-vocabulary-is-declared.md`, not `0008-tags.md`. Then: the decision stated first, in the present tense and in one paragraph; **Considered Options**, each with why it was rejected, including the ones that look obvious in hindsight; and **Consequences**, including the ones that cost something. Twelve of the thirteen are shaped that way — 0002 argues its alternatives in prose instead, which is the older habit and not the one to copy.
+Number it sequentially and name the file after the decision rather than the area, in the same voice as the title inside it — `0008-a-tag-is-its-slug-and-the-vocabulary-is-declared.md`, not `0008-tags.md`. Then: the decision stated first, in the present tense and in one paragraph; **Considered Options**, each with why it was rejected, including the ones that look obvious in hindsight; and **Consequences**, including the ones that cost something. Thirteen of the fourteen are shaped that way — 0002 argues its alternatives in prose instead, which is the older habit and not the one to copy.
 
 Record a decision here when it will outlive the code that implements it, when the obvious alternative was rejected for a reason a reader would not reconstruct, or when it constrains what can be done later — a URL shape, a store, a schema. Not every choice earns one. Add the row above in the same commit, or the index is one more thing that drifts.
