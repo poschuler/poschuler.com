@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { PERMANENT_REDIRECTS, resolveRedirect } from "~/lib/redirects";
 
@@ -49,42 +49,24 @@ describe("resolveRedirect", () => {
     }
   });
 
+  it("moves a renamed Tag to its new address", () => {
+    expect(at("/tags/ddd")).toBe("/tags/domain-driven-design");
+  });
+
   /**
-   * The rules below hold whatever the table holds, so they are asserted
-   * against an entry this test adds and takes away again: the table itself is
-   * empty, and a rule checked over zero entries is checked against nothing.
+   * A campaign parameter is how the author finds out the redirect is carrying
+   * traffic at all. Dropping it makes the move invisible in analytics.
    */
-  describe("with an entry in the table", () => {
-    const FROM = "/blog/moved-post";
-    const TO = "/blog/where-it-went";
+  it("carries the query string to the destination", () => {
+    expect(at("/resume?utm_source=linkedin")).toBe("/cv?utm_source=linkedin");
+  });
 
-    beforeEach(() => {
-      PERMANENT_REDIRECTS[FROM] = TO;
-    });
-
-    afterEach(() => {
-      delete PERMANENT_REDIRECTS[FROM];
-    });
-
-    it("moves the address to its destination", () => {
-      expect(at(FROM)).toBe(TO);
-    });
-
-    /**
-     * A campaign parameter is how the author finds out the redirect is carrying
-     * traffic at all. Dropping it makes the move invisible in analytics.
-     */
-    it("carries the query string to the destination", () => {
-      expect(at(`${FROM}?utm_source=linkedin`)).toBe(`${TO}?utm_source=linkedin`);
-    });
-
-    /**
-     * A link written by hand, or one a mail client normalised. It is the same
-     * document either way, and answering 404 to it would waste the redirect.
-     */
-    it("matches a path that arrived with a trailing slash", () => {
-      expect(at(`${FROM}/`)).toBe(TO);
-    });
+  /**
+   * A link written by hand, or one a mail client normalised. It is the same
+   * document either way, and answering 404 to it would waste the redirect.
+   */
+  it("matches a path that arrived with a trailing slash", () => {
+    expect(at("/tags/ddd/")).toBe("/tags/domain-driven-design");
   });
 });
 

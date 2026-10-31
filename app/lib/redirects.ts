@@ -8,7 +8,7 @@
  *
  * One exception, and it is the only one: **an entry leaves when its
  * destination is retired**, because a redirect to a retired address is worse
- * than none. The table is empty today for that reason, and stays a table.
+ * than none. The three Parts of the retired Series left the table that way.
  *
  * Two rules the table has to keep, both checked in `redirects.test.ts`:
  *
@@ -25,7 +25,20 @@
  * derived from the row's Container, because that is a fact about the content
  * rather than a fact about history.
  */
-export const PERMANENT_REDIRECTS: Record<string, string> = {};
+export const PERMANENT_REDIRECTS: Record<string, string> = {
+  // `resume` is a Spanish word — the third person singular of
+  // *resumir* — so `/es/resume` would read as a conjugated verb rather than
+  // as a CV. The route moved to `/cv` in both Locales (ADR 0010); the visible
+  // navigation label stays *resume* in English, because the label and the
+  // path are independent.
+  "/resume": "/cv",
+  "/resume.pdf": "/cv.pdf",
+
+  // A Tag is its own URL, so renaming one moves a page. `ddd` was an acronym
+  // that only resolves for a reader who already knows the subject, which is
+  // the opposite of what a Tag is for; the vocabulary now spells it out.
+  "/tags/ddd": "/tags/domain-driven-design",
+};
 
 /**
  * The path a request should be sent to, or `null` to let it through.
