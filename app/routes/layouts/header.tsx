@@ -5,7 +5,6 @@ import {
   Clock,
   FileCode2,
   Hammer,
-  Layers,
   Menu,
   NotebookPen,
   Terminal,
@@ -40,17 +39,13 @@ import { cn } from "~/lib/utils";
  * The mark is now the link in both, and the list is destinations the mark does
  * not already cover.
  *
- * `/series` is here because it was reachable from exactly one place — the
- * orientation block inside a Part (`routes/series-part/orientation.tsx`) — so
- * the index of the namespace could only be found by someone already inside it.
  * `/tags` is deliberately still not here: a Tag is found from the Post
- * carrying it, and its index is a secondary way in rather than a seventh
+ * carrying it, and its index is a secondary way in rather than a sixth
  * top-level destination.
  */
 const NAV_ITEMS = [
   { to: "/projects", key: "projects", Icon: Hammer },
   { to: "/blog", key: "blog", Icon: NotebookPen },
-  { to: "/series", key: "series", Icon: Layers },
   { to: "/bookmarks", key: "bookmarks", Icon: BookMarked },
   { to: "/timeline", key: "timeline", Icon: Clock },
   { to: "/cv", key: "resume", Icon: FileCode2 },
@@ -95,7 +90,7 @@ function Wordmark({ className }: { className?: string }) {
  * and never coexist: `hidden` takes the row out of the accessibility tree
  * below `lg`, and the trigger that reveals the panel is itself `lg:hidden`.
  *
- * **The row appears at `lg`, not at `md`, and it carries no icons.** Six
+ * **The row appears at `lg`, not at `md`, and it carries no icons.** Five
  * top-level destinations is a lot for a horizontal nav, and the namespace is
  * closed at eight — this does not get better later. With an icon and a gap
  * against each label the row needed about 1000px, so between `md` and that it
@@ -110,27 +105,24 @@ function Wordmark({ className }: { className?: string }) {
  * `icon` button at `size-9` above `lg` (36px), and `lg` itself at `64rem`
  * (1024px, `build/client/assets/*.css`
  * after `pnpm build`). Summing those against Inter Semibold's own advance
- * width (about 0.56em per character) puts the row at roughly 670px today —
- * wordmark, six labels and the theme toggle, with their five internal gaps
- * and the header's own three.
+ * width (about 0.56em per character) puts the row at roughly 590px today —
+ * wordmark, five labels and the theme toggle, with their four internal gaps
+ * and the header's own three. That is one label and one 24px gap fewer than
+ * the six-label row this estimate was first made for, about 80px, so its
+ * conclusion only gets stronger.
  *
  * The switcher costs a second `icon` button inside that cluster: 36px and the
- * cluster's own 4px gap, landing the row at roughly 710px inside the 1024px it
+ * cluster's own 4px gap, landing the row at roughly 630px inside the 1024px it
  * has to fit in. That is a fixed cost — it renders a Locale subtag, `en` or
  * `es`, so no string it could be handed makes it wider. It was not always:
  * while it rendered its label as words, the binding case was its fallback
  * sentence *"Proyectos en español"* at roughly 165px, and the row came to
- * roughly 860px. Both fit; only one of them stays true whatever the catalogue
+ * roughly 780px. Both fit; only one of them stays true whatever the catalogue
  * says next. There is no headless browser in this environment to render and
- * measure directly; this is the estimate that check leaves behind.
- *
- * Trading *home* for *series* left that estimate standing: the count of
- * labels did not change, and the widest of the two swaps is two characters
- * in English (about 16px) and none in Spanish, where *inicio* and *series*
- * are the same length.
+ * measure directly; these are estimates, not measurements.
  *
  * The icons stay in the panel, where they earn their place: a vertical list is
- * scanned down a column of glyphs. Six of them strung along one line is
+ * scanned down a column of glyphs. Five of them strung along one line is
  * texture rather than help, and half of them — blog, timeline, bookmarks — are
  * shapes a reader has to translate back into the word printed beside them.
  *
@@ -150,7 +142,7 @@ export function Header() {
    * `<Link>` through `render` makes it stamp `type="button"` onto an `<a>`,
    * where `type` names the linked resource's MIME type. Told not to
    * (`nativeButton={false}`) it stamps `role="button"` instead, which costs
-   * every one of the panel's seven links its destination announcement. The
+   * every one of the panel's six links its destination announcement. The
    * same trap `~/components/ui/button`'s docblock records.
    *
    * Closing is not the dialog's to own here anyway: a client-side navigation
@@ -188,7 +180,7 @@ export function Header() {
         *
         * Both controls used to sit here as direct children of the header,
         * which means they inherited its `lg:gap-6` — the same 24px that
-        * separates `blog` from `series`. Two things spaced like the nav *are*
+        * separates `blog` from `bookmarks`. Two things spaced like the nav *are*
         * the nav, so the pair read as two stray labels rather than as the
         * preferences they are, and whichever came last looked stranded
         * against the edge. `gap-1` inside, the header's own gap outside: near

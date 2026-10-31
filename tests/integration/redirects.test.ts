@@ -2,7 +2,6 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { PERMANENT_REDIRECTS } from "~/lib/redirects";
 import { findPostBySlug } from "~/models/content.server";
-import { findSeriesArc, findSeriesBySlug } from "~/models/series.server";
 import { findPostsByTag } from "~/models/tag.server";
 
 import { openTestPlatform, type TestPlatform } from "../setup/platform";
@@ -46,17 +45,7 @@ async function destinationExists(db: D1Database, path: string): Promise<boolean>
 
     // A Post with a Container does not answer at `/blog/<slug>` — it redirects
     // — so a map aimed there would be a chain, which is the other rule.
-    return post !== null && post.seriesSlug === null;
-  }
-
-  if (segments[0] === "series" && segments.length === 2) {
-    return (await findSeriesBySlug(db, segments[1], "en")) !== null;
-  }
-
-  if (segments[0] === "series" && segments.length === 3) {
-    const sections = await findSeriesArc(db, segments[1], "en");
-
-    return sections.some((section) => section.parts.some((part) => part.slug === segments[2]));
+    return post !== null && post.projectSlug === null;
   }
 
   // A Tag page is not a row of its own: it exists for exactly as long as some

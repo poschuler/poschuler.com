@@ -1,5 +1,5 @@
 import type { Locale } from "~/context";
-import { postHref, projectHref, seriesHref } from "~/lib/hrefs";
+import { projectHref } from "~/lib/hrefs";
 import type { Crumb } from "~/lib/trail";
 import { AUTHOR, SITE } from "./person";
 
@@ -14,8 +14,7 @@ import { AUTHOR, SITE } from "./person";
  *
  * **This module builds no URL of its own**. An article's own address arrives
  * already made — the same `canonical` the page's `<head>` carries, out of
- * `app/lib/seo/alternates.ts` — and every other address here, a Container's or
- * a sibling Part's, comes from `~/lib/hrefs`, the one place a relative path is
+ * `app/lib/seo/alternates.ts` — and every other address here, a Container's, comes from `~/lib/hrefs`, the one place a relative path is
  * built. What this file still owns is prepending `SITE`, exactly as
  * `alternates.ts` does — never the segment structure underneath it.
  */
@@ -50,8 +49,6 @@ export type ArticleFacts = {
   datePublished: string;
   /** The most recent Revision's date, or nothing when the document has none. */
   dateRevised?: string;
-  /** The Series this is a Part of, when it has one. */
-  seriesSlug?: string | null;
   /** The Project this is a Field Note of, when it has one. */
   projectSlug?: string | null;
   /** This article's own Locale — needed only to address its Container, not itself. */
@@ -59,7 +56,7 @@ export type ArticleFacts = {
 };
 
 /**
- * An article, whether it stands alone, is a Part, or is a Field Note.
+ * An article, whether it stands alone or is a Field Note.
  *
  * `BlogPosting` rather than `TechArticle`: Google treats them the same for rich
  * results, and `BlogPosting` is what the rest of the ecosystem understands.
@@ -69,11 +66,8 @@ export type ArticleFacts = {
  * fact worth stating — leaving the field out invites the crawler to guess from
  * the response headers, which describe the deploy rather than the writing.
  *
- * `seriesSlug` and `projectSlug` are mutually exclusive, the same way the two
- * columns they are read from are: a Post has one Container or none. Both are
- * accepted here rather than a single discriminated union because every caller
- * already has the row shape `content.server.ts` returns, with both columns
- * present and one of them `null`.
+ * `projectSlug` is the Post's Container, when it has one: a Post has a Project
+ * or none.
  */
 export function blogPosting({
   url,
@@ -81,7 +75,6 @@ export function blogPosting({
   description,
   datePublished,
   dateRevised,
-  seriesSlug,
   projectSlug,
   locale,
 }: ArticleFacts): JsonLd {
@@ -102,24 +95,15 @@ export function blogPosting({
     // these with the full `Person` on the home page and the Resume.
     author: AUTHOR,
     publisher: AUTHOR,
-    ...(seriesSlug
-      ? { isPartOf: { "@id": seriesId(seriesSlug, locale) } }
-      : projectSlug
-        ? { isPartOf: { "@id": projectId(projectSlug, locale) } }
-        : {}),
+    ...(projectSlug ? { isPartOf: { "@id": projectId(projectSlug, locale) } } : {}),
   };
-}
-
-/** The identifier a Part points at, and the landing declares. */
-export function seriesId(slug: string, locale: Locale): string {
-  return `${SITE}${seriesHref(slug, locale)}#series`;
 }
 
 /**
  * The identifier a Field Note points at — the Project it is written about.
  *
  * The Project landing declares no JSON-LD of its own — deliberately, not by
- * omission — so this is not a fragment like `seriesId`'s: a `#project` suffix
+ * omission — so this is not a fragment: a `#project` suffix
  * would be an `@id` nothing in the site's structured data graph ever defines,
  * which is a dangling reference for a crawler resolving it. The landing's own
  * URL is a real resource instead — the page a Field Note's `isPartOf` names is
@@ -127,44 +111,4 @@ export function seriesId(slug: string, locale: Locale): string {
  */
 export function projectId(slug: string, locale: Locale): string {
   return `${SITE}${projectHref(slug, locale)}`;
-}
-
-export type SeriesFacts = {
-  slug: string;
-  title: string;
-  description: string;
-  locale: Locale;
-  /** In reading order, which is the order that makes `position` mean anything. */
-  parts: Array<{ slug: string; title: string }>;
-};
-
-/**
- * The Series landing.
- *
- * `hasPart` lists what is published and nothing else — a planned Section has no
- * URL and no title a crawler could use, and announcing it here would be the
- * same claim about the future the pages themselves refuse to make.
- */
-export function creativeWorkSeries({ slug, title, description, locale, parts }: SeriesFacts): JsonLd {
-  return {
-    "@context": "https://schema.org",
-    "@type": "CreativeWorkSeries",
-    "@id": seriesId(slug, locale),
-    name: title,
-    description,
-    url: `${SITE}${seriesHref(slug, locale)}`,
-    inLanguage: locale,
-    author: AUTHOR,
-    hasPart: parts.map((part, index) => {
-      const partUrl = `${SITE}${postHref({ slug: part.slug, seriesSlug: slug }, locale)}`;
-
-      return {
-        "@type": "BlogPosting",
-        "@id": `${partUrl}#article`,
-        name: part.title,
-        url: partUrl,
-        position: index + 1,
-      };
-    }),
-  };
 }

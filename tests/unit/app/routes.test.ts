@@ -134,3 +134,19 @@ describe("/cv.pdf", () => {
     expect(pdfRoutes[0]?.path).toBe("/cv.pdf");
   });
 });
+
+/**
+ * The Series is not a place on the site any more. Nothing under `/series`
+ * is mounted in either Locale, so every address there falls through to the
+ * catch-all and answers the ordinary 404.
+ */
+describe("the retired /series namespace", () => {
+  it("is not a path segment any route declares, in either Locale", () => {
+    for (const route of all) {
+      const segments = segmentsOf(route.path);
+      const first = segments[0] === ES_PREFIX.slice(1) ? segments[1] : segments[0];
+
+      expect(first).not.toBe("series");
+    }
+  });
+});

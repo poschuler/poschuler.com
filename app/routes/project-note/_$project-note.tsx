@@ -36,8 +36,7 @@ interface NotePayload {
  * the prefix says what kind of payload it is, not which URL serves it. What
  * this route adds is the frame: the note is only reachable through the
  * Project the manifest says it belongs to, so a Slug this Project does not
- * hold is a 404 rather than an article inside somebody else's frame — the
- * same rule `/series/:seriesSlug/:partSlug` already applies to a Part. A
+ * hold is a 404 rather than an article inside somebody else's frame. A
  * Draft produces no row at all, so it 404s the same way.
  */
 export async function loader({ params, context }: Route.LoaderArgs) {
@@ -116,7 +115,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
     datePublished,
     revisions,
   } = loaderData;
-  const identity = { kind: "post" as const, slug, seriesSlug: null, projectSlug };
+  const identity = { kind: "post" as const, slug, projectSlug };
   const addresses = documentAddresses(identity, locale, existingLocales);
   const { canonical } = addresses;
   const path = postHref(identity, locale);
@@ -175,9 +174,8 @@ export default function ProjectNote() {
 
   return (
     <main className="flex-1 gap-4 bg-ui p-4 font-mono md:gap-8 md:p-10">
-      {/* Above the article, exactly as a Part names its Series above its own
-        * title: the reader who arrived from a search engine has to learn what
-        * this is about before reading it, not twenty minutes later. */}
+      {/* Above the article: the reader who arrived from a search engine has to
+        * learn what this is about before reading it, not twenty minutes later. */}
       <div className="mx-auto w-full max-w-measure pt-8">
         <ProjectBreadcrumb projectSlug={projectSlug} projectTitle={projectTitle} />
       </div>

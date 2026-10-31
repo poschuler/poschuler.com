@@ -4,7 +4,6 @@ import {
   buildSitemapRoutes,
   type SitemapContentItem,
   type SitemapProject,
-  type SitemapSeries,
   type SitemapTag,
 } from "../../../seed/kv/sitemap-routes";
 
@@ -48,19 +47,10 @@ const routesFor = (
   fallbackLastmod = FALLBACK,
   resumeLastmod = RESUME_LASTMOD,
   projects: SitemapProject[] = [],
-  series: SitemapSeries[] = [],
   tags: SitemapTag[] = [],
-) => buildSitemapRoutes(items, { fallbackLastmod, resumeLastmod }, { projects, series, tags });
+) => buildSitemapRoutes(items, { fallbackLastmod, resumeLastmod }, { projects, tags });
 
-/** A Part: a Post whose Container says where it is served from. */
-const part = (
-  slug: string,
-  seriesSlug: string,
-  publishedStringDate: string,
-  lang: "en" | "es" = "en",
-): SitemapContentItem => ({ slug, type: "post", publishedStringDate, seriesSlug, lang });
-
-/** A Field Note: a Post whose Container is a Project rather than a Series. */
+/** A Field Note: a Post whose Container is a Project. */
 const note = (
   slug: string,
   projectSlug: string,
@@ -74,8 +64,6 @@ const project = (slug: string, ...dates: string[]): SitemapProject => ({
   lang: "en",
   updates: JSON.stringify(dates.map((date) => ({ date, note: "Revised." }))),
 });
-
-const series = (slug: string, lang: "en" | "es" = "en"): SitemapSeries => ({ slug, lang });
 
 const urlsOf = (routes: ReturnType<typeof buildSitemapRoutes>) => routes.map((route) => route.url);
 
@@ -237,93 +225,9 @@ describe("buildSitemapRoutes", () => {
   });
 });
 
-/**
- * A Part is a Post with a Container, and the Container decides its address.
- * Listing it under `/blog/<slug>` is not merely stale now that the route
- * redirects — it hands a crawler a URL that answers 301, which is the one thing
- * a sitemap must never contain.
- */
-describe("a Series in the sitemap", () => {
-  const withParts = [
-    part("vertical-slices", "pragmatic-nodejs-api", "2026-02-01"),
-    item("a-loose-post", "post", "2026-01-15"),
-    part("project-setup", "pragmatic-nodejs-api", "2025-12-25"),
-  ];
-
-  const oneSeries: SitemapSeries[] = [series("pragmatic-nodejs-api")];
-
-  it("serves every Part under its Container, never under /blog", () => {
-    const urls = urlsOf(routesFor(withParts, FALLBACK, RESUME_LASTMOD, [], oneSeries));
-
-    expect(urls).toContain("/series/pragmatic-nodejs-api/project-setup");
-    expect(urls).not.toContain("/blog/project-setup");
-    expect(urls).toContain("/blog/a-loose-post");
-  });
-
-  it("lists the index and one URL per Series", () => {
-    const urls = urlsOf(routesFor(withParts, FALLBACK, RESUME_LASTMOD, [], oneSeries));
-
-    expect(urls).toContain("/series");
-    expect(urls).toContain("/series/pragmatic-nodejs-api");
-  });
-
-  /**
-   * The landing has no date of its own and gets no `updates` column: what
-   * changes on it is that a Part arrived, and that Part is already dated. So
-   * its currency is computed, and rises on its own with every Part published.
-   */
-  it("dates a landing by the newest date among its Parts", () => {
-    const routes = routesFor(withParts, FALLBACK, RESUME_LASTMOD, [], oneSeries);
-
-    expect(routes.find((route) => route.url === "/series/pragmatic-nodejs-api")?.lastmod).toBe(
-      "2026-02-01",
-    );
-  });
-
-  it("dates a Part by its latest revision, like any other Post", () => {
-    const revised: SitemapContentItem = {
-      ...part("project-setup", "pragmatic-nodejs-api", "2025-12-25"),
-      updates: JSON.stringify([{ date: "2026-06-01", note: "Updated for Node 24." }]),
-    };
-    const routes = routesFor([revised], FALLBACK, RESUME_LASTMOD, [], oneSeries);
-    const lastmodOf = (url: string) => routes.find((route) => route.url === url)?.lastmod;
-
-    expect(lastmodOf("/series/pragmatic-nodejs-api/project-setup")).toBe("2026-06-01");
-    // And the landing follows it: a revised Part is a changed landing.
-    expect(lastmodOf("/series/pragmatic-nodejs-api")).toBe("2026-06-01");
-  });
-
-  it("dates the index by the newest date across every Series", () => {
-    const routes = routesFor(
-      [...withParts, part("first-note", "volume-two", "2027-04-01")],
-      FALLBACK,
-      RESUME_LASTMOD,
-      [],
-      [...oneSeries, series("volume-two")],
-    );
-
-    expect(routes.find((route) => route.url === "/series")?.lastmod).toBe("2027-04-01");
-  });
-
-  /**
-   * A Series exists the moment it is announced — the arc is the point, not the
-   * word count — so its landing is a real page with nothing published behind it
-   * yet, and the only date the repository holds for it is the fallback.
-   */
-  it("still lists a Series that has published nothing", () => {
-    const routes = routesFor(
-      [item("a-loose-post", "post", "2026-01-15")],
-      FALLBACK,
-      RESUME_LASTMOD,
-      [],
-      [series("announced-only")],
-    );
-
-    expect(urlsOf(routes)).toContain("/series/announced-only");
-    expect(routes.find((route) => route.url === "/series/announced-only")?.lastmod).toBe(FALLBACK);
-  });
-
-  it("advertises no series routes at all when there are none", () => {
+/** The Series and its Parts are retired: no address under `/series` is advertised. */
+describe("no Series in the sitemap", () => {
+  it("advertises no series routes at all", () => {
     const urls = urlsOf(routesFor(items));
 
     expect(urls).not.toContain("/series");
@@ -332,8 +236,8 @@ describe("a Series in the sitemap", () => {
 });
 
 /**
- * A Field Note is a Post whose Container is a Project, served under it
- * the same way a Part is served under its Series. A Draft never reaches this
+ * A Field Note is a Post whose Container is a Project, served under it.
+ * A Draft never reaches this
  * seam at all — it produces no `content` row, so there is nothing here to
  * filter; what these assert is that a published note gets a URL, and that
  * nothing here invents one for a Slug that was never passed in.
@@ -380,7 +284,7 @@ describe("a Field Note in the sitemap", () => {
   });
 
   /**
-   * Unlike a Series landing, a Project's own `lastmod` does not follow its
+   * A Project's own `lastmod` does not follow its
    * notes — `SitemapProject`'s own doc explains why: a Project is revised in
    * place, and its own revisions are the only date it has.
    */
@@ -408,7 +312,7 @@ describe("the Tag index in the sitemap", () => {
   ];
 
   const withTags = (items: SitemapContentItem[], carried: SitemapTag[] = tags) =>
-    routesFor(items, FALLBACK, RESUME_LASTMOD, [], [], carried);
+    routesFor(items, FALLBACK, RESUME_LASTMOD, [], carried);
 
   it("advertises the index", () => {
     expect(urlsOf(withTags(items))).toContain("/tags");
@@ -433,7 +337,7 @@ describe("the Tag index in the sitemap", () => {
   });
 
   /**
-   * The same rule `/projects` and `/series` follow. Ten of the twenty-two
+   * The same rule `/projects` follows. Ten of the twenty-two
    * declared Tags reach a Post today, but a repository whose Posts carry none
    * would be advertising an index of nothing.
    */
@@ -499,7 +403,7 @@ describe("a bilingual document", () => {
 
     expect(urls).toContain("/blog/newest-post");
     expect(urls).toContain("/es/blog/newest-post");
-    // No duplicate: the pre-Part-10 defect was two rows, one identical `<loc>`.
+    // No duplicate: an old defect was two rows, one identical `<loc>`.
     expect(urls.filter((url) => url === "/blog/newest-post")).toHaveLength(1);
     expect(new Set(urls).size).toBe(urls.length);
   });

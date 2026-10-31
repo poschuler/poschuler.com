@@ -4,8 +4,7 @@ import { navHref, withLocale } from "~/lib/hrefs";
 
 /**
  * The Index vocabulary — the fixed upper step of every trail: the home page,
- * or the section a document sits under. Not a Series Section, which has no
- * page of its own and so is never one of these (see `Crumb` below).
+ * or the section a document sits under.
  *
  * **The closed set, and where the same set is written again.** Two other
  * places keep their own list of this same vocabulary rather than reading it
@@ -13,29 +12,19 @@ import { navHref, withLocale } from "~/lib/hrefs";
  * and the sitemap builder's literals (`seed/kv/sitemap-routes.ts`). Neither is
  * changed by this module; whoever edits `INDEX_PATH` should find them too.
  */
-export type Index = "home" | "blog" | "projects" | "series" | "tags";
+export type Index = "home" | "blog" | "projects" | "tags";
 
 const INDEX_PATH: Record<Index, string> = {
   home: "/",
   blog: "/blog",
   projects: "/projects",
-  series: "/series",
   tags: "/tags",
 };
 
-/**
- * One step on the path of URLs that leads to a page.
- *
- * **A Series Section is not one of these**, and that is why the visual
- * breadcrumb on a Part and a `BreadcrumbList` do not match. A `BreadcrumbList`
- * describes URLs a visitor can reach; a Section has no page. Naming it here
- * would declare a level of hierarchy that cannot be visited. The visual
- * breadcrumb may show it, because there it is context for a human rather than
- * a claim about the structure of the site.
- */
+/** One step on the path of URLs that leads to a page. */
 export type Crumb = {
   name: string;
-  /** Path relative to the origin, e.g. `/series`. */
+  /** Path relative to the origin, e.g. `/blog`. */
   path: string;
 };
 
@@ -45,7 +34,7 @@ export type Crumb = {
  *
  * **Both halves follow the page's Locale**, which is the whole reason this is
  * a function rather than a constant. A Spanish page used to declare a trail
- * made of English names pointing at English URLs — on `/es/series` and
+ * made of English names pointing at English URLs — on `/es/blog` and
  * `/es/tags` the entire list was the English one, so not a single step was the
  * page emitting it, while the canonical three lines above said `/es/…`. One
  * `<head>` contradicting itself is worse than a missing `BreadcrumbList`.

@@ -20,7 +20,7 @@ workspace "poschuler.com" "The personal site of Paul Osorio Schuler, modelled in
                 securityHeaders = component "security headers" "Rebuilds every response, and mints the CSP nonce in production." "workers/security-headers.ts" "Extracted for test"
                 locale = component "Locale derivation" "Reads the Locale off the path, in exactly one call site." "app/context.ts"
                 routes = component "routes" "Mounts every route twice, bare and under /es." "app/routes.ts, app/routes/**"
-                models = component "models" "Named domain queries, each one taking the Locale as an argument." "app/models/{content,project,series,tag}.server.ts"
+                models = component "models" "Named domain queries, each one taking the Locale as an argument." "app/models/{content,project,tag}.server.ts"
                 db = component "db helper" "The only path to D1, and it binds every value rather than interpolating it." "app/db.server.ts"
                 addresses = component "address algebra" "Decides what a document's address is in each Locale, and which one is canonical." "app/lib/hrefs.ts, app/lib/seo/{alternates,switcher}.ts"
                 seo = component "SEO renderers" "Renders robots.txt, the JSON-LD and the Trail." "app/lib/seo/{robots,structured-data,person}.ts, app/lib/trail.ts"
@@ -56,7 +56,7 @@ workspace "poschuler.com" "The personal site of Paul Osorio Schuler, modelled in
             deploymentVerifier = container "Deployment verifier" "Asks whether the version this run uploaded is the version serving." "Bash, scripts/verify-deployment.sh" "Build,Verifier"
         }
 
-        reader -> site "Reads Posts, Bookmarks, the Series and the Resume, in English at / or in Spanish at /es" "HTTPS"
+        reader -> site "Reads Posts, Bookmarks, Projects and the Resume, in English at / or in Spanish at /es" "HTTPS"
         crawlers -> site "Fetch the sitemap and robots.txt, and read the hreflang set, the JSON-LD and the Open Graph tags" "HTTPS"
         paul -> site "Writes the Markdown, and regenerates the fixtures beside it" "Markdown in git"
         paul -> github "Merges to main, which is the Publication" "git, gh"

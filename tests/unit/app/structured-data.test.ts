@@ -4,9 +4,7 @@ import { PERSON_CORE, PERSON_ID } from "~/lib/seo/person";
 import {
   blogPosting,
   breadcrumbList,
-  creativeWorkSeries,
   projectId,
-  seriesId,
 } from "~/lib/seo/structured-data";
 import { indexCrumb } from "~/lib/trail";
 
@@ -18,12 +16,11 @@ import { indexCrumb } from "~/lib/trail";
  * one, is invisible until it has been indexed that way for months.
  */
 
-const PART = {
-  url: "https://poschuler.com/series/pragmatic-nodejs-api/project-setup",
-  title: "Project setup",
-  description: "Where a Node.js project's structure comes from.",
+const ARTICLE = {
+  url: "https://poschuler.com/blog/implementing-value-objects",
+  title: "Implementing value objects",
+  description: "Where a value object's invariants live.",
   datePublished: "2025-12-25",
-  seriesSlug: "pragmatic-nodejs-api",
   locale: "en" as const,
 };
 
@@ -38,14 +35,14 @@ const NOTE = {
 
 describe("blogPosting", () => {
   it("dates an unrevised article by its publication rather than leaving it open", () => {
-    const article = blogPosting({ ...PART, seriesSlug: null });
+    const article = blogPosting(ARTICLE);
 
     expect(article.datePublished).toBe("2025-12-25");
     expect(article.dateModified).toBe("2025-12-25");
   });
 
   it("dates a revised article by its most recent Revision", () => {
-    const article = blogPosting({ ...PART, dateRevised: "2026-06-01" });
+    const article = blogPosting({ ...ARTICLE, dateRevised: "2026-06-01" });
 
     expect(article.datePublished).toBe("2025-12-25");
     expect(article.dateModified).toBe("2026-06-01");
@@ -59,7 +56,7 @@ describe("blogPosting", () => {
    * article with an anonymous author as far as a rich result is concerned.
    */
   it("credits a named author that is the same entity as the Person", () => {
-    const article = blogPosting(PART) as {
+    const article = blogPosting(ARTICLE) as {
       author: { "@id": string; name: string };
       publisher: { "@id": string; name: string };
     };
@@ -72,14 +69,8 @@ describe("blogPosting", () => {
 
   /** Named, not described again: the credentials stay where they live. */
   it("does not restate the rest of him on every article", () => {
-    expect(JSON.stringify(blogPosting(PART))).not.toContain("PostalAddress");
-    expect(JSON.stringify(blogPosting(PART))).not.toContain("hasCredential");
-  });
-
-  it("attaches a Part to its Series by the identifier the landing declares", () => {
-    const article = blogPosting(PART);
-
-    expect(article.isPartOf).toEqual({ "@id": seriesId("pragmatic-nodejs-api", "en") });
+    expect(JSON.stringify(blogPosting(ARTICLE))).not.toContain("PostalAddress");
+    expect(JSON.stringify(blogPosting(ARTICLE))).not.toContain("hasCredential");
   });
 
   /**
@@ -88,11 +79,9 @@ describe("blogPosting", () => {
    * a machine-readable form.
    */
   it("says nothing about containment for a Post that has no Container", () => {
-    expect(blogPosting({ ...PART, seriesSlug: null })).not.toHaveProperty("isPartOf");
-    expect(blogPosting({ ...PART, seriesSlug: undefined })).not.toHaveProperty("isPartOf");
+    expect(blogPosting(ARTICLE)).not.toHaveProperty("isPartOf");
   });
 
-  /** A Field Note's Container is a Project, not a Series. */
   it("attaches a Field Note to its Project by the identifier the landing declares", () => {
     const article = blogPosting(NOTE);
 
@@ -106,8 +95,8 @@ describe("blogPosting", () => {
 
   /** The claim follows the article, not the default. */
   it("states its own Locale rather than always English", () => {
-    expect(blogPosting(PART).inLanguage).toBe("en");
-    expect(blogPosting({ ...PART, locale: "es" }).inLanguage).toBe("es");
+    expect(blogPosting(ARTICLE).inLanguage).toBe("en");
+    expect(blogPosting({ ...ARTICLE, locale: "es" }).inLanguage).toBe("es");
   });
 });
 
@@ -115,83 +104,23 @@ describe("breadcrumbList", () => {
   it("numbers the trail from one, in the order given", () => {
     const list = breadcrumbList([
       indexCrumb("home", "en"),
-      indexCrumb("series", "en"),
-      { name: "Pragmatic Node.js API", path: "/series/pragmatic-nodejs-api" },
+      indexCrumb("projects", "en"),
+      { name: "Chekalo", path: "/projects/chekalo" },
     ]) as { itemListElement: Array<{ position: number; name: string; item: string }> };
 
     expect(list.itemListElement.map((entry) => entry.position)).toEqual([1, 2, 3]);
     expect(list.itemListElement[0].item).toBe("https://poschuler.com");
-    expect(list.itemListElement[2].name).toBe("Pragmatic Node.js API");
+    expect(list.itemListElement[2].name).toBe("Chekalo");
   });
 
   it("gives every step an absolute URL, because a step is a page", () => {
-    const list = breadcrumbList([indexCrumb("home", "en"), indexCrumb("series", "en")]) as {
+    const list = breadcrumbList([indexCrumb("home", "en"), indexCrumb("blog", "en")]) as {
       itemListElement: Array<{ item: string }>;
     };
 
     for (const entry of list.itemListElement) {
       expect(entry.item.startsWith("https://poschuler.com")).toBe(true);
     }
-  });
-});
-
-describe("creativeWorkSeries", () => {
-  const SERIES = {
-    slug: "pragmatic-nodejs-api",
-    title: "Pragmatic Node.js API",
-    description: "A monolithic API you can defend.",
-    locale: "en" as const,
-    parts: [
-      { slug: "project-setup", title: "Project setup" },
-      { slug: "schema-validation", title: "Schema validation" },
-    ],
-  };
-
-  it("declares the identifier its Parts point back at", () => {
-    expect(creativeWorkSeries(SERIES)["@id"]).toBe(seriesId("pragmatic-nodejs-api", "en"));
-  });
-
-  it("lists its Parts in reading order", () => {
-    const series = creativeWorkSeries(SERIES) as {
-      hasPart: Array<{ position: number; url: string }>;
-    };
-
-    expect(series.hasPart.map((part) => part.position)).toEqual([1, 2]);
-    expect(series.hasPart[0].url).toBe(
-      "https://poschuler.com/series/pragmatic-nodejs-api/project-setup",
-    );
-  });
-
-  /**
-   * The published Parts and nothing else. A planned Section has no URL and no
-   * title, and announcing one here would be the claim about the future the
-   * pages themselves refuse to make.
-   */
-  it("announces nothing when a Series has published nothing yet", () => {
-    const series = creativeWorkSeries({ ...SERIES, parts: [] }) as { hasPart: unknown[] };
-
-    expect(series.hasPart).toEqual([]);
-  });
-
-  /** The claim follows the landing, not the default. */
-  it("states its own Locale rather than always English", () => {
-    expect(creativeWorkSeries(SERIES).inLanguage).toBe("en");
-    expect(creativeWorkSeries({ ...SERIES, locale: "es" }).inLanguage).toBe("es");
-  });
-
-  it("matches the identifier a Part uses for its Container", () => {
-    const series = creativeWorkSeries(SERIES);
-    const part = blogPosting(PART);
-
-    expect(part.isPartOf).toEqual({ "@id": series["@id"] });
-  });
-
-  /** This module builds no URL of its own: the Locale changes the address via `~/lib/hrefs`, nothing here. */
-  it("addresses a Spanish landing under /es, at the same Slug", () => {
-    const series = creativeWorkSeries({ ...SERIES, locale: "es" });
-
-    expect(series.url).toBe("https://poschuler.com/es/series/pragmatic-nodejs-api");
-    expect(series["@id"]).toBe("https://poschuler.com/es/series/pragmatic-nodejs-api#series");
   });
 });
 

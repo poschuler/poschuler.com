@@ -27,42 +27,14 @@ BASE="http://localhost:${PORT}"
 #
 # Two lists, because two questions. `/` shows the newest Posts whatever they
 # belong to, so it is asked about all of them. The Post probed by URL has to be
-# one with **no Container**: the `blog:` key space holds every
-# Post body, a Part of a Series or a Field Note of a Project included — the
-# prefix says what kind of payload it is, not which URL serves it — but a Part
-# or a Field Note answers 301 at `/blog/<slug>` and `/blog` collapses its whole
-# Series or Project into one row. Both checks below would fail on correct code.
-# Picking the first payload alphabetically works today only because the one
-# loose Post happens to sort first; the next Part or Field Note published
-# under a slug starting `a`–`h` would break CI and point at nothing.
+# one with **no Container**: the `blog:` key space holds every Post body, a
+# Field Note of a Project included — the prefix says what kind of payload it is,
+# not which URL serves it — but a Field Note answers 301 at `/blog/<slug>` and
+# `/blog` collapses its whole Project into one row. Both checks below would
+# fail on correct code.
 #
-# Which slugs are Parts or Field Notes is read from the Series and Project
-# manifests, the same place the generators read the arc and the notes list
-# from (ADR 0007, amended).
-# Each line is `<series-or-project>\t<part-or-note>`, so the pair that probes a
-# Part or a Field Note below can be taken whole — one read from one manifest
-# and its Container read from another would produce a URL that correctly
-# answers 404.
-mapfile -t SERIES_PARTS < <(
-	node --input-type=module -e '
-		import { readdir, readFile } from "node:fs/promises";
-
-		const directory = "seed/kv/kv_payloads/series";
-
-		for (const file of await readdir(directory).catch(() => [])) {
-			const { attributes } = JSON.parse(await readFile(`${directory}/${file}`, "utf-8"));
-			const series = file.replace(/\.[^.]+\.json$/, "");
-
-			for (const section of attributes.sections ?? []) {
-				for (const part of section.parts ?? []) console.log(`${series}\t${part}`);
-			}
-		}
-	'
-)
-
-mapfile -t PART_SLUGS < <(
-	if [[ "${#SERIES_PARTS[@]}" -gt 0 ]]; then printf '%s\n' "${SERIES_PARTS[@]}" | cut -f2; fi
-)
+# Which slugs are Field Notes is read from the Project manifests, the same place
+# the generator reads the notes list from (ADR 0007, amended).
 
 # Every Project, from its payload. `/projects` and a Project landing are live
 # routes that read both stores, and they do not wait for a Field Note to exist —
@@ -111,8 +83,8 @@ mapfile -t POST_SLUGS < <(
 mapfile -t LOOSE_POST_SLUGS < <(
 	printf '%s\n' "${POST_SLUGS[@]}" |
 		{
-			if [[ "${#PART_SLUGS[@]}" -gt 0 || "${#NOTE_SLUGS[@]}" -gt 0 ]]; then
-				grep -vxF "$(printf '%s\n' "${PART_SLUGS[@]}" "${NOTE_SLUGS[@]}")"
+			if [[ "${#NOTE_SLUGS[@]}" -gt 0 ]]; then
+				grep -vxF "$(printf '%s\n' "${NOTE_SLUGS[@]}")"
 			else
 				cat
 			fi
@@ -120,7 +92,7 @@ mapfile -t LOOSE_POST_SLUGS < <(
 )
 
 if [[ "${#LOOSE_POST_SLUGS[@]}" -eq 0 ]]; then
-	echo "error: no payload under seed/kv/kv_payloads/blog for a Post outside a Series." >&2
+	echo "error: no payload under seed/kv/kv_payloads/blog for a Post." >&2
 	exit 1
 fi
 
@@ -135,7 +107,7 @@ ROUTES=(/ /blog /bookmarks /timeline /cv /robots.txt /sitemap.xml "/blog/${POST_
 #
 # The Post is carried alongside the Tag, so the content check below can assert
 # that this Post is on that page rather than trusting a 200 over an empty list.
-# One line, `<slug>\t<tag>`, as the Series pair above.
+# One line, `<slug>\t<tag>`.
 IFS=$'\t' read -r TAG_POST_SLUG TAG < <(
 	node --input-type=module -e '
 		import { readdir, readFile } from "node:fs/promises";
@@ -167,16 +139,6 @@ fi
 
 ROUTES+=(/tags "/tags/${TAG}")
 
-# The Series namespace, when there is one to probe. All three read a store —
-# the landing and a Part read *both*, D1 for the arc and KV for the body — so
-# they are the routes most likely to be the ones a missing binding takes down,
-# which is the failure this whole script exists for.
-if [[ "${#SERIES_PARTS[@]}" -gt 0 ]]; then
-	IFS=$'\t' read -r SERIES_SLUG PART_SLUG <<<"${SERIES_PARTS[0]}"
-
-	ROUTES+=(/series "/series/${SERIES_SLUG}" "/series/${SERIES_SLUG}/${PART_SLUG}")
-fi
-
 # The Project namespace. The index and a landing are probed always: they read
 # D1 for the row and KV for the body, exactly the pair a missing binding takes
 # down, and neither depends on a Field Note existing.
@@ -207,6 +169,32 @@ if [[ "${#PUBLISHED_PROJECT_NOTES[@]}" -gt 0 ]]; then
 
 	ROUTES+=("/projects/${NOTE_PROJECT_SLUG}/${NOTE_SLUG}")
 fi
+
+# Addresses this site once answered and must not any more. Written out, never
+# derived: what retired them also removed everything a list could be read from,
+# and a derived list shrinks silently with whatever it was derived from — it
+# would pass over nothing and say nothing. It outlives the Publication that
+# retired them; a reader's bookmark does not expire.
+#
+# Each answers the site's ordinary 404, not a redirect: a redirect to a retired
+# address is worse than none, so the table holds no entry for any of them.
+RETIRED=(
+	/series
+	/es/series
+	/series/pragmatic-nodejs-api
+	/series/pragmatic-nodejs-api/project-setup
+	/series/pragmatic-nodejs-api/schema-validation-and-error-handling
+	/series/pragmatic-nodejs-api/vertical-slices-and-domain-logic
+	/es/series/pragmatic-nodejs-api
+	/es/series/pragmatic-nodejs-api/project-setup
+	/es/series/pragmatic-nodejs-api/schema-validation-and-error-handling
+	/es/series/pragmatic-nodejs-api/vertical-slices-and-domain-logic
+	/blog/pragmatic-nodejs-api-setup-nodejs-express-typescript-project
+	/blog/pragmatic-nodejs-api-schema-validation-and-global-error-handling
+	/blog/pragmatic-nodejs-api-vertical-slices-and-domain-logic
+	/blog/project-setup
+	/projects/pragmatic-nodejs-api
+)
 
 # The Spanish branch. Hardcoded rather than derived, and that is the difference
 # between this block and every one above it: these four addresses do not depend
@@ -304,6 +292,18 @@ for route in "${ROUTES[@]}"; do
 		printf '    ok   %-24s %s\n' "${route}" "${status}"
 	else
 		printf '    FAIL %-24s %s\n' "${route}" "${status}"
+		failed=1
+	fi
+done
+
+echo "==> Retired addresses answer 404"
+for route in "${RETIRED[@]}"; do
+	status=$(curl -s -o /dev/null -w "%{http_code}" "${BASE}${route}")
+
+	if [[ "${status}" == "404" ]]; then
+		printf '    ok   %-24s %s\n' "${route}" "${status}"
+	else
+		printf '    FAIL %-24s %s, expected 404\n' "${route}" "${status}"
 		failed=1
 	fi
 done

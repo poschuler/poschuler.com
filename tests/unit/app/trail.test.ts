@@ -5,13 +5,13 @@ import { indexCrumb, indexHref } from "~/lib/trail";
 
 describe("indexCrumb", () => {
   it("addresses the Locale's own branch, not the English one", () => {
-    expect(indexCrumb("series", "en").path).toBe("/series");
-    expect(indexCrumb("series", "es").path).toBe("/es/series");
+    expect(indexCrumb("blog", "en").path).toBe("/blog");
+    expect(indexCrumb("blog", "es").path).toBe("/es/blog");
     expect(indexCrumb("home", "es").path).toBe("/es");
   });
 
   /**
-   * The defect this function replaced a constant to close: `/es/series` and
+   * The defect this function replaced a constant to close: `/es/blog` and
    * `/es/tags` emitted the English trail verbatim, so the page emitting the
    * `BreadcrumbList` was not among its own steps.
    */
@@ -48,8 +48,6 @@ describe("indexHref", () => {
     expect(indexHref("blog", "es")).toBe("/es/blog");
     expect(indexHref("projects", "en")).toBe("/projects");
     expect(indexHref("projects", "es")).toBe("/es/projects");
-    expect(indexHref("series", "en")).toBe("/series");
-    expect(indexHref("series", "es")).toBe("/es/series");
     expect(indexHref("tags", "en")).toBe("/tags");
     expect(indexHref("tags", "es")).toBe("/es/tags");
   });

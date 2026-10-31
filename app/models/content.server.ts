@@ -30,7 +30,6 @@ export const CONTENT_COLUMNS = `
       description as "description",
       external_url as "externalUrl",
       source as "source",
-      series_slug as "seriesSlug",
       project_slug as "projectSlug"`;
 
 type ContentRowBase = {
@@ -50,13 +49,12 @@ export type PostRowType = ContentRowBase & {
   externalUrl: null;
   source: null;
   /**
-   * The Container, when the Post is a Part of a Series or a Field Note of a
-   * Project — and `null` when it is a loose Post. Never both at once
-   * (`schema.sql`). It is what makes a correct link possible from anywhere:
-   * `/timeline`, the home page and `/blog` all interleave the three, and each
-   * takes a different prefix. `postHref` is the one place that reads them.
+   * The Container, when the Post is a Field Note of a Project — and `null`
+   * when it is a loose Post. It is what makes a correct link possible from
+   * anywhere: `/timeline`, the home page and `/blog` all interleave the two,
+   * and each takes a different prefix. `postHref` is the one place that reads
+   * it.
    */
-  seriesSlug: string | null;
   projectSlug: string | null;
 };
 
@@ -68,7 +66,6 @@ export type BookmarkRowType = ContentRowBase & {
   externalUrl: string;
   source: string;
   /** A Bookmark has no Container: nothing about it is Paul's to arrange. */
-  seriesSlug: null;
   projectSlug: null;
 };
 
@@ -107,28 +104,28 @@ export function findAllPosts(db: D1Database, locale: Locale) {
 }
 
 /**
- * Posts that belong to no Container — no Series, no Project — in this Locale.
+ * Posts that belong to no Container — no Project — in this Locale.
  *
- * `/blog` lists these plus each Series as a **single entry**, because that page
- * answers *what has this person written* and a Container is one thing written,
- * not fifteen. Publishing part nine should update a row there, not lengthen the
- * page. Every other list — the Timeline, the home page — keeps Parts and Field
- * Notes individually, because their question is *what happened lately*.
+ * `/blog` lists these plus each Project with Field Notes as a **single entry**,
+ * because that page answers *what has this person written* and a Container is
+ * one thing written, not fifteen. Every other list — the Timeline, the home
+ * page — keeps Field Notes individually, because their question is *what
+ * happened lately*.
  *
- * `/blog` lists a Project-with-notes as an entry of its own — see
- * `findProjectsWithNotes` — and this query is what keeps a Field Note from also
- * being double-counted here as a loose Post.
+ * A Project-with-notes is an entry of its own — see `findProjectsWithNotes` —
+ * and this query is what keeps a Field Note from also being double-counted
+ * here as a loose Post.
  */
 export function findLoosePosts(db: D1Database, locale: Locale) {
   return findContent<PostRowType>(
     db,
-    "where type = 'post' and series_slug is null and project_slug is null and lang = ?",
+    "where type = 'post' and project_slug is null and lang = ?",
     [locale],
   );
 }
 
 /**
- * One Post by Slug, in a Locale, whether it is loose or a Part.
+ * One Post by Slug, in a Locale, whether it is loose or a Field Note.
  *
  * The row, not the body: `/blog/:blogSlug` reads it to find out whether the
  * Slug it was handed is served from somewhere else. Returns `null` rather than
