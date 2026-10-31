@@ -51,11 +51,6 @@ type Chrome = {
   nav: {
     projects: string;
     blog: string;
-    /**
-     * Lower case like its neighbours, so it is the nav's own label rather
-     * than `series.heading`, which is the page's title and capitalised.
-     */
-    series: string;
     bookmarks: string;
     timeline: string;
     /**
@@ -165,25 +160,6 @@ type Chrome = {
   };
   series: {
     heading: string;
-    subtitle: string;
-    arcHeading: string;
-    sectionState: Record<"complete" | "inProgress" | "planned", string>;
-    /** The landing's own badge — a different pair of words than a Section's state. */
-    landingState: Record<"complete" | "ongoing", string>;
-    startingPoint: string;
-    destination: string;
-    outOfScope: string;
-    audience: string;
-    completeSummary: string;
-    ongoingSummary: string;
-    startHere: (seriesTitle: string) => string;
-    endOfSeries: string;
-    endOfSection: (sectionTitle: string) => string;
-    nextUp: (partTitle: string) => string;
-    seeFullArc: string;
-    whereNextLabel: string;
-    sectionIndexLabel: (sectionTitle: string) => string;
-    youAreHere: string;
   };
   tags: {
     heading: string;
@@ -214,11 +190,6 @@ type Chrome = {
     wrote: string;
     read: string;
   };
-  seriesItem: {
-    kindLabel: string;
-    noPartsYet: string;
-    parts: (count: number) => string;
-  };
   postArticle: {
     viewGithubRepository: string;
   };
@@ -246,7 +217,6 @@ export const STRINGS: Record<Locale, Chrome> = {
     nav: {
       projects: "projects",
       blog: "blog",
-      series: "series",
       bookmarks: "bookmarks",
       timeline: "timeline",
       resume: "resume",
@@ -306,25 +276,6 @@ export const STRINGS: Record<Locale, Chrome> = {
     },
     series: {
       heading: "Series",
-      subtitle: "Subjects worked through in order, rather than one article at a time",
-      arcHeading: "The arc",
-      sectionState: { complete: "Complete", inProgress: "In progress", planned: "Planned" },
-      landingState: { complete: "Complete", ongoing: "Ongoing" },
-      startingPoint: "You start with",
-      destination: "You end up with",
-      outOfScope: "Not covered",
-      audience: "Who it is for",
-      completeSummary: "This series is complete: it reaches the destination above.",
-      ongoingSummary:
-        "This series is ongoing. It is finished when it reaches the destination above — however many parts that takes.",
-      startHere: (seriesTitle) => `${seriesTitle} — start here`,
-      endOfSeries: "That is the end of the series.",
-      endOfSection: (sectionTitle) => `That is the end of ${sectionTitle}.`,
-      nextUp: (partTitle) => `Next up · ${partTitle}`,
-      seeFullArc: "See the full arc →",
-      whereNextLabel: "Where to go next",
-      sectionIndexLabel: (sectionTitle) => `${sectionTitle} — the parts published so far`,
-      youAreHere: "— you are here",
     },
     tags: {
       heading: "Tags",
@@ -347,11 +298,6 @@ export const STRINGS: Record<Locale, Chrome> = {
       wrote: "I wrote",
       read: "I read",
     },
-    seriesItem: {
-      kindLabel: "Series",
-      noPartsYet: "no parts yet",
-      parts: (count) => `${count} ${plural(count, "part", "parts")}`,
-    },
     postArticle: {
       viewGithubRepository: "View Github Repository",
     },
@@ -372,7 +318,6 @@ export const STRINGS: Record<Locale, Chrome> = {
     nav: {
       projects: "proyectos",
       blog: "blog",
-      series: "series",
       bookmarks: "marcadores",
       timeline: "cronología",
       resume: "curriculum",
@@ -432,25 +377,6 @@ export const STRINGS: Record<Locale, Chrome> = {
     },
     series: {
       heading: "Series",
-      subtitle: "Temas trabajados en orden, en vez de un artículo a la vez",
-      arcHeading: "El arco",
-      sectionState: { complete: "Completa", inProgress: "En curso", planned: "Planeada" },
-      landingState: { complete: "Completa", ongoing: "En curso" },
-      startingPoint: "Empiezas con",
-      destination: "Terminas con",
-      outOfScope: "Fuera de alcance",
-      audience: "Para quién es",
-      completeSummary: "Esta serie está completa: alcanza el destino descrito arriba.",
-      ongoingSummary:
-        "Esta serie está en curso. Termina cuando alcanza el destino descrito arriba, sin importar cuántas partes tome.",
-      startHere: (seriesTitle) => `${seriesTitle} — empieza aquí`,
-      endOfSeries: "Ese es el final de la serie.",
-      endOfSection: (sectionTitle) => `Ese es el final de ${sectionTitle}.`,
-      nextUp: (partTitle) => `Sigue · ${partTitle}`,
-      seeFullArc: "Ver el arco completo →",
-      whereNextLabel: "Adónde ir después",
-      sectionIndexLabel: (sectionTitle) => `${sectionTitle} — las partes publicadas hasta ahora`,
-      youAreHere: "— estás aquí",
     },
     tags: {
       heading: "Etiquetas",
@@ -472,11 +398,6 @@ export const STRINGS: Record<Locale, Chrome> = {
     contentItem: {
       wrote: "Escribí",
       read: "Leí",
-    },
-    seriesItem: {
-      kindLabel: "Series",
-      noPartsYet: "sin partes todavía",
-      parts: (count) => `${count} ${plural(count, "parte", "partes")}`,
     },
     postArticle: {
       viewGithubRepository: "Ver repositorio de GitHub",

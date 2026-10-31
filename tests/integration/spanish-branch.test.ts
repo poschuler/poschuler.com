@@ -11,7 +11,6 @@ import { loader as homeLoader } from "~/routes/home/_home";
 import { loader as projectNoteLoader } from "~/routes/project-note/_$project-note";
 import { loader as projectLoader } from "~/routes/project-slug/_$project-slug";
 import { loader as projectsLoader, meta as projectsMeta } from "~/routes/projects/_projects";
-import { loader as seriesLoader, meta as seriesMeta } from "~/routes/series/_series";
 import { loader as tagsLoader, meta as tagsMeta } from "~/routes/tags/_tags";
 import { loader as timelineLoader } from "~/routes/timeline/_timeline";
 
@@ -47,7 +46,6 @@ const get = (path: string) => new Request(`https://poschuler.com${path}`);
 const SPANISH = {
   documents: `select slug as "key" from content where lang = 'es'`,
   projects: `select slug as "key" from project where lang = 'es'`,
-  series: `select slug as "key" from series where lang = 'es'`,
   tags: `select distinct content_tag.tag as "key" from content_tag where lang = 'es'`,
 } as const;
 
@@ -144,14 +142,13 @@ describe("a document with no Spanish Translation", () => {
  */
 describe("a Spanish index, with or without anything behind it", () => {
   it("answers 200 with a list on every Spanish index, empty or not", async () => {
-    const [{ entries }, { projects }, { series }, { tags }] = await Promise.all([
+    const [{ entries }, { projects }, { tags }] = await Promise.all([
       blogLoader(routeArgs<ArgsOf<typeof blogLoader>>(platform, get("/es/blog"))),
       projectsLoader(routeArgs<ArgsOf<typeof projectsLoader>>(platform, get("/es/projects"))),
-      seriesLoader(routeArgs<ArgsOf<typeof seriesLoader>>(platform, get("/es/series"))),
       tagsLoader(routeArgs<ArgsOf<typeof tagsLoader>>(platform, get("/es/tags"))),
     ]);
 
-    for (const list of [entries, projects, series, tags]) {
+    for (const list of [entries, projects, tags]) {
       expect(Array.isArray(list)).toBe(true);
     }
   });
@@ -164,33 +161,26 @@ describe("a Spanish index, with or without anything behind it", () => {
    * is the same guarantee, and it survives everything written from here on.
    */
   it("lists only Spanish rows — no English document reaches a Spanish index", async () => {
-    const [documents, projectSlugs, seriesSlugs, tagKeys] = await Promise.all([
+    const [documents, projectSlugs, tagKeys] = await Promise.all([
       spanishKeys(SPANISH.documents),
       spanishKeys(SPANISH.projects),
-      spanishKeys(SPANISH.series),
       spanishKeys(SPANISH.tags),
     ]);
 
-    const [{ entries }, { projects }, { series }, { tags }] = await Promise.all([
+    const [{ entries }, { projects }, { tags }] = await Promise.all([
       blogLoader(routeArgs<ArgsOf<typeof blogLoader>>(platform, get("/es/blog"))),
       projectsLoader(routeArgs<ArgsOf<typeof projectsLoader>>(platform, get("/es/projects"))),
-      seriesLoader(routeArgs<ArgsOf<typeof seriesLoader>>(platform, get("/es/series"))),
       tagsLoader(routeArgs<ArgsOf<typeof tagsLoader>>(platform, get("/es/tags"))),
     ]);
 
     for (const entry of entries) {
       if (entry.kind === "post") expect(documents).toContain(entry.post.slug);
-      if (entry.kind === "series") expect(seriesSlugs).toContain(entry.series.slug);
       if (entry.kind === "project") expect(projectSlugs).toContain(entry.project.slug);
     }
 
     for (const project of projects) {
       expect(project.lang).toBe("es");
       expect(projectSlugs).toContain(project.slug);
-    }
-
-    for (const one of series) {
-      expect(seriesSlugs).toContain(one.slug);
     }
 
     for (const one of tags) {
@@ -206,10 +196,9 @@ describe("a Spanish index, with or without anything behind it", () => {
    * about what has been written and changes without any code changing.
    */
   it("declares noindex, follow on exactly the indexes that came back empty", async () => {
-    const [blogData, projectsData, seriesData, tagsData] = await Promise.all([
+    const [blogData, projectsData, tagsData] = await Promise.all([
       blogLoader(routeArgs<ArgsOf<typeof blogLoader>>(platform, get("/es/blog"))),
       projectsLoader(routeArgs<ArgsOf<typeof projectsLoader>>(platform, get("/es/projects"))),
-      seriesLoader(routeArgs<ArgsOf<typeof seriesLoader>>(platform, get("/es/series"))),
       tagsLoader(routeArgs<ArgsOf<typeof tagsLoader>>(platform, get("/es/tags"))),
     ]);
 
@@ -221,11 +210,6 @@ describe("a Spanish index, with or without anything behind it", () => {
         at: "/es/projects",
         list: projectsData.projects,
         head: projectsMeta({ loaderData: projectsData } as never),
-      },
-      {
-        at: "/es/series",
-        list: seriesData.series,
-        head: seriesMeta({ loaderData: seriesData } as never),
       },
       { at: "/es/tags", list: tagsData.tags, head: tagsMeta({ loaderData: tagsData } as never) },
     ];

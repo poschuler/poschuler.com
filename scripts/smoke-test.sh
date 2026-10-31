@@ -179,6 +179,8 @@ fi
 # Each answers the site's ordinary 404, not a redirect: a redirect to a retired
 # address is worse than none, so the table holds no entry for any of them.
 RETIRED=(
+	/series
+	/es/series
 	/series/pragmatic-nodejs-api
 	/series/pragmatic-nodejs-api/project-setup
 	/series/pragmatic-nodejs-api/schema-validation-and-error-handling

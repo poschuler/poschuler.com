@@ -33,18 +33,7 @@ const contentRoutes = (suffix: string) => [
       id: `project-note${suffix}`,
     }),
 
-    // The whole `/series` namespace at once. An index of one entry earns
-    // its place by closing the namespace: the alternative was a temporary
-    // redirect with an expiry date nobody would remember.
-    route("/series", "routes/series/_series.tsx", { id: `series${suffix}` }),
-    route("/series/:seriesSlug", "routes/series-slug/_$series-slug.tsx", {
-      id: `series-slug${suffix}`,
-    }),
-    route("/series/:seriesSlug/:partSlug", "routes/series-part/_$series-part.tsx", {
-      id: `series-part${suffix}`,
-    }),
-
-    // The whole `/tags` namespace, closed the way `/series` is: the index
+    // The whole `/tags` namespace, closed the way `/projects` is: the index
     // lists every Tag some Post carries, and a Tag no Post carries is a 404
     // one level down rather than an entry here that leads to one.
     route("/tags", "routes/tags/_tags.tsx", { id: `tags${suffix}` }),

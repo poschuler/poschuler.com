@@ -6,9 +6,6 @@ import { loader as bookmarksLoader } from "~/routes/bookmarks/_bookmarks";
 import { loader as homeLoader } from "~/routes/home/_home";
 import { loader as projectLoader } from "~/routes/project-slug/_$project-slug";
 import { loader as projectsLoader } from "~/routes/projects/_projects";
-import { loader as seriesPartLoader } from "~/routes/series-part/_$series-part";
-import { loader as seriesLandingLoader } from "~/routes/series-slug/_$series-slug";
-import { loader as seriesLoader } from "~/routes/series/_series";
 import { loader as tagLoader } from "~/routes/tag/_$tag";
 import { loader as tagsLoader } from "~/routes/tags/_tags";
 import { loader as timelineLoader } from "~/routes/timeline/_timeline";
@@ -106,7 +103,7 @@ describe("/ — the landing page", () => {
 });
 
 /**
- * `/blog` changed unit: loose Posts plus each Container — Series or Project —
+ * `/blog` changed unit: loose Posts plus each Project with Field Notes
  * as a single entry. A Part or a Field Note appearing here individually would
  * mean publishing part nine, or a new note, lengthens the page, which is
  * exactly what the change exists to prevent. The fixtures carry no published
@@ -115,6 +112,19 @@ describe("/ — the landing page", () => {
  */
 describe("/blog", () => {
   const load = () => blogLoader(routeArgs<ArgsOf<typeof blogLoader>>(platform, get("/blog")));
+
+  it("lists Posts and Projects with Field Notes, and nothing else", async () => {
+    const { entries } = await load();
+
+    expect(entries.length).toBeGreaterThan(0);
+    expect([...new Set(entries.map((entry) => entry.kind))].sort()).toEqual(
+      expect.arrayContaining(["post"]),
+    );
+
+    for (const entry of entries) {
+      expect(["post", "project"]).toContain(entry.kind);
+    }
+  });
 
   it("lists loose Posts, and no Part on its own", async () => {
     const { entries } = await load();
@@ -134,7 +144,6 @@ describe("/blog", () => {
     const { entries } = await load();
     const dates = entries.map((entry) => {
       if (entry.kind === "post") return entry.post.publishedAt;
-      if (entry.kind === "series") return entry.series.publishedAt;
       return entry.project.publishedAt;
     });
 
@@ -294,49 +303,6 @@ describe("/projects/:project", () => {
     await projectLoader(args(projectSlug, spy));
 
     expect(keys).toEqual([`project:${projectSlug}:en`]);
-  });
-});
-
-/**
- * A Series is not a Content Item: no Published At, never in the Timeline,
- * revised in place. None is published any more, so these assert what its
- * routes answer with nothing behind them.
- */
-describe("/series — the index", () => {
-  /** Nothing is published, so the index is empty rather than missing. */
-  it("returns an empty list once no Series is published", async () => {
-    const { series } = await seriesLoader(
-      routeArgs<ArgsOf<typeof seriesLoader>>(platform, get("/series")),
-    );
-
-    expect(series).toEqual([]);
-  });
-});
-
-describe("/series/:seriesSlug — the landing", () => {
-  const args = (slug: string, on: Pick<TestPlatform, "env" | "ctx"> = platform) =>
-    routeArgs<ArgsOf<typeof seriesLandingLoader>>(on, get(`/series/${slug}`), {
-      seriesSlug: slug,
-    });
-
-  it("404s on a Slug with nothing behind it", async () => {
-    await expect(seriesLandingLoader(args("no-such-series"))).rejects.toMatchObject({
-      status: 404,
-    });
-  });
-});
-
-describe("/series/:seriesSlug/:partSlug — a Part", () => {
-  const args = (series: string, part: string, on: Pick<TestPlatform, "env" | "ctx"> = platform) =>
-    routeArgs<ArgsOf<typeof seriesPartLoader>>(on, get(`/series/${series}/${part}`), {
-      seriesSlug: series,
-      partSlug: part,
-    });
-
-  it("404s on a Series that does not exist", async () => {
-    await expect(seriesPartLoader(args("no-such-series", "no-such-part"))).rejects.toMatchObject({
-      status: 404,
-    });
   });
 });
 
