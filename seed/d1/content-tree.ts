@@ -7,16 +7,14 @@
  * a Post filed under `bookmarks/` was seeded with no body rendered, and listed,
  * linked and indexed with an empty page while nothing failed.
  *
- * It generalises to trees that hold a Container. One tree can now hold
- * two types — `series/` holds the manifest *and* the Posts that are its Parts —
- * and what tells them apart is already in the path:
+ * It generalises to a tree that holds a Container. One tree can hold two
+ * types — `projects/` holds the Project *and* the Posts that are its Field
+ * Notes — and what tells them apart is already in the path:
  *
  *     bookmarks/how-i-would-do-auth.md                   depth 1
  *     blog/<slug>/<slug>.en.md                           depth 2
  *     projects/<project>/<project>.en.md                 depth 2
- *     series/<series>/<series>.en.md                     depth 2
- *     series/<series>/<part>/<part>.en.md                depth 3
- *     projects/<project>/<note>/<note>.en.md              depth 3
+ *     projects/<project>/<note>/<note>.en.md             depth 3
  *
  * The file named after its folder *is* that folder; a subfolder is content
  * living inside it. So depth 1 and 2 are the tree's own item, and depth 3 is
@@ -28,14 +26,14 @@
  */
 
 /** What a Markdown file can declare itself to be. */
-export type ContentType = "post" | "link" | "project" | "series";
+export type ContentType = "post" | "link" | "project";
 
 /**
  * Whether a tree's files carry a Locale suffix — `<slug>.<locale>.md` — or
  * must not.
  *
- * `"required"` is every tree with a Translation: a Post, a Project landing, a
- * Series manifest and its Parts all live at `(Slug, Locale)`. `"forbidden"` is
+ * `"required"` is every tree with a Translation: a Post and a Project
+ * landing both live at `(Slug, Locale)`. `"forbidden"` is
  * `bookmarks/` alone — a Bookmark is a pointer to somebody else's document, not
  * a document of its own, so it has nothing to translate and no Locale to carry.
  */
@@ -50,8 +48,7 @@ export type LocaleRule = "required" | "forbidden";
  * the build rather than acquiring an invented meaning. `projects/` used to say
  * the same, before `project_slug` existed on `content` to make a nested Post
  * linkable. That column arrived with Field Notes, and this line is the branch
- * it was reserved for: depth 3 under a Project is a Field Note, the same depth
- * rule `series/` already generalised.
+ * it was reserved for: depth 3 under a Project is a Field Note.
  *
  * `locale` used to live nowhere: the vocabulary was two characters inside a
  * regular expression in `seed-sql.ts`, and a suffix it did not recognise was
@@ -65,7 +62,6 @@ export const CONTENT_TREES = {
   blog: { item: "post", nested: null, locale: "required" },
   bookmarks: { item: "link", nested: null, locale: "forbidden" },
   projects: { item: "project", nested: "post", locale: "required" },
-  series: { item: "series", nested: "post", locale: "required" },
 } as const satisfies Record<
   string,
   { item: ContentType; nested: ContentType | null; locale: LocaleRule }

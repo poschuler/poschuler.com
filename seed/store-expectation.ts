@@ -47,7 +47,6 @@ export interface DocumentInput {
    */
   attributes: {
     tags?: unknown;
-    sections?: Array<{ slug: string; parts?: string[] }>;
     /** A Project manifest's Field Notes, in the order its landing renders them. */
     notes?: unknown;
     draft?: unknown;
@@ -56,13 +55,10 @@ export interface DocumentInput {
 
 /**
  * A Content Item's Container, as its placement and the manifest that lists it
- * say it should be — never both `seriesSlug` and `projectSlug` at once, the
- * same way `content.series_slug` and `content.project_slug` never both hold a
- * value (`schema.sql`).
+ * say it should be — the same two columns `content.project_slug` and
+ * `content.container_order` hold (`schema.sql`).
  */
 export interface ContainerColumns {
-  seriesSlug: string | null;
-  seriesSection: string | null;
   projectSlug: string | null;
   containerOrder: number | null;
 }
@@ -72,18 +68,12 @@ export interface Expectation {
   content: Set<string>;
   contentTags: Set<string>;
   project: Set<string>;
-  series: Set<string>;
-  sections: Set<string>;
   /** A Content Item's identity → its expected Container columns. */
   containers: Map<string, ContainerColumns>;
-  /** A Series Section's identity → its expected position in the manifest's arc. */
-  sectionOrder: Map<string, number>;
 }
 
 /** A Content Item with no Container — a loose Post, a Bookmark. */
 const NO_CONTAINER: ContainerColumns = {
-  seriesSlug: null,
-  seriesSection: null,
   projectSlug: null,
   containerOrder: null,
 };
@@ -120,10 +110,10 @@ function addTags(tags: Set<string>, slug: string, lang: string, values: unknown)
 }
 
 /**
- * A Post, a Project landing or a Series manifest whose filename carries no
- * recognised Locale under a tree that requires one — the same fatal shape as
- * a placement that will not classify, since this is what the file *is*, read
- * off its path, not what it *says* (#58). One assertion, shared by the three
+ * A Post or a Project landing whose filename carries no recognised
+ * Locale under a tree that requires one — the same fatal shape as a placement
+ * that will not classify, since this is what the file *is*, read
+ * off its path, not what it *says* (#58). One assertion, shared by the two
  * branches that require a Locale, rather than three inline checks free to
  * drift apart.
  *
@@ -146,24 +136,13 @@ function assertRecognisedLocale(
   }
 }
 
-/** Where a Part sits, as its Series manifest lists it: its Section and its position in that list. */
-interface PartLocation {
-  section: string;
-  order: number;
-}
-
 /**
- * Every Part's and every Field Note's position, read raw off the manifests in
- * `documents` — an indexed iteration over the same array `series-sql.ts` and
- * `project-sql.ts` read, and nothing else (ADR 0012). Keyed by Container
- * folder, Locale and the Part's or Note's own Slug, because a manifest only
- * governs the Locale it is itself written in.
+ * Every Field Note's position, read raw off the manifests in `documents` — an
+ * indexed iteration over the same array `project-sql.ts` reads, and nothing
+ * else (ADR 0012). Keyed by Container folder, Locale and the Note's own Slug,
+ * because a manifest only governs the Locale it is itself written in.
  */
-function readManifestPlacements(documents: DocumentInput[]): {
-  parts: Map<string, PartLocation>;
-  notes: Map<string, number>;
-} {
-  const parts = new Map<string, PartLocation>();
+function readManifestPlacements(documents: DocumentInput[]): Map<string, number> {
   const notes = new Map<string, number>();
 
   for (const { relativePath, attributes } of documents) {
@@ -181,13 +160,7 @@ function readManifestPlacements(documents: DocumentInput[]): {
 
     const folder = pathSegments(relativePath)[1];
 
-    if (placed.type === "series") {
-      for (const section of attributes.sections ?? []) {
-        (section.parts ?? []).forEach((partSlug, order) => {
-          parts.set(`${folder}:${parsed.lang}:${partSlug}`, { section: section.slug, order });
-        });
-      }
-    } else if (placed.type === "project") {
+    if (placed.type === "project") {
       const noteSlugs = Array.isArray(attributes.notes) ? (attributes.notes as string[]) : [];
 
       noteSlugs.forEach((noteSlug, order) => {
@@ -196,7 +169,7 @@ function readManifestPlacements(documents: DocumentInput[]): {
     }
   }
 
-  return { parts, notes };
+  return notes;
 }
 
 /**
@@ -208,13 +181,10 @@ export function expectationFrom(documents: DocumentInput[]): Expectation {
     content: new Set<string>(),
     contentTags: new Set<string>(),
     project: new Set<string>(),
-    series: new Set<string>(),
-    sections: new Set<string>(),
     containers: new Map<string, ContainerColumns>(),
-    sectionOrder: new Map<string, number>(),
   };
 
-  const manifestPlacements = readManifestPlacements(documents);
+  const notePlacements = readManifestPlacements(documents);
 
   for (const { relativePath, attributes } of documents) {
     // `draft: true` produces no row, of any type — mirrored leniently: this
@@ -255,17 +225,8 @@ export function expectationFrom(documents: DocumentInput[]): Expectation {
 
       if (placed.container === null) {
         expectation.containers.set(`${slug}:${lang}`, NO_CONTAINER);
-      } else if (placed.tree === "series") {
-        const location = manifestPlacements.parts.get(`${placed.container}:${lang}:${slug}`);
-
-        expectation.containers.set(`${slug}:${lang}`, {
-          ...NO_CONTAINER,
-          seriesSlug: placed.container,
-          seriesSection: location?.section ?? null,
-          containerOrder: location?.order ?? null,
-        });
       } else if (placed.tree === "projects") {
-        const order = manifestPlacements.notes.get(`${placed.container}:${lang}:${slug}`);
+        const order = notePlacements.get(`${placed.container}:${lang}:${slug}`);
 
         expectation.containers.set(`${slug}:${lang}`, {
           ...NO_CONTAINER,
@@ -284,22 +245,6 @@ export function expectationFrom(documents: DocumentInput[]): Expectation {
       assertRecognisedLocale(relativePath, placed.tree, lang);
 
       expectation.project.add(`${slug}:${lang}`);
-    } else if (placed.type === "series") {
-      assertRecognisedLocale(relativePath, placed.tree, lang);
-
-      expectation.series.add(`${slug}:${lang}`);
-
-      // The sections, and each one's position in the arc, are read straight
-      // off the manifest's own array — an indexed iteration and nothing else
-      // — not off the generated SQL: a generator that dropped one, or wrote
-      // it at the wrong position, would otherwise agree with itself
-      // (ADR 0012).
-      (attributes.sections ?? []).forEach((section, index) => {
-        const identity = `${slug}:${lang}:${section.slug}`;
-
-        expectation.sections.add(identity);
-        expectation.sectionOrder.set(identity, index);
-      });
     }
   }
 
@@ -313,7 +258,7 @@ export function expectationFrom(documents: DocumentInput[]): Expectation {
  * sets finds nothing wrong in either direction, so a broken derivation — a
  * path constant that moves, a directory read that fails quietly — would
  * otherwise certify an empty store as correct. Scoped to Content Items alone:
- * a Project, a Series and a Series Section may legitimately be absent, since
+ * a Project may legitimately be absent, since
  * the schema ships before the first one is written (#58).
  */
 export function isEmptyContentExpectation(expectation: Expectation): boolean {
@@ -323,7 +268,7 @@ export function isEmptyContentExpectation(expectation: Expectation): boolean {
 /**
  * Both directions, per table: a row the Markdown does not back is as wrong as
  * one it backs and the store is missing. The second is the one a prune exists
- * to prevent — a Section dropped from a manifest keeps rendering on the
+ * to prevent — a Field Note dropped from a manifest keeps rendering on the
  * landing until something notices it is still there.
  */
 export function comparePresence(
@@ -339,68 +284,16 @@ export function comparePresence(
   };
 }
 
-/**
- * One Series Section whose stored position disagrees with the index its
- * manifest lists it at — named by the Section's identity and both positions,
- * the same reasoning as `ContainerFinding`: a wrong position is one number
- * against another, not a missing row plus an unexpected one.
- */
-export interface SectionOrderFinding {
-  identity: string;
-  stored: number;
-  expected: number;
-}
-
-/**
- * The Container comparison's reasoning applied one level up: a Series
- * Section's own position in the arc is a value on a row that already
- * exists, not a presence set. An identity missing from `present` is skipped
- * here too — the presence comparison for Sections already names it missing.
- *
- * Kept separate from `compareContainers` on purpose, not by oversight: the
- * two compare different shapes — a record of four Container columns against
- * a single position — and their findings carry different fields, a
- * `ContainerFinding` naming the column that disagreed where a
- * `SectionOrderFinding` has no column to name. A comparator generic over
- * both would need a column list and a finding constructor, which costs more
- * to audit than the dozen lines it saves, in a script whose value is being
- * obviously correct by inspection.
- */
-export function compareSectionOrder(
-  expected: Map<string, number>,
-  present: Map<string, number>,
-): SectionOrderFinding[] {
-  const findings: SectionOrderFinding[] = [];
-
-  for (const [identity, expectedOrder] of expected) {
-    const storedOrder = present.get(identity);
-
-    if (storedOrder === undefined || storedOrder === expectedOrder) {
-      continue;
-    }
-
-    findings.push({ identity, stored: storedOrder, expected: expectedOrder });
-  }
-
-  return findings;
-}
-
-const CONTAINER_COLUMNS: (keyof ContainerColumns)[] = [
-  "seriesSlug",
-  "seriesSection",
-  "projectSlug",
-  "containerOrder",
-];
+const CONTAINER_COLUMNS: (keyof ContainerColumns)[] = ["projectSlug", "containerOrder"];
 
 /**
  * Column by column, for every identity the Markdown expects a Container
- * shape for: a Part's Series and Section, a Field Note's Project, either
- * one's position, or a loose Post's absence of all four (ADR 0012's "value on
- * a row that already exists").
+ * shape for: a Field Note's Project and its position, or a loose
+ * Post's absence of both (ADR 0012's "value on a row that already exists").
  *
  * An identity missing from `present` is skipped, not reported here — the
  * presence comparison already names it missing, and reporting it again as
- * four disagreeing columns would say the same thing twice, in two shapes.
+ * disagreeing columns would say the same thing twice, in two shapes.
  */
 export function compareContainers(
   expected: Map<string, ContainerColumns>,

@@ -11,8 +11,7 @@
  * pages holding one Post each where there should have been one holding two. So
  * the set is *closed*: it is declared in `app/content/tags.json`, beside the
  * content and not in the pipeline, because which subjects this site writes about
- * is an editorial decision — the same kind the Series manifest already makes
- * about its own arc.
+ * is an editorial decision.
  *
  * Pure, like every other rule under `seed/d1`: the file is read from disk by
  * `generate-seed-sql.ts` and arrives here as a value.

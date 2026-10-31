@@ -201,7 +201,7 @@ RETIRED=(
 # on any Spanish document existing. An index exists in every Locale whether or
 # not its list has anything in it, the home page is one, and `/es/cv` renders
 # from `resume.json`, which carries both Locales. The routes that *do* need a
-# Translation — a Post, a Series, a Project — answer 404 in Spanish today and
+# Translation — a Post, a Project — answer 404 in Spanish today and
 # correctly so, which is why none of them is here.
 #
 # It is the half of the route table the English probes cannot reach: the Locale

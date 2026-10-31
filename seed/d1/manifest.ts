@@ -1,25 +1,21 @@
 /**
- * The reconciliation every manifest Container runs against its own tree, and
- * the Container-contradiction check every Draft Container runs against its
- * children.
+ * The reconciliation a Project's manifest runs against its own tree, and the
+ * Container-contradiction check a Draft Project runs against its children.
  *
- * A Series' manifest and a Project's are different shapes — an arc of sections
- * against a flat list — but what they check once a slug is in hand is the same
- * invariant, stated by `series-sql.ts` first: a listed item with no file fails,
- * a file no manifest lists fails, and the same item listed twice fails. A
- * Project's notes need the identical check, so it moved here rather than being
- * copied — a check with two implementations has two chances to drift the day
- * one of them is fixed and the other is not.
+ * A Project's manifest is a flat list of Field Notes, and what it checks once a
+ * slug is in hand is one invariant: a listed note with no file fails, a file no
+ * manifest lists fails, and the same note listed twice fails.
  */
 
 /** One slug a manifest lists, and where a duplicate listing would be blamed. */
 export interface ManifestEntry {
   slug: string;
   /**
-   * A section's Slug, for a Series — so two sections both listing the same
-   * Part produce *"in both 'a' and 'b'"*. A Project has no sections, so every
-   * entry from one manifest carries the same `where` (the manifest's own
-   * path), which collapses the same branch into a plain *"listed twice"*.
+   * Where the entry was listed, so a slug listed in two places can be told
+   * apart from one listed twice in the same place — *"in both 'a' and 'b'"*
+   * against a plain *"listed twice"*. A Project's manifest is a flat list, so
+   * every entry from one carries the same `where` (the manifest's own path),
+   * and only the second message is reachable.
    */
   where: string;
 }
@@ -36,8 +32,8 @@ export interface ManifestFile {
  * Manifest and disk must reconcile: every listed item has a file, and every
  * file under the Container's folder is listed exactly once.
  *
- * `noun` names what is being reconciled in the messages this produces — `Part`
- * or `Field Note` — so a build failure reads like the domain rather than like
+ * `noun` names what is being reconciled in the messages this produces — `Field
+ * Note` — so a build failure reads like the domain rather than like
  * a generic "item".
  */
 export function reconcileManifest(

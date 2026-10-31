@@ -933,7 +933,7 @@
                     "technology": "Node"
                   },
                   {
-                    "description": "Hands it the Project and Series manifests, and the documents nested under them",
+                    "description": "Hands it the Project manifests, and the documents nested under them",
                     "destinationId": "29",
                     "id": "100",
                     "sourceId": "25",
@@ -964,7 +964,7 @@
                 "technology": "seed/d1/content-tree.ts"
               },
               {
-                "description": "Reads the Series arc and the Project's flat note list, which is the only place order is declared (ADR 0007).",
+                "description": "Reads the Project's flat note list, which is the only place order is declared (ADR 0007).",
                 "documentation": {},
                 "id": "27",
                 "name": "manifest reader",
@@ -996,7 +996,7 @@
                 "technology": "seed/d1/seed-sql.ts"
               },
               {
-                "description": "Emits the Project and Series rows and their sections, reconciling the manifest against the disk.",
+                "description": "Emits the Project rows, reconciling the manifest against the disk.",
                 "documentation": {},
                 "id": "29",
                 "name": "container SQL",
@@ -1022,7 +1022,7 @@
                   }
                 ],
                 "tags": "Element,Component",
-                "technology": "seed/d1/{project,series}-sql.ts"
+                "technology": "seed/d1/project-sql.ts"
               },
               {
                 "description": "Holds the closed set a Tag must belong to, and fails the build for one that is not declared (ADR 0008).",
