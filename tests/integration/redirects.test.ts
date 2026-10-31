@@ -45,7 +45,7 @@ async function destinationExists(db: D1Database, path: string): Promise<boolean>
 
     // A Post with a Container does not answer at `/blog/<slug>` — it redirects
     // — so a map aimed there would be a chain, which is the other rule.
-    return post !== null && post.seriesSlug === null;
+    return post !== null && post.projectSlug === null;
   }
 
   // A Tag page is not a row of its own: it exists for exactly as long as some

@@ -88,21 +88,16 @@ afterAll(async () => {
  */
 describe("a document with no Spanish Translation", () => {
   // Only the Project half of this rule still has a subject. Every English Post
-  // is translated, `pragmatic-nodejs-api` is the only Series and its manifest
-  // and all three Parts are translated too, and with the Posts went the last
-  // Tag no Spanish Post carries. Each `find` that picked one of those subjects
+  // is translated, and with the Posts went the last Tag no Spanish Post
+  // carries. Each `find` that picked one of those subjects
   // threw in `beforeAll` and took the whole file down with it — which is what
   // the `!` above is written to do.
   //
-  // So the standalone Post, Series landing, Part and Tag cases are all gone,
-  // and nothing covers their 404 now. The argument that retired the Post case
-  // first — a Part is a Post, and the Part case runs the rule through the same
-  // loader chain — died with the Part case itself. What still runs the rule is
-  // Project and Field Note.
+  // So the standalone Post and Tag cases are gone, and nothing covers their
+  // 404 now. What still runs the rule is Project and Field Note.
   //
   // These are not broken cases: their subjects stopped existing. Bring them
-  // back the day a second English-only Post or Series is written, which the
-  // second volume will be for months before anyone translates it.
+  // back the day a second English-only Post is written.
 
   it("404s a Project at its Spanish address", async () => {
     await expect(

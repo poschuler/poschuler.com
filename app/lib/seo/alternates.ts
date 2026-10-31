@@ -6,7 +6,7 @@
  * the one place it is not.
  */
 import type { Locale } from "../../context.ts";
-import { postHref, projectHref, seriesHref, withLocale } from "../hrefs.ts";
+import { postHref, projectHref, withLocale } from "../hrefs.ts";
 import { SITE } from "./person.ts";
 
 /**
@@ -24,8 +24,7 @@ import { SITE } from "./person.ts";
 
 /** What a document is, for the one purpose this module has: building its address. */
 export type DocumentIdentity =
-  | { kind: "post"; slug: string; seriesSlug: string | null; projectSlug?: string | null }
-  | { kind: "series"; slug: string }
+  | { kind: "post"; slug: string; projectSlug?: string | null }
   | { kind: "project"; slug: string }
   /**
    * A page with no document behind it — an index, a listing, the home page.
@@ -120,8 +119,6 @@ function relativePath(identity: DocumentIdentity, locale: Locale): string {
   switch (identity.kind) {
     case "post":
       return postHref(identity, locale);
-    case "series":
-      return seriesHref(identity.slug, locale);
     case "project":
       return projectHref(identity.slug, locale);
     case "index":
@@ -132,11 +129,11 @@ function relativePath(identity: DocumentIdentity, locale: Locale): string {
 /**
  * The section a document belongs to, for the one case `switcherDestination`
  * below needs it: a document with no Translation, which sends a reader to that
- * section's index rather than to a 404. Typed over the three kinds that can
+ * section's index rather than to a 404. Typed over the kinds that can
  * lack a Translation — an `index` never can, so `switcherDestination` never
  * calls this for one.
  */
-export type SwitcherSection = "blog" | "series" | "projects";
+export type SwitcherSection = "blog" | "projects";
 
 function fallbackSection(
   identity: Exclude<DocumentIdentity, { kind: "index" }>,
@@ -144,8 +141,6 @@ function fallbackSection(
   switch (identity.kind) {
     case "post":
       return { path: "/blog", section: "blog" };
-    case "series":
-      return { path: "/series", section: "series" };
     case "project":
       return { path: "/projects", section: "projects" };
   }
@@ -202,8 +197,8 @@ export function switcherDestination(
  *
  * An empty array when the list is not empty, so `...emptyIndexRobots(...)`
  * composes into every index's `meta` array without an `if` at the call site —
- * one line, shared by `/blog`, `/projects`, `/series` and `/tags` rather than
- * the same conditional written out four times.
+ * one line, shared by `/blog`, `/projects` and `/tags` rather than
+ * the same conditional written out three times.
  */
 export function emptyIndexRobots(isEmpty: boolean): { name: "robots"; content: string }[] {
   return isEmpty ? [{ name: "robots", content: "noindex, follow" }] : [];

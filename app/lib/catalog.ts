@@ -96,7 +96,7 @@ type Chrome = {
     /** This Locale's own name, in its own language — "English" / "Español". */
     language: string;
     /** A section's name in this Locale, keyed the way `SwitcherSection` is (`app/lib/seo/alternates.ts`). */
-    section: Record<"blog" | "series" | "projects", string>;
+    section: Record<"blog" | "projects", string>;
     /**
      * What the switcher says when the current document has no Translation and
      * falls back to a section index — `"Blog in English"` / `"Blog en
@@ -157,9 +157,6 @@ type Chrome = {
     fieldNotesHeading: string;
     /** The kind label on `/blog`'s listing row — singular, unlike `heading`. */
     kindLabel: string;
-  };
-  series: {
-    heading: string;
   };
   tags: {
     heading: string;
@@ -234,7 +231,7 @@ export const STRINGS: Record<Locale, Chrome> = {
     languageSwitcher: {
       code: "en",
       language: "English",
-      section: { blog: "Blog", series: "Series", projects: "Projects" },
+      section: { blog: "Blog", projects: "Projects" },
       inThisLanguage: (section) => `${section} in English`,
     },
     notFound: {
@@ -273,9 +270,6 @@ export const STRINGS: Record<Locale, Chrome> = {
       repository: "Repository",
       fieldNotesHeading: "Field notes",
       kindLabel: "Project",
-    },
-    series: {
-      heading: "Series",
     },
     tags: {
       heading: "Tags",
@@ -335,7 +329,7 @@ export const STRINGS: Record<Locale, Chrome> = {
     languageSwitcher: {
       code: "es",
       language: "Español",
-      section: { blog: "Blog", series: "Series", projects: "Proyectos" },
+      section: { blog: "Blog", projects: "Proyectos" },
       inThisLanguage: (section) => `${section} en español`,
     },
     notFound: {
@@ -374,9 +368,6 @@ export const STRINGS: Record<Locale, Chrome> = {
       repository: "Repositorio",
       fieldNotesHeading: "Notas de campo",
       kindLabel: "Proyecto",
-    },
-    series: {
-      heading: "Series",
     },
     tags: {
       heading: "Etiquetas",

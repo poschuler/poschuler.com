@@ -18,7 +18,6 @@ describe("switcherDestinationForRoute — the index pages", () => {
     ["timeline", "/timeline"],
     ["blog", "/blog"],
     ["projects", "/projects"],
-    ["series", "/series"],
     ["tags", "/tags"],
   ])("resolves %s to its Spanish equivalent", (routeId, path) => {
     expect(switcherDestinationForRoute(routeId, undefined, "en")).toEqual({
@@ -60,7 +59,7 @@ describe("switcherDestinationForRoute — the 404", () => {
 describe("switcherDestinationForRoute — the Resume", () => {
   it("goes to /es/cv even with no loader data", () => {
     // `/cv` is mounted in both branches today (ADR 0010) and always
-    // resolves — unlike a Post, Series or Project, it is not a document that
+    // resolves — unlike a Post or Project, it is not a document that
     // can 404 for lacking a Translation, so the switcher does not need
     // `existingLocales` to say so before offering it.
     expect(switcherDestinationForRoute("resume", undefined, "en")).toEqual({
@@ -117,22 +116,6 @@ describe("switcherDestinationForRoute — a Field Note", () => {
   });
 });
 
-describe("switcherDestinationForRoute — a Part", () => {
-  it("carries the destination through its Series, via seriesSlug on the loader data", () => {
-    const data = {
-      slug: "project-setup",
-      seriesSlug: "pragmatic-nodejs-api",
-      existingLocales: ["en", "es"],
-    };
-
-    expect(switcherDestinationForRoute("series-part", data, "en")).toEqual({
-      href: "/es/series/pragmatic-nodejs-api/project-setup",
-      locale: "es",
-      section: null,
-    });
-  });
-});
-
 describe("switcherDestinationForRoute — a Project landing", () => {
   it("reads slug and existingLocales off the loader data", () => {
     const data = { slug: "chekalo", existingLocales: ["en"] };
@@ -141,18 +124,6 @@ describe("switcherDestinationForRoute — a Project landing", () => {
       href: "/es/projects",
       locale: "es",
       section: "projects",
-    });
-  });
-});
-
-describe("switcherDestinationForRoute — a Series landing", () => {
-  it("reads slug and existingLocales off the loader data", () => {
-    const data = { slug: "pragmatic-nodejs-api", existingLocales: ["en", "es"] };
-
-    expect(switcherDestinationForRoute("series-slug", data, "en")).toEqual({
-      href: "/es/series/pragmatic-nodejs-api",
-      locale: "es",
-      section: null,
     });
   });
 });

@@ -14,12 +14,13 @@ import type { ContentRowType } from "~/models/content.server";
  * same two defects. `ContentRowType` is already the union of exactly these two
  * shapes, so one component narrowing on `type` covers every list on the site.
  *
- * The block itself now lives in `ListingRow`, shared with `SeriesItem`. What
+ * The block itself lives in `ListingRow`, shared with `ProjectItem`. What
  * stays here is what a Content Item decides: where it links and what its
  * metadata line says.
  *
- * **A Post does not always live under `/blog`.** A Part is served under its
- * Series, and `postHref` is the only place that reads the column which says so.
+ * **A Post does not always live under `/blog`.** A Field Note is served under
+ * its Project, and `postHref` is the only place that reads the column which
+ * says so.
  */
 export function ContentItem({
   item,

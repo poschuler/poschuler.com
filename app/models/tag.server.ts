@@ -13,9 +13,8 @@ import { CONTENT_COLUMNS, type PostRowType } from "~/models/content.server";
  * the answer; it never reads the vocabulary, which is a declaration of what may
  * be written rather than a record of what exists.
  *
- * Its own module rather than a fourth function in `content.server.ts`, the
- * shape `series.server.ts` established: the table is new, the join is the whole
- * subject, and a caller reading this file sees every question a Tag can answer
+ * Its own module rather than a function in `content.server.ts`: the table is
+ * new, the join is the whole subject, and a caller reading this file sees every question a Tag can answer
  * in one place.
  *
  * Every fragment below is fixed text supplied by this module; values go through
@@ -95,7 +94,7 @@ export function findTagsWithPostCounts(db: D1Database, locale: Locale) {
  * three references instead.
  *
  * An empty array for a Tag no Post carries. That is a 404 the route decides on,
- * the way `findSeriesBySlug` returns `null` rather than throwing.
+ * rather than throwing.
  *
  * The Slug breaks a tie on the date. Nothing on this site shares one today, and
  * the order two Posts published the same day come back in would otherwise be

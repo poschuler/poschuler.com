@@ -192,6 +192,7 @@ RETIRED=(
 	/blog/pragmatic-nodejs-api-setup-nodejs-express-typescript-project
 	/blog/pragmatic-nodejs-api-schema-validation-and-global-error-handling
 	/blog/pragmatic-nodejs-api-vertical-slices-and-domain-logic
+	/blog/project-setup
 	/projects/pragmatic-nodejs-api
 )
 

@@ -27,7 +27,7 @@ import {
  */
 
 let platform: TestPlatform;
-/** A Post that belongs to no Series — the only kind `/blog/:slug` still serves. */
+/** A Post that belongs to no Container — the only kind `/blog/:slug` still serves. */
 let postSlug: string;
 /** Some Project — the two-store shape is the same whichever one it is. */
 let projectSlug: string;
@@ -45,7 +45,7 @@ beforeAll(async () => {
     routeArgs<ArgsOf<typeof timelineLoader>>(platform, get("/timeline")),
   );
 
-  postSlug = contentItems.find((item) => item.type === "post" && item.seriesSlug === null)!.slug;
+  postSlug = contentItems.find((item) => item.type === "post" && item.projectSlug === null)!.slug;
 
   const { projects } = await projectsLoader(
     routeArgs<ArgsOf<typeof projectsLoader>>(platform, get("/projects")),
@@ -126,7 +126,7 @@ describe("/blog", () => {
     }
   });
 
-  it("lists loose Posts, and no Part on its own", async () => {
+  it("lists loose Posts, and no Field Note on its own", async () => {
     const { entries } = await load();
 
     expect(entries.length).toBeGreaterThan(0);
@@ -134,7 +134,6 @@ describe("/blog", () => {
     for (const entry of entries) {
       if (entry.kind === "post") {
         expect(entry.post.type).toBe("post");
-        expect(entry.post.seriesSlug).toBeNull();
         expect(entry.post.projectSlug).toBeNull();
       }
     }
@@ -181,6 +180,11 @@ describe("/blog/:blogSlug", () => {
   /** A missing key, an unpublished Post and a typo all behave the same way. */
   it("404s on a Slug with nothing behind it", async () => {
     await expect(blogSlugLoader(args("no-such-post"))).rejects.toMatchObject({ status: 404 });
+  });
+
+  /** The short Slug a retired Part answered to is a Slug with no Post, like any other. */
+  it("404s on the short Slug of a former Part", async () => {
+    await expect(blogSlugLoader(args("project-setup"))).rejects.toMatchObject({ status: 404 });
   });
 
   /**
@@ -275,6 +279,10 @@ describe("/projects/:project", () => {
 
   it("404s on a Slug with nothing behind it", async () => {
     await expect(projectLoader(args("no-such-project"))).rejects.toMatchObject({ status: 404 });
+  });
+
+  it("404s on the retired Project", async () => {
+    await expect(projectLoader(args("pragmatic-nodejs-api"))).rejects.toMatchObject({ status: 404 });
   });
 
   /**

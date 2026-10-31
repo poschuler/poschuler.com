@@ -4,85 +4,36 @@ import {
   navHref,
   postHref,
   projectHref,
-  seriesHref,
   tagHref,
   withLocale,
 } from "../../../app/lib/hrefs";
 
 /**
  * Four lines with a test, because the rule they hold is the one that used to
- * live inline in `ContentItem` as `/blog/${item.slug}` — and the day a Part
- * moved under its Series, that line started producing a 404 from every list on
- * the site at once. A Field Note under its Project is the third branch, and
+ * live inline in `ContentItem` as `/blog/${item.slug}` — and the day a Post
+ * moved under a Container, that line started producing a 404 from every list
+ * on the site at once. A Field Note under its Project is the other branch, and
  * every branch takes a Locale as well.
  */
 
 describe("postHref", () => {
   it("serves a loose Post from /blog", () => {
-    expect(postHref({ slug: "implementing-value-objects", seriesSlug: null }, "en")).toBe(
+    expect(postHref({ slug: "implementing-value-objects" }, "en")).toBe(
       "/blog/implementing-value-objects",
     );
   });
 
-  it("serves a Part under its Series", () => {
-    expect(
-      postHref({ slug: "project-setup", seriesSlug: "pragmatic-nodejs-api" }, "en"),
-    ).toBe("/series/pragmatic-nodejs-api/project-setup");
-  });
-
   it("serves a Field Note under its Project", () => {
     expect(
-      postHref({ slug: "product-matching", seriesSlug: null, projectSlug: "chekalo" }, "en"),
+      postHref({ slug: "product-matching", projectSlug: "chekalo" }, "en"),
     ).toBe("/projects/chekalo/product-matching");
-  });
-
-  /**
-   * The two Container columns never both hold a value (`schema.sql`), so this
-   * case never arises in practice — what it pins is that the function still
-   * resolves to exactly one branch rather than to neither or to both.
-   */
-  it("resolves to the Series when handed both, rather than to neither", () => {
-    expect(
-      postHref(
-        { slug: "x", seriesSlug: "pragmatic-nodejs-api", projectSlug: "chekalo" },
-        "en",
-      ),
-    ).toBe("/series/pragmatic-nodejs-api/x");
-  });
-
-  /** Callers outside a Project's own note listing never pass `projectSlug` at all. */
-  it("treats an absent projectSlug the same as null", () => {
-    expect(
-      postHref({ slug: "project-setup", seriesSlug: "pragmatic-nodejs-api" }, "en"),
-    ).toBe(
-      postHref(
-        { slug: "project-setup", seriesSlug: "pragmatic-nodejs-api", projectSlug: null },
-        "en",
-      ),
-    );
   });
 
   /** The Slug never varies by Locale (ADR 0010); the segment gains `/es` in front of it. */
   it("prefixes a Spanish address with /es, at the same Slug", () => {
-    expect(postHref({ slug: "implementing-value-objects", seriesSlug: null }, "es")).toBe(
+    expect(postHref({ slug: "implementing-value-objects" }, "es")).toBe(
       "/es/blog/implementing-value-objects",
     );
-  });
-
-  it("prefixes a Spanish Part through its already-prefixed Series", () => {
-    expect(
-      postHref({ slug: "project-setup", seriesSlug: "pragmatic-nodejs-api" }, "es"),
-    ).toBe("/es/series/pragmatic-nodejs-api/project-setup");
-  });
-});
-
-describe("seriesHref", () => {
-  it("points at the landing", () => {
-    expect(seriesHref("pragmatic-nodejs-api", "en")).toBe("/series/pragmatic-nodejs-api");
-  });
-
-  it("points at the Spanish landing under /es", () => {
-    expect(seriesHref("pragmatic-nodejs-api", "es")).toBe("/es/series/pragmatic-nodejs-api");
   });
 });
 

@@ -5,7 +5,7 @@ import {
   hreflangEntries,
   type DocumentIdentity,
 } from "../../app/lib/seo/alternates.ts";
-import { postHref, projectHref, seriesHref, withLocale } from "../../app/lib/hrefs.ts";
+import { postHref, projectHref, withLocale } from "../../app/lib/hrefs.ts";
 import type { ChangeFrequency, SitemapAlternate, SitemapRoute } from "../../app/lib/seo/sitemap.ts";
 import { latestRevision, parseRevisions } from "../../app/lib/revisions.ts";
 
@@ -39,15 +39,9 @@ export type SitemapContentItem = {
    */
   updates?: string;
   /**
-   * The Container, when the Post has one. It decides the address: a Part is
-   * served under its Series and has never been reachable at `/blog/<slug>`
-   * since the route started redirecting.
-   */
-  seriesSlug?: string | null;
-  /**
-   * The other Container a Post can have — a Field Note is served under its
-   * Project the same way a Part is served under its Series, and for the same
-   * reason: `/blog/<slug>` redirects it rather than serving it.
+   * The Container, when the Post has one. It decides the address: a Field Note
+   * is served under its Project, and `/blog/<slug>` redirects it rather than
+   * serving it.
    */
   projectSlug?: string | null;
 };
@@ -97,22 +91,6 @@ export type SitemapProject = {
 };
 
 /**
- * Only what the sitemap reads from a Series, which is its Slug and its Locale.
- *
- * **No `updates` column, deliberately.** ADR 0005 gives revisions to documents
- * with no other possible date; a Series has one. What changes on a landing is
- * that a Part arrived, and that Part is already dated — so the date is computed
- * from the Parts below, and rises on its own with every publication. A revision
- * entry reading *added part 4* above an index already showing part 4 is
- * duplication that can be forgotten, at which point the landing lies about its
- * own currency.
- */
-export type SitemapSeries = {
-  slug: string;
-  lang: Locale;
-};
-
-/**
  * A Tag some Post carries in some Locale — one row per `(Tag, Locale)` pair
  * that reaches a Post, which is what decides whether `/tags` and `/es/tags`
  * each have anything to advertise, independently: a Spanish Tags index counts
@@ -133,16 +111,13 @@ export type SitemapTag = {
 };
 
 /**
- * The three collections that are not Content Items.
+ * The two collections that are not Content Items.
  *
- * An object rather than positional parameters: `SitemapProject[]` satisfies
- * `SitemapSeries[]` structurally, so transposing those two would type-check
- * while publishing every Project under `/series/`. Named fields make that
- * mistake unrepresentable.
+ * An object rather than positional parameters, so a call site names which
+ * collection it is handing over.
  */
 export type SitemapCollections = {
   projects?: SitemapProject[];
-  series?: SitemapSeries[];
   tags?: SitemapTag[];
 };
 
@@ -183,8 +158,6 @@ function relativePathFor(identity: DocumentIdentity, locale: Locale): string {
   switch (identity.kind) {
     case "post":
       return postHref(identity, locale);
-    case "series":
-      return seriesHref(identity.slug, locale);
     case "project":
       return projectHref(identity.slug, locale);
     case "index":
@@ -235,14 +208,12 @@ function routesFor(
 export function buildSitemapRoutes(
   items: SitemapContentItem[],
   { fallbackLastmod, resumeLastmod }: SitemapDates,
-  { projects = [], series = [], tags = [] }: SitemapCollections = {},
+  { projects = [], tags = [] }: SitemapCollections = {},
 ): SitemapRoute[] {
   const posts = items.filter((item) => item.type === "post");
   const bookmarks = items.filter((item) => item.type === "link");
-  // A Part or a Field Note is served under its Container; everything else
-  // under `/blog`.
-  const loosePosts = posts.filter((post) => !post.seriesSlug && !post.projectSlug);
-  const parts = posts.filter((post) => post.seriesSlug);
+  // A Field Note is served under its Container; everything else under `/blog`.
+  const loosePosts = posts.filter((post) => !post.projectSlug);
   const notes = posts.filter((post) => post.projectSlug);
 
   const lastModOf = (list: { publishedStringDate: string }[]) =>
@@ -266,39 +237,20 @@ export function buildSitemapRoutes(
 
   const newest = (dates: string[]) => dates.reduce((a, b) => (a > b ? a : b));
 
-  // --- Loose Posts, Parts and Field Notes: grouped by Slug, one entry per Locale that exists for it ---
+  // --- Loose Posts and Field Notes: grouped by Slug, one entry per Locale that exists for it ---
 
   const loosePostGroups = groupBySlug(loosePosts);
-  const partGroups = groupBySlug(parts);
   const noteGroups = groupBySlug(notes);
 
   const loosePostRoutes: SitemapRoute[] = [...loosePostGroups.entries()].flatMap(([slug, group]) => {
-    const identity: DocumentIdentity = { kind: "post", slug, seriesSlug: null };
+    const identity: DocumentIdentity = { kind: "post", slug };
     const alternates = alternatesFor(identity, group.locales);
 
     return group.locales.map((locale): SitemapRoute => {
       const row = group.rows.get(locale)!;
 
       return {
-        url: postHref({ slug, seriesSlug: null }, locale),
-        lastmod: revisedAt(row, row.publishedStringDate),
-        changefreq: "monthly",
-        priority: 0.7,
-        alternates,
-      };
-    });
-  });
-
-  const partRoutes: SitemapRoute[] = [...partGroups.entries()].flatMap(([slug, group]) => {
-    const seriesSlug = firstRow(group).seriesSlug!;
-    const identity: DocumentIdentity = { kind: "post", slug, seriesSlug };
-    const alternates = alternatesFor(identity, group.locales);
-
-    return group.locales.map((locale): SitemapRoute => {
-      const row = group.rows.get(locale)!;
-
-      return {
-        url: postHref({ slug, seriesSlug }, locale),
+        url: postHref({ slug }, locale),
         lastmod: revisedAt(row, row.publishedStringDate),
         changefreq: "monthly",
         priority: 0.7,
@@ -309,14 +261,14 @@ export function buildSitemapRoutes(
 
   const noteRoutes: SitemapRoute[] = [...noteGroups.entries()].flatMap(([slug, group]) => {
     const projectSlug = firstRow(group).projectSlug!;
-    const identity: DocumentIdentity = { kind: "post", slug, seriesSlug: null, projectSlug };
+    const identity: DocumentIdentity = { kind: "post", slug, projectSlug };
     const alternates = alternatesFor(identity, group.locales);
 
     return group.locales.map((locale): SitemapRoute => {
       const row = group.rows.get(locale)!;
 
       return {
-        url: postHref({ slug, seriesSlug: null, projectSlug }, locale),
+        url: postHref({ slug, projectSlug }, locale),
         lastmod: revisedAt(row, row.publishedStringDate),
         changefreq: "monthly",
         priority: 0.7,
@@ -357,54 +309,6 @@ export function buildSitemapRoutes(
         )
       : [];
 
-  // --- Series ---
-
-  const seriesGroups = groupBySlug(series);
-
-  const seriesLastmod = (slug: string, locale: Locale): string | null => {
-    const dates = [...partGroups.values()]
-      .filter((group) => firstRow(group).seriesSlug === slug)
-      .map((group) => group.rows.get(locale))
-      .filter((row): row is SitemapContentItem => row !== undefined)
-      .map((row) => revisedAt(row, row.publishedStringDate));
-
-    // A Series exists the moment it is announced — the arc is the point, not
-    // the word count — so a landing with nothing published behind it yet is
-    // an ordinary state, and `null` says "the caller's fallback applies"
-    // rather than inventing a date nothing on the landing carries.
-    return dates.length > 0 ? newest(dates) : null;
-  };
-
-  const seriesItemRoutes: SitemapRoute[] = [...seriesGroups.entries()].flatMap(([slug, group]) => {
-    const identity: DocumentIdentity = { kind: "series", slug };
-    const alternates = alternatesFor(identity, group.locales);
-
-    return group.locales.map((locale): SitemapRoute => ({
-      url: seriesHref(slug, locale),
-      lastmod: seriesLastmod(slug, locale) ?? fallbackLastmod,
-      changefreq: "monthly",
-      priority: 0.7,
-      alternates,
-    }));
-  });
-
-  const seriesIndexLocales = LOCALES.filter((locale) => inLocale(series, locale).length > 0);
-  const seriesIndexRoutes: SitemapRoute[] =
-    seriesIndexLocales.length > 0
-      ? routesFor(
-          { kind: "index", path: "/series" },
-          seriesIndexLocales,
-          (locale) =>
-            newest(
-              [...seriesGroups.entries()]
-                .filter(([, group]) => group.locales.includes(locale))
-                .map(([slug]) => seriesLastmod(slug, locale) ?? fallbackLastmod),
-            ),
-          "monthly",
-          0.6,
-        )
-      : [];
-
   // --- Tags: the index only. No URL per Tag, deliberately (see `SitemapTag`'s
   // own doc) — every individual Tag page declares `noindex, follow`, and a
   // sitemap advertising a page that asks not to be indexed is the site
@@ -424,13 +328,12 @@ export function buildSitemapRoutes(
         )
       : [];
 
-  // --- Blog: the loose Posts, plus each Series and each Project with a
-  // published Field Note, all as a single entry — `/blog`'s own rule. Every
-  // one of the three is a Post (a loose Post, a Part or a Field Note), so a
-  // Locale with zero Posts of any kind has none of the three, and this is one
-  // filter rather than three: an index advertising nothing is worse than no
-  // index, and that applies here exactly as it already does to `/projects`,
-  // `/series` and `/tags`.
+  // --- Blog: the loose Posts, plus each Project with a published Field Note,
+  // as a single entry — `/blog`'s own rule. Both are Posts (a loose Post or a
+  // Field Note), so a Locale with zero Posts of any kind has neither, and this
+  // is one filter rather than two: an index advertising nothing is worse than
+  // no index, and that applies here exactly as it already does to `/projects`
+  // and `/tags`.
   const blogIndexLocales = LOCALES.filter((locale) => inLocale(posts, locale).length > 0);
   const blogIndexRoutes: SitemapRoute[] =
     blogIndexLocales.length > 0
@@ -489,9 +392,6 @@ export function buildSitemapRoutes(
     ...projectIndexRoutes,
     ...projectItemRoutes,
     ...noteRoutes,
-    ...seriesIndexRoutes,
-    ...seriesItemRoutes,
-    ...partRoutes,
     ...tagIndexRoutes,
     ...loosePostRoutes,
   ];

@@ -46,12 +46,12 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     const locale = context.get(localeContext);
 
     /**
-     * The row before the body, for one reason: a Part or a Field Note is
-     * served under its Container, and its payload sits under the same `blog:`
-     * key as any other Post — the prefix says what kind of payload it is, not
-     * which URL serves it. So KV alone would answer this URL with a page that
-     * also exists at `/series/…` or `/projects/…`, and two addresses for one
-     * article is a canonical nobody declared.
+     * The row before the body, for one reason: a Field Note is served under
+     * its Project, and its payload sits under the same `blog:` key as any other
+     * Post — the prefix says what kind of payload it is, not which URL serves
+     * it. So KV alone would answer this URL with a page that also exists at
+     * `/projects/…`, and two addresses for one article is a canonical nobody
+     * declared.
      *
      * Not the historical redirects: those are a table of URLs that no longer
      * exist and belong in `app/lib/redirects.ts`, consulted in the Worker. This
@@ -63,7 +63,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
         throw new Response("Not Found", { status: 404 });
     }
 
-    if (post.seriesSlug || post.projectSlug) {
+    if (post.projectSlug) {
         // The query string travels, for the reason `app/lib/redirects.ts`
         // states for the hop before this one: it is what tells the author the
         // redirect is being used at all. The two land on the same page, so
@@ -73,8 +73,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 
     const BLOG_KV = env.BLOG_KV;
     // Keyed off the resolved row's own Locale, the way every sibling route
-    // already reads its body (`/projects/:project`, `/series/:seriesSlug`,
-    // `/series/:seriesSlug/:partSlug`) — not off the request's, which a Post
+    // already reads its body (`/projects/:project`) — not off the request's, which a Post
     // with no Translation in that Locale would never have found a row for.
     const kv_key = `blog:${blogSlug}:${post.lang}`;
     const contentPayload = await BLOG_KV.get<BlogContentPayload>(kv_key, {
@@ -127,12 +126,12 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
     const { title, description, slug, locale, existingLocales, datePublished, revisions } = loaderData;
     const addresses = documentAddresses(
-        { kind: "post", slug, seriesSlug: null },
+        { kind: "post", slug },
         locale,
         existingLocales,
     );
     const { canonical } = addresses;
-    const path = postHref({ slug, seriesSlug: null }, locale);
+    const path = postHref({ slug }, locale);
 
     return [
         { title: `${title} | Paul Osorio Schuler` },
@@ -155,9 +154,6 @@ export function meta({ loaderData }: Route.MetaArgs) {
                 datePublished,
                 // Newest first, guaranteed by `validateRevisions`.
                 dateRevised: revisions[0]?.date,
-                // A standalone Post has no Container, and saying otherwise
-                // would invent a continuity that does not exist.
-                seriesSlug: null,
                 locale,
             }),
         },

@@ -8,7 +8,7 @@
  *
  * One exception, and it is the only one: **an entry leaves when its
  * destination is retired**, because a redirect to a retired address is worse
- * than none. The three Parts of the retired Series left the table that way.
+ * than none. Three entries left the table that way, when the pages they pointed at were retired.
  *
  * Two rules the table has to keep, both checked in `redirects.test.ts`:
  *
@@ -19,11 +19,6 @@
  *   redirect at all — the reader gets nothing and the engine drops the URL
  *   rather than moving it. That one crosses this map and the database, so it is
  *   asserted in `tests/integration/redirects.test.ts`.
- *
- * This is not where a Part's short Slug is resolved. `/blog/project-setup`
- * never existed publicly; it is answered in the `/blog/:blogSlug` loader,
- * derived from the row's Container, because that is a fact about the content
- * rather than a fact about history.
  */
 export const PERMANENT_REDIRECTS: Record<string, string> = {
   // `resume` is a Spanish word — the third person singular of

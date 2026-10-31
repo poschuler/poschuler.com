@@ -18,7 +18,7 @@ import { openTestPlatform, routeArgs, type TestPlatform } from "../setup/platfor
  * `content.test.ts` already inserts rows to exercise a constraint, and remove
  * them again in `afterAll` — the test state directory is shared for the whole
  * run, and a leftover row would move the counts `content.test.ts` and
- * `series.test.ts` assert.
+ * the other suites assert.
  *
  * Two notes, not one: the landing's index and a note's sibling list both need
  * a manifest with more than one entry to prove they order it rather than just
@@ -103,7 +103,7 @@ afterAll(async () => {
 });
 
 describe("findLoosePosts — excludes a Field Note", () => {
-  it("excludes a Post whose Container is a Project, the same as one whose Container is a Series", async () => {
+  it("excludes a Post whose Container is a Project", async () => {
     const loose = await findLoosePosts(platform.env.POSCHULER_BD, "en");
 
     expect(loose.some((post) => post.slug === NOTE_SLUG)).toBe(false);
@@ -267,8 +267,7 @@ describe("/projects/:projectSlug/:noteSlug — a Field Note", () => {
 
   /**
    * The Project decides. A Slug some other Project's manifest lists is a 404
-   * rather than an article inside somebody else's frame — the same rule
-   * `/series/:seriesSlug/:partSlug` already applies to a Part.
+   * rather than an article inside somebody else's frame.
    */
   it("404s on a note that belongs to a different Project", async () => {
     await expect(
