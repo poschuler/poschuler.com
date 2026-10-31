@@ -1,6 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { findAllBookmarks, findAllPosts, mergeTimeline } from "~/models/content.server";
+import {
+  findAllBookmarks,
+  findAllPosts,
+  findLoosePosts,
+  findPostBySlug,
+  mergeTimeline,
+} from "~/models/content.server";
+import { findPostsByTag } from "~/models/tag.server";
 
 import { openTestPlatform, type TestPlatform } from "../setup/platform";
 
@@ -183,5 +190,35 @@ describe("the schema enforces identity", () => {
         "insert into content (slug, type, title, published_at) values ('no-locale', 'post', 'No locale', '2026-01-01')",
       ).run(),
     ).rejects.toThrow();
+  });
+});
+
+/**
+ * The Series is gone from everything the Worker serves, and the `content` table
+ * still carries its two columns until the writers lose them. A row that comes
+ * back with either key means a query selects a column nothing reads.
+ */
+describe("the Worker's content queries", () => {
+  const SERIES_KEYS = ["seriesSlug", "seriesSection"];
+
+  it("return rows that carry no Series column", async () => {
+    const db = platform.env.POSCHULER_BD;
+    const rows = [
+      ...(await findAllPosts(db, "en")),
+      ...(await findLoosePosts(db, "en")),
+      ...(await findAllBookmarks(db)),
+      ...(await findPostsByTag(db, "nodejs", "en")),
+    ];
+    const [first] = await findAllPosts(db, "en");
+    const bySlug = await findPostBySlug(db, first.slug, "en");
+
+    expect(rows.length).toBeGreaterThan(0);
+    expect(bySlug).not.toBeNull();
+
+    for (const row of [...rows, bySlug]) {
+      for (const key of SERIES_KEYS) {
+        expect(row).not.toHaveProperty(key);
+      }
+    }
   });
 });
