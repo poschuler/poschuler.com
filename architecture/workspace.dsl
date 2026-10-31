@@ -35,9 +35,9 @@ workspace "poschuler.com" "The personal site of Paul Osorio Schuler, modelled in
             d1Generator = container "D1 seed generator" "Turns front matter into rows." "Node, front-matter, seed/d1/generate-seed-sql.ts" "Build" {
                 frontMatter = component "front matter reader" "Reads each file's front matter, checks it against the tree, the Tag vocabulary and the Locale suffix, and writes seed.sql." "seed/d1/generate-seed-sql.ts, front-matter"
                 treeWalker = component "content tree walker" "Classifies every file by the tree it sits in and the depth it sits at, never by what its front matter claims (ADR 0004)." "seed/d1/content-tree.ts"
-                manifestReader = component "manifest reader" "Reads the Series arc and the Project's flat note list, which is the only place order is declared (ADR 0007)." "seed/d1/manifest.ts"
+                manifestReader = component "manifest reader" "Reads the Project's flat note list, which is the only place order is declared (ADR 0007)." "seed/d1/manifest.ts"
                 sqlEmitter = component "SQL emitter" "Turns a classified file into a row, and emits the upserts before the prune, never a DELETE first." "seed/d1/seed-sql.ts"
-                containerSql = component "container SQL" "Emits the Project and Series rows and their sections, reconciling the manifest against the disk." "seed/d1/{project,series}-sql.ts"
+                containerSql = component "container SQL" "Emits the Project rows, reconciling the manifest against the disk." "seed/d1/project-sql.ts"
                 tagVocabulary = component "Tag vocabulary" "Holds the closed set a Tag must belong to, and fails the build for one that is not declared (ADR 0008)." "seed/d1/tag-vocabulary.ts, app/content/tags.json"
             }
             kvGenerator = container "KV seed generator" "Renders each published body and the sitemap into payloads." "Node, marked, seed/kv/generate-kv-json.ts" "Build" {
@@ -120,7 +120,7 @@ workspace "poschuler.com" "The personal site of Paul Osorio Schuler, modelled in
         site.d1Generator.frontMatter -> site.content "Reads the front matter of every file the walker claims" "Node, front-matter"
         site.d1Generator.frontMatter -> site.d1Generator.treeWalker "Asks what each file is, and refuses one no tree claims" "Node"
         site.d1Generator.frontMatter -> site.d1Generator.sqlEmitter "Hands it a validated Content Item to emit" "Node"
-        site.d1Generator.frontMatter -> site.d1Generator.containerSql "Hands it the Project and Series manifests, and the documents nested under them" "Node"
+        site.d1Generator.frontMatter -> site.d1Generator.containerSql "Hands it the Project manifests, and the documents nested under them" "Node"
         site.d1Generator.frontMatter -> site.fixtures "Writes seed.sql, and treats an empty walk as impossible rather than as empty" "Node, fs"
         site.d1Generator.sqlEmitter -> site.d1Generator.tagVocabulary "Checks every Tag against the closed set (ADR 0008)" "Node"
         site.d1Generator.containerSql -> site.d1Generator.manifestReader "Reads the declared arc, and refuses a manifest that contradicts the disk (ADR 0007)" "Node"

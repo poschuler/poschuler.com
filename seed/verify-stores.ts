@@ -8,7 +8,6 @@ import { listPayloadFiles } from "./kv/payload-files.ts";
 import {
   compareContainers,
   comparePresence,
-  compareSectionOrder,
   expectationFrom,
   isEmptyContentExpectation,
   type ContainerColumns,
@@ -46,8 +45,6 @@ interface ContentTagRow {
 interface ContentContainerRow {
     slug: string;
     lang: string | null;
-    series_slug: string | null;
-    series_section: string | null;
     project_slug: string | null;
     container_order: number | null;
 }
@@ -55,25 +52,6 @@ interface ContentContainerRow {
 interface ProjectRow {
     slug: string;
     lang: string;
-}
-
-interface SeriesRow {
-    slug: string;
-    lang: string;
-}
-
-interface SeriesSectionRow {
-    series_slug: string;
-    lang: string;
-    slug: string;
-}
-
-/** A Series Section's own position in the arc, read back alongside its identity. */
-interface SeriesSectionOrderRow {
-    series_slug: string;
-    lang: string;
-    slug: string;
-    section_order: number;
 }
 
 function wrangler(args: string[], wranglerArgs: string[]): string {
@@ -170,17 +148,8 @@ async function verify(mode: string): Promise<boolean> {
     const contentRows = d1Query<ContentRow>("select slug, lang, type from content", wranglerArgs);
     const tagRows = d1Query<ContentTagRow>("select slug, lang, tag from content_tag", wranglerArgs);
     const projectRows = d1Query<ProjectRow>("select slug, lang from project", wranglerArgs);
-    const seriesRows = d1Query<SeriesRow>("select slug, lang from series", wranglerArgs);
-    const sectionRows = d1Query<SeriesSectionRow>(
-        "select series_slug, lang, slug from series_section",
-        wranglerArgs,
-    );
     const containerRows = d1Query<ContentContainerRow>(
-        "select slug, lang, series_slug, series_section, project_slug, container_order from content",
-        wranglerArgs,
-    );
-    const sectionOrderRows = d1Query<SeriesSectionOrderRow>(
-        "select series_slug, lang, slug, section_order from series_section",
+        "select slug, lang, project_slug, container_order from content",
         wranglerArgs,
     );
 
@@ -191,10 +160,6 @@ async function verify(mode: string): Promise<boolean> {
             new Set(tagRows.map((row) => `${row.slug}:${row.lang ?? ""}:${row.tag}`))),
         comparePresence("Project", expected.project,
             new Set(projectRows.map((row) => `${row.slug}:${row.lang}`))),
-        comparePresence("Series", expected.series,
-            new Set(seriesRows.map((row) => `${row.slug}:${row.lang}`))),
-        comparePresence("Series Section", expected.sections,
-            new Set(sectionRows.map((row) => `${row.series_slug}:${row.lang}:${row.slug}`))),
     ];
 
     // The comparison itself is `store-expectation.ts`'s: this only formats the
@@ -214,8 +179,6 @@ async function verify(mode: string): Promise<boolean> {
         containerRows.map((row) => [
             `${row.slug}:${row.lang ?? ""}`,
             {
-                seriesSlug: row.series_slug,
-                seriesSection: row.series_section,
                 projectSlug: row.project_slug,
                 containerOrder: row.container_order,
             },
@@ -228,24 +191,6 @@ async function verify(mode: string): Promise<boolean> {
             ? `${expected.containers.size} rows`
             : containerFindings
                 .map((finding) => `${finding.identity} ${finding.column}: stored ${finding.stored ?? "null"}, expected ${finding.expected ?? "null"}`)
-                .join("; ")) && passed;
-
-    // Symmetric to the Container comparison, one level up: a Section's own
-    // position in the arc is a value on a row that already exists, not a
-    // presence difference (#57).
-    const presentSectionOrder = new Map<string, number>(
-        sectionOrderRows.map((row) => [
-            `${row.series_slug}:${row.lang}:${row.slug}`,
-            row.section_order,
-        ]),
-    );
-    const sectionOrderFindings = compareSectionOrder(expected.sectionOrder, presentSectionOrder);
-
-    passed = report("every Series Section position agrees", sectionOrderFindings.length === 0,
-        sectionOrderFindings.length === 0
-            ? `${expected.sectionOrder.size} rows`
-            : sectionOrderFindings
-                .map((finding) => `${finding.identity}: stored ${finding.stored}, expected ${finding.expected}`)
                 .join("; ")) && passed;
 
     console.log(`==> KV (${mode})`);

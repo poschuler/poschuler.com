@@ -37,7 +37,6 @@ describe("treeOf", () => {
     ["blog/value-objects/value-objects.en.md", "blog"],
     ["bookmarks/how-i-would-do-auth.md", "bookmarks"],
     ["projects/chekalo/chekalo.en.md", "projects"],
-    ["series/api/api.en.md", "series"],
   ])("reads %s as the %s tree", (relativePath, tree) => {
     expect(treeOf(relativePath)).toBe(tree);
   });
@@ -64,7 +63,15 @@ describe("treeOf", () => {
   });
 
   it("names a tree for every type the generators can seed", () => {
-    expect(Object.keys(CONTENT_TREES).sort()).toEqual(["blog", "bookmarks", "projects", "series"]);
+    expect(Object.keys(CONTENT_TREES).sort()).toEqual(["blog", "bookmarks", "projects"]);
+  });
+
+  /**
+   * The retired tree is refused like any directory nobody claims: a file
+   * placed there fails the build instead of publishing nothing in silence.
+   */
+  it("does not claim a retired tree", () => {
+    expect(treeOf("series/api/api.en.md")).toBeNull();
   });
 });
 
@@ -73,7 +80,6 @@ describe("placementOf — the tree's own item", () => {
     ["bookmarks/how-i-would-do-auth.md", "bookmarks", "link"],
     ["blog/value-objects/value-objects.en.md", "blog", "post"],
     ["projects/chekalo/chekalo.en.md", "projects", "project"],
-    ["series/pragmatic-nodejs-api/pragmatic-nodejs-api.en.md", "series", "series"],
   ])("reads %s as a %s item of type %s", (relativePath, tree, type) => {
     expect(placement(relativePath)).toEqual({ tree, type, container: null });
   });
@@ -90,16 +96,10 @@ describe("placementOf — content inside a Container", () => {
    * path rather than by a filename convention the walker would have to learn
    * twice.
    */
-  it("reads a Part as a Post whose Container is the folder above", () => {
-    expect(placement("series/pragmatic-nodejs-api/project-setup/project-setup.en.md")).toEqual({
-      tree: "series",
-      type: "post",
-      container: "pragmatic-nodejs-api",
-    });
-  });
-
   it("reads a Windows-style nested path the same way", () => {
-    expect(placement("series\\api\\part-one\\part-one.en.md").container).toBe("api");
+    expect(placement("projects\\chekalo\\product-matching\\product-matching.en.md").container).toBe(
+      "chekalo",
+    );
   });
 
   /**
@@ -116,7 +116,7 @@ describe("placementOf — content inside a Container", () => {
   /**
    * The depth rule generalises to `projects/`: depth 2 stays the Project
    * itself, and depth 3 is a Field Note whose Container is the folder above —
-   * the same rule a Part already follows under `series/`.
+   * the one tree that holds a Container.
    */
   it("reads a Field Note as a Post whose Container is the Project above", () => {
     expect(placement("projects/chekalo/product-matching/product-matching.en.md")).toEqual({
@@ -126,14 +126,6 @@ describe("placementOf — content inside a Container", () => {
     });
   });
 
-  it("fails anything nested deeper than a Container", () => {
-    const result = placementOf("series/api/part-one/deeper/deeper.en.md");
-
-    expect(isMisplaced(result)).toBe(true);
-    expect((result as { error: string }).error).toMatch(/deeper than a Container/);
-  });
-
-  /** The same rule, the same message, on the other tree that holds a Container. */
   it("fails a Field Note nested deeper than its Project", () => {
     const result = placementOf("projects/chekalo/product-matching/deeper/deeper.en.md");
 
@@ -150,6 +142,17 @@ describe("placementOf — what classifies as nothing", () => {
     expect((result as { error: string }).error).toMatch(/not under a content tree/);
   });
 
+  /**
+   * `series/` was a tree until it was retired. A file placed there now meets
+   * the ordinary refusal, the same one any unclaimed directory meets.
+   */
+  it("fails a file under the retired series tree with the ordinary refusal", () => {
+    const result = placementOf("series/api/api.en.md");
+
+    expect(isMisplaced(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/not under a content tree/);
+  });
+
   it("fails a file sitting loose at the root of the content directory", () => {
     const result = placementOf("stray.en.md");
 
@@ -160,7 +163,7 @@ describe("placementOf — what classifies as nothing", () => {
 
 describe("unclaimedTrees", () => {
   it("names nothing when every directory is walked by someone", () => {
-    expect(unclaimedTrees(["blog", "bookmarks", "projects", "series"])).toEqual([]);
+    expect(unclaimedTrees(["blog", "bookmarks", "projects"])).toEqual([]);
   });
 
   /**
@@ -177,8 +180,6 @@ describe("declaredTypeMatches", () => {
     ["post", "blog/a/a.en.md"],
     ["link", "bookmarks/a.md"],
     ["project", "projects/a/a.en.md"],
-    ["series", "series/a/a.en.md"],
-    ["post", "series/a/part/part.en.md"],
     ["post", "projects/a/note/note.en.md"],
   ])("accepts type %s at %s", (type, relativePath) => {
     expect(declaredTypeMatches(type, placement(relativePath))).toBe(true);
@@ -189,9 +190,9 @@ describe("declaredTypeMatches", () => {
     expect(declaredTypeMatches("post", placement("bookmarks/a.md"))).toBe(false);
   });
 
-  /** Depth, not just the tree: a manifest and a Part sit in the same tree. */
-  it("rejects a Part declaring itself the Series it belongs to", () => {
-    expect(declaredTypeMatches("series", placement("series/a/part/part.en.md"))).toBe(false);
+  /** Depth, not just the tree: a Project and a Field Note sit in the same tree. */
+  it("rejects a Field Note declaring itself the Project it belongs to", () => {
+    expect(declaredTypeMatches("project", placement("projects/a/note/note.en.md"))).toBe(false);
   });
 
   it("rejects a type no tree declares", () => {
@@ -212,7 +213,6 @@ describe("CONTENT_TREES — the Locale rule per tree", () => {
   it("requires a Locale under every tree that holds a Translation", () => {
     expect(CONTENT_TREES.blog.locale).toBe("required");
     expect(CONTENT_TREES.projects.locale).toBe("required");
-    expect(CONTENT_TREES.series.locale).toBe("required");
   });
 
   /** A Bookmark is a pointer, not a document with a Translation of its own. */
@@ -222,7 +222,7 @@ describe("CONTENT_TREES — the Locale rule per tree", () => {
 });
 
 describe("localeMatchesTree", () => {
-  it.each(["blog", "projects", "series"] as const)(
+  it.each(["blog", "projects"] as const)(
     "accepts a recognised Locale under %s",
     (tree) => {
       expect(localeMatchesTree(tree, "en")).toBe(true);
@@ -235,7 +235,7 @@ describe("localeMatchesTree", () => {
    * `parseContentFilename` does not recognise — `localeMatchesTree` does not
    * need to tell those two apart, only that a Locale-bearing tree got neither.
    */
-  it.each(["blog", "projects", "series"] as const)(
+  it.each(["blog", "projects"] as const)(
     "rejects no recognised Locale under %s",
     (tree) => {
       expect(localeMatchesTree(tree, null)).toBe(false);
