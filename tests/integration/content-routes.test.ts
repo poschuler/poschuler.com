@@ -32,9 +32,6 @@ import {
 let platform: TestPlatform;
 /** A Post that belongs to no Series — the only kind `/blog/:slug` still serves. */
 let postSlug: string;
-/** A Post with a Container, and the Series it belongs to. */
-let partSlug: string;
-let seriesSlug: string;
 /** Some Project — the two-store shape is the same whichever one it is. */
 let projectSlug: string;
 /** The Project the home page is supposed to single out, read from the store. */
@@ -52,10 +49,6 @@ beforeAll(async () => {
   );
 
   postSlug = contentItems.find((item) => item.type === "post" && item.seriesSlug === null)!.slug;
-
-  const part = contentItems.find((item) => item.type === "post" && item.seriesSlug !== null)!;
-  partSlug = part.slug;
-  seriesSlug = part.seriesSlug!;
 
   const { projects } = await projectsLoader(
     routeArgs<ArgsOf<typeof projectsLoader>>(platform, get("/projects")),
@@ -123,11 +116,10 @@ describe("/ — the landing page", () => {
 describe("/blog", () => {
   const load = () => blogLoader(routeArgs<ArgsOf<typeof blogLoader>>(platform, get("/blog")));
 
-  it("lists loose Posts and Series, and no Part on its own", async () => {
+  it("lists loose Posts, and no Part on its own", async () => {
     const { entries } = await load();
 
     expect(entries.length).toBeGreaterThan(0);
-    expect(entries.some((entry) => entry.kind === "series")).toBe(true);
 
     for (const entry of entries) {
       if (entry.kind === "post") {
@@ -150,12 +142,6 @@ describe("/blog", () => {
     expect(dates).toEqual([...dates].sort().reverse());
   });
 
-  it("carries the size of each Series, which is not a position", async () => {
-    const { entries } = await load();
-    const series = entries.find((entry) => entry.kind === "series");
-
-    expect(series?.kind === "series" && series.series.partCount).toBeGreaterThan(0);
-  });
 });
 
 describe("/bookmarks", () => {
@@ -186,26 +172,6 @@ describe("/blog/:blogSlug", () => {
   /** A missing key, an unpublished Post and a typo all behave the same way. */
   it("404s on a Slug with nothing behind it", async () => {
     await expect(blogSlugLoader(args("no-such-post"))).rejects.toMatchObject({ status: 404 });
-  });
-
-  /**
-   * A Part's body sits under the same `blog:` key as any other Post — the
-   * prefix says what kind of payload it is, not which URL serves it — so KV
-   * alone would answer here with a page that also exists under `/series`. One
-   * article at two addresses is a canonical nobody declared.
-   */
-  it("sends a Part to its Series rather than serving it a second time", async () => {
-    // A loader signals a redirect by throwing one, so the assertion has to
-    // catch it: resolving here is itself the failure.
-    const response: Response = await blogSlugLoader(args(partSlug)).then(
-      () => {
-        throw new Error(`/blog/${partSlug} served a Part instead of redirecting`);
-      },
-      (thrown) => thrown,
-    );
-
-    expect(response.status).toBe(301);
-    expect(response.headers.get("Location")).toBe(`/series/${seriesSlug}/${partSlug}`);
   });
 
   /**
@@ -333,32 +299,17 @@ describe("/projects/:project", () => {
 
 /**
  * A Series is not a Content Item: no Published At, never in the Timeline,
- * revised in place. What it has instead is an arc, and these assert that the
- * arc reaches the pages that render it.
+ * revised in place. None is published any more, so these assert what its
+ * routes answer with nothing behind them.
  */
 describe("/series — the index", () => {
-  it("returns every Series with its contract and its size", async () => {
+  /** Nothing is published, so the index is empty rather than missing. */
+  it("returns an empty list once no Series is published", async () => {
     const { series } = await seriesLoader(
       routeArgs<ArgsOf<typeof seriesLoader>>(platform, get("/series")),
     );
 
-    expect(series.length).toBeGreaterThan(0);
-
-    for (const one of series) {
-      expect(one.destination).toBeTruthy();
-      expect(one.outOfScope.length).toBeGreaterThan(0);
-      expect(["ongoing", "complete"]).toContain(one.status);
-    }
-  });
-
-  it("dates each Series by its most recent Part", async () => {
-    const { series } = await seriesLoader(
-      routeArgs<ArgsOf<typeof seriesLoader>>(platform, get("/series")),
-    );
-    const [first] = series;
-
-    expect(first.partCount).toBeGreaterThan(0);
-    expect(first.publishedStringDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(series).toEqual([]);
   });
 });
 
@@ -368,66 +319,10 @@ describe("/series/:seriesSlug — the landing", () => {
       seriesSlug: slug,
     });
 
-  it("returns the contract, the arc and the body together", async () => {
-    const payload = await seriesLandingLoader(args(seriesSlug));
-
-    expect(payload.startingPoint).toBeTruthy();
-    expect(payload.destination).toBeTruthy();
-    expect(payload.audience).toBeTruthy();
-    expect(payload.outOfScope.length).toBeGreaterThan(0);
-    expect(payload.sections.length).toBeGreaterThan(0);
-    expect(payload.html).toContain("<");
-  });
-
-  /**
-   * A section with no Parts is *planned* and still belongs on the landing: it
-   * says what will be covered in a sentence, and enumerates nothing. That is
-   * what keeps the arc visible without the empty checkboxes.
-   */
-  it("keeps a section with no Parts, carrying its summary", async () => {
-    const { sections } = await seriesLandingLoader(args(seriesSlug));
-    const planned = sections.filter((section) => section.parts.length === 0);
-
-    expect(planned.length).toBeGreaterThan(0);
-    expect(planned.every((section) => section.summary.trim() !== "")).toBe(true);
-  });
-
-  /**
-   * Reading order, which is the opposite of every index on the site: those
-   * answer *what is new*, an arc answers *where do I start*. The dates come out
-   * ascending here only because these Parts were written in order — what the
-   * assertion pins is that nothing re-sorted them by `published_at desc` on the
-   * way through.
-   */
-  it("lists the Parts of a section in reading order, not newest first", async () => {
-    const { sections } = await seriesLandingLoader(args(seriesSlug));
-    const dates = sections[0].parts.map((part) => part.publishedStringDate);
-
-    expect(dates.length).toBeGreaterThan(1);
-    expect(dates).toEqual([...dates].sort());
-  });
-
   it("404s on a Slug with nothing behind it", async () => {
     await expect(seriesLandingLoader(args("no-such-series"))).rejects.toMatchObject({
       status: 404,
     });
-  });
-
-  /** The landing takes its own prefix, because it is not a Post. */
-  it("reads the body from the series: key space", async () => {
-    const keys: string[] = [];
-    const spy = platformWith(platform, {
-      BLOG_KV: {
-        get: async (key: string) => {
-          keys.push(key);
-          return { html: "<p>x</p>" };
-        },
-      },
-    });
-
-    await seriesLandingLoader(args(seriesSlug, spy));
-
-    expect(keys).toEqual([`series:${seriesSlug}:en`]);
   });
 });
 
@@ -438,58 +333,8 @@ describe("/series/:seriesSlug/:partSlug — a Part", () => {
       partSlug: part,
     });
 
-  it("returns the article and the orientation around it", async () => {
-    const payload = await seriesPartLoader(args(seriesSlug, partSlug));
-
-    expect(payload.title).toBeTruthy();
-    expect(payload.html).toContain("<");
-    expect(payload.seriesTitle).toBeTruthy();
-    expect(payload.orientation.section.title).toBeTruthy();
-    expect(payload.orientation.section.parts.some((part) => part.slug === partSlug)).toBe(true);
-  });
-
-  /**
-   * The other half of the same reversal. A Part is an ordinary Post here too:
-   * its Tags are its own and say nothing about the Series holding it, and they
-   * come out of the payload above rather than from a row this route never reads
-   * — the arc is the only thing it queries.
-   */
-  it("returns its own Tags, out of the payload it already fetched", async () => {
-    const payload = await seriesPartLoader(args(seriesSlug, partSlug));
-
-    expect(payload.tags.length).toBeGreaterThan(0);
-  });
-
-  /** The body is an ordinary Post's, under the prefix every Post body uses. */
-  it("reads the body from the blog: key space", async () => {
-    const keys: string[] = [];
-    const spy = platformWith(platform, {
-      BLOG_KV: {
-        get: async (key: string) => {
-          keys.push(key);
-          return { attributes: { title: "x", publishedAt: "2026-01-01" }, html: "<p>x</p>" };
-        },
-      },
-    });
-
-    await seriesPartLoader(args(seriesSlug, partSlug, spy));
-
-    expect(keys).toEqual([`blog:${partSlug}:en`]);
-  });
-
   it("404s on a Series that does not exist", async () => {
-    await expect(seriesPartLoader(args("no-such-series", partSlug))).rejects.toMatchObject({
-      status: 404,
-    });
-  });
-
-  /**
-   * The arc decides. A Slug this Series does not hold is a 404 rather than an
-   * article inside somebody else's frame — which is what would happen if the
-   * route trusted the URL and read KV straight away.
-   */
-  it("404s on a Part the Series does not hold", async () => {
-    await expect(seriesPartLoader(args(seriesSlug, postSlug))).rejects.toMatchObject({
+    await expect(seriesPartLoader(args("no-such-series", "no-such-part"))).rejects.toMatchObject({
       status: 404,
     });
   });
@@ -573,35 +418,20 @@ describe("/tags/:tag", () => {
    * from `content_tag` in D1, so the day one narrows without the other, a Post
    * starts offering links to a 404.
    *
-   * Both Post routes, because a Part is where this would break first: it is
-   * served from a Slug the Series holds, and a Tag page that filtered Parts out
-   * would leave three of the site's four Posts pointing at pages missing them.
    */
-  it("lists the Post behind every chip either Post route renders", async () => {
+  it("lists the Post behind every chip its route renders", async () => {
     const post = await blogSlugLoader(
       routeArgs<ArgsOf<typeof blogSlugLoader>>(platform, get(`/blog/${postSlug}`), {
         blogSlug: postSlug,
       }),
     );
-    const part = await seriesPartLoader(
-      routeArgs<ArgsOf<typeof seriesPartLoader>>(
-        platform,
-        get(`/series/${seriesSlug}/${partSlug}`),
-        { seriesSlug, partSlug },
-      ),
-    );
 
-    for (const { slug, tags } of [
-      { slug: postSlug, tags: post.tags },
-      { slug: partSlug, tags: part.tags },
-    ]) {
-      expect(tags.length).toBeGreaterThan(0);
+    expect(post.tags.length).toBeGreaterThan(0);
 
-      for (const tag of tags) {
-        const page = await tagLoader(args(tag));
+    for (const tag of post.tags) {
+      const page = await tagLoader(args(tag));
 
-        expect(page.posts.some((listed) => listed.slug === slug)).toBe(true);
-      }
+      expect(page.posts.some((listed) => listed.slug === postSlug)).toBe(true);
     }
   });
 });

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { PERMANENT_REDIRECTS, resolveRedirect } from "~/lib/redirects";
 
@@ -18,8 +18,18 @@ const at = (path: string) => resolveRedirect(new URL(`https://poschuler.com${pat
 describe("resolveRedirect", () => {
   it("leaves a URL that still exists alone", () => {
     expect(at("/blog/implementing-value-objects-in-nodejs")).toBeNull();
-    expect(at("/series/pragmatic-nodejs-api")).toBeNull();
     expect(at("/")).toBeNull();
+  });
+
+  /**
+   * An address that was retired is not an address that moved: a redirect to a
+   * retired destination is worse than none (see `redirects.ts`), so the three
+   * original Part addresses fall through to the router's 404.
+   */
+  it("leaves a retired address alone", () => {
+    expect(at("/blog/pragmatic-nodejs-api-setup-nodejs-express-typescript-project")).toBeNull();
+    expect(at("/blog/pragmatic-nodejs-api-schema-validation-and-global-error-handling")).toBeNull();
+    expect(at("/blog/pragmatic-nodejs-api-vertical-slices-and-domain-logic")).toBeNull();
   });
 
   /**
@@ -39,30 +49,42 @@ describe("resolveRedirect", () => {
     }
   });
 
-  it("moves the three Series Parts to their new home", () => {
-    expect(at("/blog/pragmatic-nodejs-api-setup-nodejs-express-typescript-project")).toBe(
-      "/series/pragmatic-nodejs-api/project-setup",
-    );
-  });
-
   /**
-   * A campaign parameter is how the author finds out the redirect is carrying
-   * traffic at all. Dropping it makes the move invisible in analytics.
+   * The rules below hold whatever the table holds, so they are asserted
+   * against an entry this test adds and takes away again: the table itself is
+   * empty, and a rule checked over zero entries is checked against nothing.
    */
-  it("carries the query string to the destination", () => {
-    expect(
-      at("/blog/pragmatic-nodejs-api-setup-nodejs-express-typescript-project?utm_source=linkedin"),
-    ).toBe("/series/pragmatic-nodejs-api/project-setup?utm_source=linkedin");
-  });
+  describe("with an entry in the table", () => {
+    const FROM = "/blog/moved-post";
+    const TO = "/blog/where-it-went";
 
-  /**
-   * A link written by hand, or one a mail client normalised. It is the same
-   * document either way, and answering 404 to it would waste the redirect.
-   */
-  it("matches a path that arrived with a trailing slash", () => {
-    expect(at("/blog/pragmatic-nodejs-api-vertical-slices-and-domain-logic/")).toBe(
-      "/series/pragmatic-nodejs-api/vertical-slices-and-domain-logic",
-    );
+    beforeEach(() => {
+      PERMANENT_REDIRECTS[FROM] = TO;
+    });
+
+    afterEach(() => {
+      delete PERMANENT_REDIRECTS[FROM];
+    });
+
+    it("moves the address to its destination", () => {
+      expect(at(FROM)).toBe(TO);
+    });
+
+    /**
+     * A campaign parameter is how the author finds out the redirect is carrying
+     * traffic at all. Dropping it makes the move invisible in analytics.
+     */
+    it("carries the query string to the destination", () => {
+      expect(at(`${FROM}?utm_source=linkedin`)).toBe(`${TO}?utm_source=linkedin`);
+    });
+
+    /**
+     * A link written by hand, or one a mail client normalised. It is the same
+     * document either way, and answering 404 to it would waste the redirect.
+     */
+    it("matches a path that arrived with a trailing slash", () => {
+      expect(at(`${FROM}/`)).toBe(TO);
+    });
   });
 });
 

@@ -353,29 +353,22 @@ VALUES (${escapeSql(slug)}, ${escapeSql(lang)}, ${escapeSql(section.slug)}, ${es
 }
 
 /**
- * Inserts first, prune last, and nothing at all when there are no Series —
- * unless `anyFilesFound` says otherwise.
+ * Inserts first, prune last — and the prune runs with nothing to insert.
  *
  * Both prunes are needed and neither is optional: a section removed from a
  * manifest would otherwise stay alive in the database and keep rendering on the
  * landing — the same failure `content` and `project` already close.
  *
- * The guard on an empty list is `project-sql.ts`'s, for its reason: a repo with
- * no Series is an ordinary state, and a prune built from an empty list deletes
- * every row on the strength of finding nothing. And `anyFilesFound` is
- * `project-sql.ts`'s too, for the same reason: every Series this walk found
- * may have declared `draft: true`, in which case a previously published one
- * must still be pruned even though `seriesRows` came back empty.
+ * An empty list is not guarded against, because it is how a retired Series
+ * leaves the database: SQLite reads an empty `NOT IN ()` as true for every row,
+ * so with no manifest on disk both prunes empty their tables. A seed that said
+ * nothing instead would leave the last published Series live in D1 for as long
+ * as the database lives.
  */
 export function buildSeriesSeedSql(
   seriesRows: SeededRow[],
   sectionRows: SeededRow[],
-  { anyFilesFound = false }: { anyFilesFound?: boolean } = {},
 ): string {
-  if (seriesRows.length === 0 && !anyFilesFound) {
-    return "";
-  }
-
   const statements = [...seriesRows, ...sectionRows].map((row) => row.statement).join("");
   const seriesKeys = seriesRows.map((row) => escapeSql(row.key)).join(", ");
   const sectionKeys = sectionRows.map((row) => escapeSql(row.key)).join(", ");

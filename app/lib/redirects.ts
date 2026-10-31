@@ -6,6 +6,10 @@
  * published, which never do. Removing one in two years as tidying breaks
  * whatever still points at it, and nothing will report that it happened.
  *
+ * One exception, and it is the only one: **an entry leaves when its
+ * destination is retired**, because a redirect to a retired address is worse
+ * than none. The table is empty today for that reason, and stays a table.
+ *
  * Two rules the table has to keep, both checked in `redirects.test.ts`:
  *
  * - **Straight to the final destination, never chained.** A redirect aimed at
@@ -21,31 +25,7 @@
  * derived from the row's Container, because that is a fact about the content
  * rather than a fact about history.
  */
-export const PERMANENT_REDIRECTS: Record<string, string> = {
-  // The three Parts of Pragmatic Node.js API were published under
-  // `/blog` with the Series name written by hand into each Slug, because
-  // nothing yet read the directory a file sat in. They now live under their
-  // Container, and the Slug says only what the Part is about.
-  "/blog/pragmatic-nodejs-api-setup-nodejs-express-typescript-project":
-    "/series/pragmatic-nodejs-api/project-setup",
-  "/blog/pragmatic-nodejs-api-schema-validation-and-global-error-handling":
-    "/series/pragmatic-nodejs-api/schema-validation-and-error-handling",
-  "/blog/pragmatic-nodejs-api-vertical-slices-and-domain-logic":
-    "/series/pragmatic-nodejs-api/vertical-slices-and-domain-logic",
-
-  // `resume` is a Spanish word — the third person singular of
-  // *resumir* — so `/es/resume` would read as a conjugated verb rather than
-  // as a CV. The route moved to `/cv` in both Locales (ADR 0010); the visible
-  // navigation label stays *resume* in English, because the label and the
-  // path are independent.
-  "/resume": "/cv",
-  "/resume.pdf": "/cv.pdf",
-
-  // A Tag is its own URL, so renaming one moves a page. `ddd` was an acronym
-  // that only resolves for a reader who already knows the subject, which is
-  // the opposite of what a Tag is for; the vocabulary now spells it out.
-  "/tags/ddd": "/tags/domain-driven-design",
-};
+export const PERMANENT_REDIRECTS: Record<string, string> = {};
 
 /**
  * The path a request should be sent to, or `null` to let it through.

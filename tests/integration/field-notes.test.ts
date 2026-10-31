@@ -290,7 +290,7 @@ describe("/projects/:projectSlug/:noteSlug — a Field Note", () => {
  * setup and teardown, because `PROJECT_SLUG` above deliberately carries two.
  */
 describe("/projects/:project/:note — a lone published note", () => {
-  const LONE_PROJECT_SLUG = "pragmatic-nodejs-api";
+  const LONE_PROJECT_SLUG = "poschuler-com";
   const LONE_NOTE_SLUG = "test-lone-field-note";
 
   beforeAll(() =>

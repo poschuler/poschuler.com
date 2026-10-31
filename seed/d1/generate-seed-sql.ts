@@ -337,14 +337,6 @@ async function collectSeriesRows(vocabulary: TagVocabulary, options: DraftOption
     series: SeededRow[];
     sections: SeededRow[];
     content: ContentRow[];
-    /**
-     * Distinct from `series.length > 0`: every Series manifest this walk found
-     * may have declared `draft: true`, and `buildSeriesSeedSql` needs to tell
-     * that state apart from "nothing has ever been written" to know whether an
-     * empty `series` still calls for a prune. A folder existing at all already
-     * guarantees at least one manifest was read — see the throw just below.
-     */
-    anyFilesFound: boolean;
 }> {
     const folders = await readSeriesFolders();
     const series: SeededRow[] = [];
@@ -433,7 +425,7 @@ async function collectSeriesRows(vocabulary: TagVocabulary, options: DraftOption
         }
     }
 
-    return { series, sections, content, anyFilesFound: folders.size > 0 };
+    return { series, sections, content };
 }
 
 /** Reads the disk; the rule itself lives in `content-tree.ts`. */
@@ -570,9 +562,7 @@ async function generateSqlSeed({
     const sqlCommands =
         buildSeedSql(rows) +
         buildProjectSeedSql(projectRows.project, { anyFilesFound: projectRows.anyFilesFound }) +
-        buildSeriesSeedSql(seriesRows.series, seriesRows.sections, {
-            anyFilesFound: seriesRows.anyFilesFound,
-        });
+        buildSeriesSeedSql(seriesRows.series, seriesRows.sections);
 
     try {
         await fs.mkdir(path.dirname(outputSqlFile), { recursive: true });
