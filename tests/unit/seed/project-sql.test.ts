@@ -16,8 +16,7 @@ import {
  * the shape of the seed: upserts first, prune last, never a leading delete.
  *
  * The manifest is what a Project adds: which Field Notes it holds, and in what order —
- * a flat list, not an arc, reconciled against the notes on disk the same way a
- * Series' Parts are (`manifest.ts`, shared rather than copied).
+ * a flat list, reconciled against the notes on disk (`manifest.ts`).
  */
 
 const MANIFEST = "projects/chekalo/chekalo.en.md";
@@ -153,7 +152,7 @@ describe("projectRowFor — the notes", () => {
     expect(notes.get("alias-flip")).toEqual({ projectSlug: "chekalo", order: 1 });
   });
 
-  /** Reordering is a line moved in one file, the same property a Series has. */
+  /** Reordering is one line moved in one file. */
   it("renumbers every note when the list is reordered, with nothing else edited", () => {
     const attributes = project({ notes: ["alias-flip", "product-matching"] });
     const files = [noteFile("product-matching"), noteFile("alias-flip")];
@@ -191,8 +190,7 @@ describe("projectRowFor — the notes", () => {
 });
 
 /**
- * The invariant `manifest.ts` shares with `series-sql.ts`: a listed note with
- * no file fails, a file no manifest lists fails, and a note listed twice fails.
+ * The invariant `manifest.ts` states: a listed note with no file fails, a file no manifest lists fails, and a note listed twice fails.
  */
 describe("projectRowFor — manifest and disk must reconcile", () => {
   it("fails a listed note with no file", () => {

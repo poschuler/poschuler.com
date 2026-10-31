@@ -9,9 +9,8 @@
  *
  * The manifest is authorship; D1 is a projection of it (ADR 0001). What the
  * manifest declares that nothing else could is which notes the Project holds
- * and in what order — a flat list, not an arc: a Series orders because it
- * promised a Destination, a Project accumulates because the problems turn up
- * when they turn up.
+ * and in what order — a flat list, because a Project accumulates as the
+ * problems turn up.
  */
 
 import { validateRevisions } from "../../app/lib/revisions.ts";
@@ -135,8 +134,7 @@ function notesFrontMatterError(relativePath: string, notes: unknown): string | n
  * The rows for one Project manifest, or the reason the build should stop.
  *
  * `noteFiles` is every Markdown file under this Project folder that carries
- * this manifest's Locale and a recognised one at all — the same convention
- * `seriesRowsFor` reads `partFiles` under.
+ * this manifest's Locale and a recognised one at all.
  */
 export function projectRowFor(
   relativePath: string,

@@ -12,8 +12,7 @@ The site is bilingual: English is served at the root with no prefix, Spanish und
 | ------------- | -------------------------------------------------------------------- |
 | `/`           | Landing page — who he is, the flagship project, the newest writing    |
 | `/projects`   | Software he built and runs, weighted by tier                          |
-| `/blog`       | Long-form articles and the series they belong to                      |
-| `/series`     | Subjects worked through in order — each with a contract and an arc     |
+| `/blog`       | Long-form articles                                                    |
 | `/bookmarks`  | External articles worth endorsing, credited to their source           |
 | `/timeline`   | Posts and Bookmarks interleaved, newest first                         |
 | `/tags`       | Every subject some Post covers, heaviest first, with its count        |
@@ -28,13 +27,13 @@ Every page above also exists under `/es`, serving the same document translated w
 
 ```
 app/content/<tree>/**/*.md     ← authored here, versioned in git
-   │                             the tree — blog, bookmarks, projects, series — says what it is
+   │                             the tree — blog, bookmarks, projects — says what it is
    │                             and how deep it sits says whether it is the item or lives inside one
-   ├─ front matter ──▶ D1 (content, content_tag, project, series, series_section)
-   └─ body ──────────▶ KV  (blog:… , project:… , series:…)   pre-rendered HTML
+   ├─ front matter ──▶ D1 (content, content_tag, project)
+   └─ body ──────────▶ KV  (blog:… , project:…)   pre-rendered HTML
 ```
 
-A key's prefix says what kind of payload it is, not which URL serves it: a Part of a series is an ordinary Post with a container, so its body lives under `blog:` and is served at `/series/<series>/<part>`.
+A key's prefix says what kind of payload it is, not which URL serves it: a Field Note is an ordinary Post with a container, so its body lives under `blog:` and is served at `/projects/<project>/<note>`.
 
 Serving a Post is therefore one KV read, and listing Content Items is one indexed D1 query — no Markdown parsing on the request path. That is why `front-matter` and `marked` are dependencies yet appear in no runtime import. See [ADR 0001](docs/adr/0001-markdown-as-source-of-truth-derived-into-d1-and-kv.md).
 
@@ -95,14 +94,12 @@ app/content/
   bookmarks/<slug>.md                       a Bookmark — front matter only, no Locale
   projects/<project>/<project>.en.md        a Project
   projects/<project>/<note>/<note>.en.md    a Field Note — a Post in that Project
-  series/<series>/<series>.en.md            a Series manifest — the whole arc
-  series/<series>/<part>/<part>.en.md       a Part — a Post in that Series
 ```
 
 The file named after its folder *is* that folder, and a subfolder is content
-living inside it. That one rule is how a Series manifest is told apart from its
-Parts, and a Project from its Field Notes — neither a Part nor a Field Note
-declares where it sits, because the manifest above it already does
+living inside it. That one rule is how a Project is told apart from its Field
+Notes — a Field Note does not declare where it sits, because the manifest above
+it already does
 ([ADR 0007](docs/adr/0007-the-manifest-declares-the-arc-a-part-does-not-know-where-it-is.md)).
 Nothing nests under `blog/` or `bookmarks/`, and a directory no generator walks
 fails the build rather than publishing nothing in silence.
@@ -201,7 +198,7 @@ The order is the point: the seed, the deploy and the check are one sequence with
 
 ## Documentation
 
-- [`CONTEXT.md`](CONTEXT.md) — the domain vocabulary. What a Post, a Bookmark, a Series, a Part and the Timeline mean here.
+- [`CONTEXT.md`](CONTEXT.md) — the domain vocabulary. What a Post, a Bookmark, a Field Note and the Timeline mean here.
 - [`docs/authoring.md`](docs/authoring.md) — how a document is written, checked and published: front matter by kind, languages, drafts, the commands, and what fails the build. Templates in [`docs/templates/`](docs/templates/).
 - [`docs/architecture.md`](docs/architecture.md) — runtime shape, the content pipeline, data stores, caching, known defects.
 - [`docs/runbook.md`](docs/runbook.md) — what to do when production is wrong: a failed publication, a rollback and what it does not undo, reverting content, and the symptoms with a known cause.

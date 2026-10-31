@@ -137,15 +137,15 @@ describe("contentRowFor — Posts", () => {
       VOCABULARY,
     ) as SeededRow;
 
-    expect(row.statement).toContain("(slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, project_slug, container_order, updated_at)");
+    expect(row.statement).toContain("(slug, lang, type, title, description, published_at, repository, updates, project_slug, container_order, updated_at)");
     expect(row.statement).not.toContain("external_url");
   });
 
   /**
    * The Container columns travel together or not at all, which is why nothing
    * checks that they do: a loose Post is written with four NULLs rather than
-   * with the columns omitted, so a Post that leaves a Series or a Project
-   * cannot keep half of one.
+   * with the columns omitted, so a Post that leaves a Project cannot keep half
+   * of one.
    */
   it("writes a loose Post with no Container rather than with none of the columns", () => {
     const row = contentRowFor(
@@ -154,7 +154,7 @@ describe("contentRowFor — Posts", () => {
       VOCABULARY,
     ) as SeededRow;
 
-    expect(row.statement).toContain("'[]', NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'[]', NULL, NULL, CURRENT_TIMESTAMP)");
   });
 
   /**
@@ -202,27 +202,27 @@ describe("contentRowFor — Drafts", () => {
     expect(isInvalid(result)).toBe(true);
   });
 
-  it("fails a draft Part that is not listed in its manifest, exactly as a published one would", () => {
+  it("fails a draft Field Note that is not listed in its manifest, exactly as a published one would", () => {
     const result = contentRowFor(
-      "series/pragmatic-nodejs-api/project-setup/project-setup.en.md",
+      "projects/chekalo/product-matching/product-matching.en.md",
       post({ draft: true }),
       VOCABULARY,
     );
 
     expect(isInvalid(result)).toBe(true);
-    expect((result as { error: string }).error).toMatch(/not listed in the pragmatic-nodejs-api manifest/);
+    expect((result as { error: string }).error).toMatch(/not listed in the chekalo manifest/);
   });
 
   /**
-   * A Part that is listed and is a draft: every check a Part has to pass
+   * A Field Note that is listed and is a draft: every check a Field Note has to pass
    * still runs, and only then does it produce nothing.
    */
-  it("skips a draft Part that is listed in its manifest, after the Container check passes", () => {
+  it("skips a draft Field Note that is listed in its manifest, after the Container check passes", () => {
     const result = contentRowFor(
-      "series/pragmatic-nodejs-api/project-setup/project-setup.en.md",
+      "projects/chekalo/product-matching/product-matching.en.md",
       post({ draft: true }),
       VOCABULARY,
-      { seriesSlug: "pragmatic-nodejs-api", section: "fundamentals", order: 1 },
+      { projectSlug: "chekalo", order: 1 },
     );
 
     expect(isSkipped(result)).toBe(true);
@@ -423,122 +423,22 @@ describe("contentRowFor — Bookmarks", () => {
 });
 
 /**
- * A Part is a Post with a Container. Everything that makes it one is written
- * here from the manifest's lists — a Part's own file says nothing about where
- * it sits (ADR 0007).
- */
-describe("contentRowFor — Parts of a Series", () => {
-  const partPath = "series/pragmatic-nodejs-api/project-setup/project-setup.en.md";
-  const placement = { seriesSlug: "pragmatic-nodejs-api", section: "fundamentals", order: 1 };
-
-  it("writes the Container the manifest supplies", () => {
-    const row = contentRowFor(partPath, post(), VOCABULARY, placement) as SeededRow;
-
-    expect(row.key).toBe("project-setup:en");
-    expect(row.statement).toContain("'pragmatic-nodejs-api', 'fundamentals', NULL, 1, CURRENT_TIMESTAMP)");
-  });
-
-  /** Zero is a position, and a falsy one. It must survive the round trip. */
-  it("writes the first Part's position rather than dropping it", () => {
-    const row = contentRowFor(partPath, post(), VOCABULARY, {
-      ...placement,
-      order: 0,
-    }) as SeededRow;
-
-    expect(row.statement).toContain("'fundamentals', NULL, 0, CURRENT_TIMESTAMP)");
-  });
-
-  /**
-   * What *writes both order columns with the same value* became. Its invariant
-   * went with the column: `section_order` was written beside `container_order`,
-   * unread, for the Worker still deployed during the rename's expand step, and
-   * `0007` dropped it once that publication was live.
-   *
-   * What is left worth pinning is that there is no second copy at all — the
-   * statement names one order column and carries one position. The
-   * `not.toContain` is the load-bearing half; the position is asserted beside
-   * it so the test cannot pass against a statement that writes nothing.
-   */
-  it("writes the position once, into the only order column left", () => {
-    const row = contentRowFor(partPath, post(), VOCABULARY, {
-      ...placement,
-      order: 3,
-    }) as SeededRow;
-
-    expect(row.statement).toContain("'fundamentals', NULL, 3, CURRENT_TIMESTAMP)");
-    expect(row.statement).not.toContain("section_order");
-  });
-
-  /**
-   * The other half of *manifest and disk reconcile*: a Part nothing indexes
-   * would be seeded with no Container, so no listing could link to it.
-   */
-  it("fails a Part its manifest does not list", () => {
-    const result = contentRowFor(partPath, post(), VOCABULARY);
-
-    expect(isInvalid(result)).toBe(true);
-    expect((result as { error: string }).error).toMatch(/not listed in the pragmatic-nodejs-api manifest/);
-  });
-
-  /**
-   * `en-old` is not a Locale, so this file fails on that before the manifest
-   * is ever consulted — it is never a candidate for "not listed", because it
-   * never earns a Locale to be listed under.
-   */
-  it("fails a Part with no recognised Locale rather than demanding the manifest list it", () => {
-    const result = contentRowFor(
-      "series/pragmatic-nodejs-api/project-setup/project-setup.en-old.md",
-      post(),
-      VOCABULARY,
-    );
-
-    expect(isInvalid(result)).toBe(true);
-    expect((result as { error: string }).error).toMatch(/no recognised Locale/);
-    expect((result as { error: string }).error).not.toMatch(/not listed in the/);
-  });
-
-  it("fails a Part declaring itself the Series it belongs to", () => {
-    const result = contentRowFor(
-      partPath,
-      { ...post(), type: "series" as never },
-      VOCABULARY,
-      placement,
-    );
-
-    expect(isInvalid(result)).toBe(true);
-  });
-
-  it("fails a Series manifest handed to the content generator", () => {
-    const result = contentRowFor(
-      "series/pragmatic-nodejs-api/pragmatic-nodejs-api.en.md",
-      post(),
-      VOCABULARY,
-    );
-
-    expect(isInvalid(result)).toBe(true);
-    expect((result as { error: string }).error).toMatch(/does not belong in the content table/);
-  });
-});
-
-/**
- * A Field Note is a Post whose Container is a Project — `PartPlacement`'s
- * sibling, `NotePlacement`, written from the Project manifest's flat list
- * rather than from an arc.
+ * A Field Note is a Post whose Container is a Project — its `NotePlacement`
+ * is written from the Project manifest's flat list.
  */
 describe("contentRowFor — Field Notes of a Project", () => {
   const notePath = "projects/chekalo/product-matching/product-matching.en.md";
   const placement = { projectSlug: "chekalo", order: 0 };
 
-  it("writes the Container the manifest supplies, with no Series columns", () => {
+  it("writes the Container the manifest supplies", () => {
     const row = contentRowFor(notePath, post(), VOCABULARY, placement) as SeededRow;
 
     expect(row.key).toBe("product-matching:en");
-    expect(row.statement).toContain("NULL, NULL, 'chekalo', 0, CURRENT_TIMESTAMP)");
+    expect(row.statement).toContain("'chekalo', 0, CURRENT_TIMESTAMP)");
   });
 
   /**
-   * As a Part's is — and with a non-zero position, because the test above
-   * uses zero and a generator that wrote `0` whatever the manifest said would
+   * With a non-zero position, because the test above uses zero and a generator that wrote `0` whatever the manifest said would
    * satisfy that one.
    */
   it("writes the position once, into the only order column left", () => {
@@ -579,6 +479,33 @@ describe("contentRowFor — Field Notes of a Project", () => {
 
     expect(isInvalid(result)).toBe(true);
     expect((result as { error: string }).error).toMatch(/does not belong in the content table/);
+  });
+
+  /**
+   * `en-old` is not a Locale, so this file fails on that before the manifest
+   * is ever consulted — it never earns a Locale to be listed under.
+   */
+  it("fails a Field Note with no recognised Locale rather than demanding the manifest list it", () => {
+    const result = contentRowFor(
+      "projects/chekalo/product-matching/product-matching.en-old.md",
+      post(),
+      VOCABULARY,
+    );
+
+    expect(isInvalid(result)).toBe(true);
+    expect((result as { error: string }).error).toMatch(/no recognised Locale/);
+    expect((result as { error: string }).error).not.toMatch(/not listed in the/);
+  });
+
+  it("fails a Field Note declaring itself the Project it belongs to", () => {
+    const result = contentRowFor(
+      notePath,
+      { ...post(), type: "project" as never },
+      VOCABULARY,
+      placement,
+    );
+
+    expect(isInvalid(result)).toBe(true);
   });
 });
 
@@ -630,7 +557,7 @@ describe("contentRowFor — the tree and the front matter must agree", () => {
 });
 
 /**
- * The vocabulary arrives the way a Part's placement does — as a value the
+ * The vocabulary arrives the way a Field Note's placement does — as a value the
  * generator read off the disk — so an undeclared Tag fails in the shape every
  * other front-matter mistake already fails in. What these assert is that it is a
  * failure at all: a warning printed by a run that already prints skip notices on
@@ -710,7 +637,7 @@ describe("contentRowFor — Tags are drawn from the declared vocabulary", () => 
    */
   it("fails a Post with no recognised Locale on that, even when its Tags are undeclared too", () => {
     const result = contentRowFor(
-      "series/pragmatic-nodejs-api/project-setup/project-setup.en-old.md",
+      "blog/project-setup/project-setup.en-old.md",
       post({ tags: ["Nodejs", "TypeScript"] }),
       VOCABULARY,
     );
@@ -761,22 +688,22 @@ describe("contentRowFor — Tags become rows", () => {
   });
 
   /**
-   * A Part's rows are a loose Post's rows. Where it sits is already on its
+   * A Field Note's rows are a loose Post's rows. Where it sits is already on its
    * `content` row, and repeating it here would be a second place for it to be
    * wrong — while what a Tag page lists is a policy of the page, not of the
    * data.
    */
-  it("gives a Part of a Series the same rows as a loose Post, with no trace of its Container", () => {
+  it("gives a Field Note the same rows as a loose Post, with no trace of its Container", () => {
     const row = contentRowFor(
-      "series/pragmatic-nodejs-api/project-setup/project-setup.en.md",
+      "projects/chekalo/product-matching/product-matching.en.md",
       post({ tags: ["nodejs"] }),
       VOCABULARY,
-      { seriesSlug: "pragmatic-nodejs-api", section: "fundamentals", order: 1 },
+      { projectSlug: "chekalo", order: 1 },
     ) as ContentRow;
 
-    expect(row.tags.map((tag) => tag.key)).toEqual(["project-setup:en:nodejs"]);
-    expect(row.tags[0].statement).toContain("VALUES ('project-setup', 'en', 'nodejs')");
-    expect(row.tags[0].statement).not.toContain("pragmatic-nodejs-api");
+    expect(row.tags.map((tag) => tag.key)).toEqual(["product-matching:en:nodejs"]);
+    expect(row.tags[0].statement).toContain("VALUES ('product-matching', 'en', 'nodejs')");
+    expect(row.tags[0].statement).not.toContain("chekalo");
   });
 
   /**
@@ -800,7 +727,7 @@ describe("contentRowFor — revisions", () => {
   it("stores an absent list as an empty array, not as NULL", () => {
     const row = contentRowFor("blog/a/a.en.md", post(), VOCABULARY) as SeededRow;
 
-    expect(row.statement).toContain("updates, series_slug");
+    expect(row.statement).toContain("updates, project_slug");
     expect(row.statement).toContain(`'[]'`);
   });
 
@@ -847,7 +774,7 @@ describe("contentRowFor — revisions", () => {
 /**
  * A Slug is unique across the whole site, not within a tree: `content` carries
  * one partial unique index on `(slug, lang)` and another on `(slug)`. Shortening
- * a Part's Slug is exactly the move that can collide with a loose Post.
+ * a Field Note's Slug is exactly the move that can collide with a loose Post.
  */
 describe("duplicateKeys", () => {
   const row = (key: string): SeededRow => ({ key, statement: "" });

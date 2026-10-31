@@ -41,44 +41,18 @@ export interface FrontMatterAttributes {
 }
 
 /**
- * Where a Part sits in its Series, as the manifest says.
+ * Where a Field Note sits in its Project, as the manifest says.
  *
  * It arrives as an argument rather than being read from front matter, and that
- * is the decision itself (ADR 0007): a Part does not know where it is. The
- * manifest lists the Parts of each section, in order, and the generator turns
- * those lists into these three values.
- */
-export interface PartPlacement {
-  seriesSlug: string;
-  section: string;
-  /** The position in its section's list — an index, never written by hand. */
-  order: number;
-}
-
-/**
- * Where a Field Note sits in its Project — `PartPlacement`'s sibling, with no
- * section: a Project's manifest is a flat list, not an arc. A Project
- * accumulates because the problems turn up when they turn up; a Series orders
- * because it promised a Destination.
+ * is the decision itself (ADR 0007): a Field Note does not know where it is.
+ * A Project's manifest is a flat list, and the generator turns that list into
+ * these two values — a Project accumulates because the problems turn up when
+ * they turn up.
  */
 export interface NotePlacement {
   projectSlug: string;
   /** The position in the manifest's list — an index, never written by hand. */
   order: number;
-}
-
-/**
- * A Post's Container, as the manifest that holds it hands it over: a Part's
- * placement in its Series, or a Field Note's in its Project — never both, the
- * same way `content.series_slug` and `content.project_slug` never both hold a
- * value (`schema.sql`). Which one a value is is read structurally, by the
- * field only that kind carries, rather than by a `kind` tag neither manifest
- * writes.
- */
-export type ContainerPlacement = PartPlacement | NotePlacement;
-
-function isPartPlacement(container: ContainerPlacement): container is PartPlacement {
-  return "seriesSlug" in container;
 }
 
 /** A row that will be seeded, and the identity used to decide it survives a prune. */
@@ -203,9 +177,9 @@ export interface DraftOptions {
 /**
  * One `content_tag` row per Tag the file carries.
  *
- * Written for Posts and Bookmarks alike, and for a Part exactly as for a loose
- * Post: what a Tag page lists is a policy of the page, not of the data. A Part
- * carries no trace of its Container here either — that lives on its `content`
+ * Written for Posts and Bookmarks alike, and for a Field Note exactly as for a
+ * loose Post: what a Tag page lists is a policy of the page, not of the data. A
+ * Field Note carries no trace of its Container here either — that lives on its `content`
  * row, and duplicating it would be a second place for it to be wrong.
  *
  * The key is the natural key of the Content Item plus the Tag. `id_content` is
@@ -234,15 +208,14 @@ VALUES (${escapeSql(slug)}, ${escapeSql(lang)}, ${escapeSql(tag)});
  * Container, and the filename gives its Slug (ADR 0004). Those are separate
  * readings of the same path, and before this only the last one happened.
  *
- * `vocabulary` arrives the same way a Part's placement does — as a value the
+ * `vocabulary` arrives the same way a Field Note's placement does — as a value the
  * caller read off the disk — so a Tag this site has not declared fails in the
  * shape every other front-matter mistake already fails in, rather than in a path
  * of its own.
  *
- * `container` is supplied by the caller for a Post that lives inside a Series
- * or a Project, because only the manifest knows where it sits — a Part's
- * placement or a Field Note's, never both. A nested Post without one is a Part
- * or a Field Note nothing indexes, which is a failure rather than a loose
+ * `container` is supplied by the caller for a Post that lives inside a
+ * Project, because only the manifest knows where it sits. A nested Post without
+ * one is a Field Note nothing indexes, which is a failure rather than a loose
  * Post.
  *
  * `options.includeDrafts` is `preview:drafts`'s hook (see `DraftOptions`): every
@@ -253,7 +226,7 @@ export function contentRowFor(
   relativePath: string,
   attributes: FrontMatterAttributes,
   vocabulary: TagVocabulary,
-  container?: ContainerPlacement,
+  container?: NotePlacement,
   options?: DraftOptions,
 ): ContentFileResult {
   const placed = placementOf(relativePath);
@@ -262,7 +235,7 @@ export function contentRowFor(
     return { error: placed.error };
   }
 
-  if (placed.type === "project" || placed.type === "series") {
+  if (placed.type === "project") {
     return {
       error: `${relativePath} is a ${placed.type} and does not belong in the content table`,
     };
@@ -314,12 +287,12 @@ export function contentRowFor(
     }
 
     // Every file with a recognised Locale reaches this, drafts included: a
-    // Part or a Field Note not listed in its manifest is a mistake whether or
+    // Field Note not listed in its manifest is a mistake whether or
     // not `draft: true` is set — see the check at the end of this branch for
     // the one place that flag is actually read.
     if (placed.container !== null && !container) {
       return {
-        error: `${relativePath} is not listed in the ${placed.container} manifest — a Part nothing indexes cannot be reached or ordered`,
+        error: `${relativePath} is not listed in the ${placed.container} manifest — a Field Note nothing indexes cannot be reached or ordered`,
       };
     }
 
@@ -338,11 +311,10 @@ export function contentRowFor(
       return { reason: `${relativePath} is a draft` };
     }
 
-    // Written here or written as NULL, never read from front matter. The
-    // three Series columns always travel together, and so do the two Project
-    // ones — a Post's Container is a Part's placement or a Field Note's,
-    // never both — which is why the invariant that they are all present or
-    // all absent is not checked anywhere: it is not representable.
+    // Written here or written as NULL, never read from front matter. The two
+    // Project columns always travel together, which is why the invariant that
+    // they are both present or both absent is not checked anywhere: it is not
+    // representable.
     //
     // The position is written once, into `container_order`. It was written
     // twice for one publication: `section_order` carried the same value,
@@ -350,14 +322,12 @@ export function contentRowFor(
     // by that name (ADR 0006's amendment). `0007` dropped the column once that
     // publication was live, and this duplication went with it.
     const containerColumns = !container
-      ? "NULL, NULL, NULL, NULL"
-      : isPartPlacement(container)
-        ? `${escapeSql(container.seriesSlug)}, ${escapeSql(container.section)}, NULL, ${container.order}`
-        : `NULL, NULL, ${escapeSql(container.projectSlug)}, ${container.order}`;
+      ? "NULL, NULL"
+      : `${escapeSql(container.projectSlug)}, ${container.order}`;
 
     return {
       statement: `
-INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, repository, updates, series_slug, series_section, project_slug, container_order, updated_at)
+INSERT OR REPLACE INTO content (slug, lang, type, title, description, published_at, repository, updates, project_slug, container_order, updated_at)
 VALUES (${escapedSlug}, ${escapeSql(lang)}, 'post', ${title}, ${escapeSql(attributes.description)}, ${publishedAt}, ${escapeSql(attributes.repository)}, ${escapeSql(JSON.stringify(revisions.revisions))}, ${containerColumns}, CURRENT_TIMESTAMP);
 `,
       key: `${slug}:${lang}`,
@@ -411,8 +381,8 @@ VALUES (${escapedSlug}, NULL, 'link', ${title}, ${escapeSql(attributes.externalU
 /**
  * The identities claimed by more than one file.
  *
- * `content` is unique on `(slug, lang)` **site-wide**, not per tree, so a Part
- * named `project-setup` competes with every loose Post and every future Field
+ * `content` is unique on `(slug, lang)` **site-wide**, not per tree, so a Field
+ * Note named `product-matching` competes with every loose Post and every future Field
  * Note. The database would catch it — as a constraint violation partway through
  * seeding the deployed store, naming a row rather than a file. This catches it
  * on the developer's machine, before the SQL is written.

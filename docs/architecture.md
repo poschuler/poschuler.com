@@ -85,9 +85,6 @@ than one generic pair, and for `container_order` having replaced `section_order`
 added the new column and `0007` dropped the old one, once the Worker reading the
 new name was the one serving (ADR 0006, amended).
 
-The D1 generators and verifiers still carry Series wording, and still write its
-tables, until the second Publication removes them (ADR 0014).
-
 A document under any tree may declare itself a Draft (`draft: true`) rather
 than being placed outside it — checked exactly as strictly as a published one,
 and producing no row and no payload only once every other check has passed
